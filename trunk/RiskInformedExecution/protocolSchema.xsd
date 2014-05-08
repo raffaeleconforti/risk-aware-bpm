@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:protocol="http://www.yawlfoundation.org/communicationProtocol"
+           targetNamespace="http://www.yawlfoundation.org/communicationProtocol"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           version="1.0">
+           
+  <xs:complexType name="request">
+    <xs:element name="type" type="xs:string" />
+    <xs:element name="workItems" type="protocol:workItems" />
+    <xs:element name="resource" type="xs:string" />
+    <xs:sequence minOccurs="0" maxOccurs="1">
+      <xs:element name="data" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="workItems">
+    <xs:sequence maxOccurs="unbounded">
+      <xs:element name="workItem" type="protocol:workItem" />
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="workItem">
+    <xs:sequence>
+      <xs:element name="caseID" type="xs:string" />
+      <xs:element name="taskID" type="xs:string" />
+      <xs:element name="specificationURI" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="responce">
+    <xs:element name="coupleWorkItemsPredictions" type="protocol:coupleWorkItemsPredictions" />
+  </xs:complexType>
+  
+  <xs:complexType name="coupleWorkItemsPredictions">
+    <xs:sequence maxOccurs="unbounded">
+      <xs:element name="coupleWorkItemPrediction" type="protocol:coupleWorkItemPrediction" />
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="coupleWorkItemPrediction">
+    <xs:sequence>
+      <xs:element name="workItem" type="protocol:workItem" />
+      <xs:element name="prediction" type="xs:double" />
+    </xs:sequence>
+  </xs:complexType>
+    
+</xs:schema>

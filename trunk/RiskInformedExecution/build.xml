@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="create_run_jar" name="Create Runnable Jar for Project Risk Informed Execution">
+    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
+    <!--ANT 1.7 is required                                        -->
+    <target name="create_run_jar">
+        <jar destfile="/home/stormfire/OperationalSupport.jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="Annotators.RiskAnnotator"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="/home/stormfire/Dropbox/workspace/Risk Informed Execution/bin"/>
+            <fileset dir="/home/stormfire/Dropbox/workspace/Simulated Annealing/bin"/>
+            <fileset dir="/home/stormfire/Dropbox/workspace/Engine/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-collections-3.2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-digester.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-discovery.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-fileupload-1.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-httpclient-3.0.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-io-1.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-jxpath-1.2-patched.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-lang-2.3.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-logging-1.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jcommon-1.0.0-rc1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jdbc2_0-stdext.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jdom.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jfreechart-1.0.0-rc1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jsf-api.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jsf-impl.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jsfcl.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jstl.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jta-1.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/junit-4.5.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/log4j-1.2.16.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/mail.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/mysql-connector-java-5.1.6-bin.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/odmg-3.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/xml-apis.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/xercesImpl.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/optional-1_5_1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/portlet.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/postgresql-7.4.5.jdbc.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/postgresql-8.3-603.jdbc3.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/qname-from-wsdl4j-20030807.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/rowset.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/saaj.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/sax.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/saxon9-dom.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/saxon9-jdom.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/saxon9-s9api.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/saxon9.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/saxpath.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/serializer.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/servlet-api.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/slf4j-api-1.6.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/soaprmi-1_1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/sqlx.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/standard.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/twitter4j-2.0.8.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/webui.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/wsdl4j-20030807.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/wsif-j2c.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/wsif.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/xmlParserAPIs-2_2_1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/xmlrpc-1.2-b1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/xsd.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/xsd.resources.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/customActions/RegistryInstallerListener.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/customActions/RegistryUninstallerListener.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/customActions/SummaryLoggerInstallerListener.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/JDKPathPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/LicencePanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/PackageDependentUserInputPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/PacksPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/ProcessPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/SelectPrinterPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/ShortcutPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/SimpleFinishPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/SudoPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/SummaryPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/TargetPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/UserInputPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/bin/panels/XInfoPanel.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/Installer/libs/lib/uninstaller.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/MXMLib.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/ProM.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/slickerbox0.5.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/JRclient.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/JRI.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/kxml2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/OpenXES.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/OpenXES-XStream.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/Spex.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/appbase.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/bcmail-jdk15-139.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/bcprov-jdk15-139.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/common.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-beanutils.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-codec-1.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/commons-el.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/ecore.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/hibernate3.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/javax.servlet-1.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/activation.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/antlr-2.7.6.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/apache_soap-2_3_1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/asm.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/att.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/axis-1_1RC2-ant.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/axis-1.1RC2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/cglib-2.2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/dataprovider.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/defaulttheme-gray.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/dom4j-1.6.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/dwr-1.1.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/ehcache-1.3.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/errorhandler.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/GantzGraf-0.9.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/hsqldb.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/itext-1.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/java_cup.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/javassist-3.9.0.GA.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/javax-activation-1.0.2.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/javax-mail-1.3.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jaxen-full.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jaxp-api.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/jaxrpc.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Engine/build/3rdParty/lib/slf4j-log4j12-1.6.0.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/src/lib/OpenXES-XStream.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/src/lib/OpenXES.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/src/lib/jdom.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/lib/weka.jar"/>
+            <fileset dir="/home/stormfire/Dropbox/workspace/DataPetriNets/bin"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/lib/pojava-2.8.1.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/lib/javax.servlet-1.4.jar"/>
+            <zipfileset excludes="META-INF/*.SF" src="/home/stormfire/Dropbox/workspace/Risk Informed Execution/lib/saxon9-s9api.jar"/>
+        </jar>
+    </target>
+</project>
