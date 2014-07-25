@@ -11,9 +11,6 @@
 
     <artifactId>risk-process-state</artifactId>
     <packaging>pom</packaging>
-    <modules>
-        <module>../risk-server</module>
-    </modules>
 
     <dependencies>
 
