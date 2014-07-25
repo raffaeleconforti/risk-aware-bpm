@@ -727,8 +727,8 @@
             <fileset dir="${classes.dir}${packageRoot}/elements/data"
                      includes="YParameter.class YVariable.class"/>
         </copy>
-        <copy todir="${yawl.worklet.app.name}${webinf.dir}/elements/state">
-            <fileset dir="${classes.dir}${packageRoot}/elements/state"
+        <copy todir="${yawl.worklet.app.name}${webinf.dir}/elements/org.yawlfoundation.yawl.risk.state">
+            <fileset dir="${classes.dir}${packageRoot}/elements/org.yawlfoundation.yawl.risk.state"
                      includes="YIdentifier.class"/>
         </copy>
     	  <copy todir="${yawl.worklet.app.name}${webinf.dir}/exceptions">
@@ -867,8 +867,8 @@
             <fileset dir="${classes.dir}${packageRoot}/elements/data"
                      includes="YParameter.class YVariable.class"/>
         </copy>
-        <copy todir="${yawl.resource.app.name}${webinf.dir}/elements/state">
-            <fileset dir="${classes.dir}${packageRoot}/elements/state"
+        <copy todir="${yawl.resource.app.name}${webinf.dir}/elements/org.yawlfoundation.yawl.risk.state">
+            <fileset dir="${classes.dir}${packageRoot}/elements/org.yawlfoundation.yawl.risk.state"
                      includes="YIdentifier.class"/>
         </copy>
         <copy todir="${yawl.resource.app.name}${webinf.dir}/exceptions">
@@ -1061,8 +1061,8 @@
                               YSyntaxException.class YAWLException.class
                               YStateException.class YQueryException.class" />
         </copy>
-        <copy todir="${yawl.monitor.app.name}${webinf.dir}/elements/state">
-            <fileset dir="${classes.dir}${packageRoot}/elements/state"
+        <copy todir="${yawl.monitor.app.name}${webinf.dir}/elements/org.yawlfoundation.yawl.risk.state">
+            <fileset dir="${classes.dir}${packageRoot}/elements/org.yawlfoundation.yawl.risk.state"
                      includes="YIdentifier.class"/>
         </copy>
         <copy todir="${yawl.monitor.app.name}${webinf.dir}/logging">
@@ -1812,7 +1812,7 @@
 
 
     <!--target name="launch" depends="reload" description="launch engine application">
-        <java classname="org.yawlfoundation.yawl.engine.gui.YAdminGUI"
+        <java classname="YAdminGUI"
             fork="true"
             spawn="true">
             <jvmarg value="-Djava.rmi.server.codebase=file:/d:\YAWL\engine\classes/"/>
