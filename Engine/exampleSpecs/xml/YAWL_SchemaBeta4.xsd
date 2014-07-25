@@ -600,7 +600,7 @@
 					</xs:restriction>
 				</xs:simpleType>
 			</xs:element>
-			<xs:element name="state" type="xs:string" minOccurs="0"/>
+			<xs:element name="org.yawlfoundation.yawl.risk.state" type="xs:string" minOccurs="0"/>
 			<xs:element name="country" type="xs:string"/>
 		</xs:sequence>
 	</xs:complexType>

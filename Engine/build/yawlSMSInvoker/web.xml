@@ -144,7 +144,7 @@
         <description>
             Reports that the URI request found nothing, hence the error report.
         </description>
-        <servlet-class>org.yawlfoundation.yawl.engine.interfce.ErrorServlet</servlet-class>
+        <servlet-class>ErrorServlet</servlet-class>
         <load-on-startup>1</load-on-startup>
     </servlet-->
 

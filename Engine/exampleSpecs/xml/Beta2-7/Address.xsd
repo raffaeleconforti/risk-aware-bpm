@@ -7,7 +7,7 @@
 				<xs:element ref="number"/>
 				<xs:element name="streetName" type="xs:string"/>
 				<xs:element ref="locality" minOccurs="0"/>
-				<xs:element ref="state"/>
+				<xs:element ref="org.yawlfoundation.yawl.risk.state"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
@@ -36,7 +36,7 @@
 				<xs:element name="number" type="xs:nonNegativeInteger"/>
 				<xs:element ref="locality"/>
 				<xs:element ref="postCode"/>
-				<xs:element ref="state" minOccurs="0"/>
+				<xs:element ref="org.yawlfoundation.yawl.risk.state" minOccurs="0"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
@@ -48,7 +48,7 @@
 			</xs:restriction>
 		</xs:simpleType>
 	</xs:element>
-	<xs:element name="state">
+	<xs:element name="org.yawlfoundation.yawl.risk.state">
 		<xs:simpleType>
 			<xs:restriction base="xs:string">
 				<xs:enumeration value="Qld"/>
