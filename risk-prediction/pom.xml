@@ -154,6 +154,31 @@
         </dependency>
 
         <dependency>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>ProM-Contexts</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>ProM-Framework</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>ProM-Models</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>TransitionSystems</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>Uitopia</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>yawl.libraries.risk-prediction</groupId>
             <artifactId>gurobi</artifactId>
         </dependency>
@@ -181,6 +206,12 @@
         <dependency>
             <groupId>colt</groupId>
             <artifactId>colt</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-math</groupId>
+            <artifactId>commons-math</artifactId>
+            <version>1.2</version>
         </dependency>
 
     </dependencies>
