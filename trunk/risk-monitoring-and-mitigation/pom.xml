@@ -10,7 +10,8 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>risk-prediction</artifactId>
+    <artifactId>risk-monitoring-and-mitigation</artifactId>
+    <packaging>pom</packaging>
 
     <build>
         <plugins>
@@ -27,9 +28,9 @@
                             <goal>install-file</goal>
                         </goals>
                         <configuration>
-                            <file>${basedir}/lib/weka.jar</file>
-                            <groupId>yawl.libraries.risk-prediction</groupId>
-                            <artifactId>weka</artifactId>
+                            <file>${basedir}/lib/ProM-Contexts.jar</file>
+                            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                            <artifactId>ProM-Contexts</artifactId>
                             <version>${library.version}</version>
                             <packaging>jar</packaging>
                             <generatePom>true</generatePom>
@@ -43,9 +44,9 @@
                             <goal>install-file</goal>
                         </goals>
                         <configuration>
-                            <file>${basedir}/lib/gurobi.jar</file>
-                            <groupId>yawl.libraries.risk-prediction</groupId>
-                            <artifactId>gurobi</artifactId>
+                            <file>${basedir}/lib/ProM-Framework.jar</file>
+                            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                            <artifactId>ProM-Framework</artifactId>
                             <version>${library.version}</version>
                             <packaging>jar</packaging>
                             <generatePom>true</generatePom>
@@ -59,9 +60,9 @@
                             <goal>install-file</goal>
                         </goals>
                         <configuration>
-                            <file>${basedir}/lib/server.jar</file>
-                            <groupId>yawl.libraries.risk-prediction</groupId>
-                            <artifactId>server</artifactId>
+                            <file>${basedir}/lib/ProM-Models.jar</file>
+                            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                            <artifactId>ProM-Models</artifactId>
                             <version>${library.version}</version>
                             <packaging>jar</packaging>
                             <generatePom>true</generatePom>
@@ -75,41 +76,9 @@
                             <goal>install-file</goal>
                         </goals>
                         <configuration>
-                            <file>${basedir}/lib/com.google.ortools.constraintsolver.jar</file>
-                            <groupId>yawl.libraries.risk-prediction</groupId>
-                            <artifactId>google-constraintsolver</artifactId>
-                            <version>${library.version}</version>
-                            <packaging>jar</packaging>
-                            <generatePom>true</generatePom>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>install5</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>install-file</goal>
-                        </goals>
-                        <configuration>
-                            <file>${basedir}/lib/com.google.ortools.linearsolver.jar</file>
-                            <groupId>yawl.libraries.risk-prediction</groupId>
-                            <artifactId>google-linearsolver</artifactId>
-                            <version>${library.version}</version>
-                            <packaging>jar</packaging>
-                            <generatePom>true</generatePom>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>install6</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>install-file</goal>
-                        </goals>
-                        <configuration>
-                            <file>${basedir}/lib/lpsolve55j.jar</file>
-                            <groupId>yawl.libraries.risk-prediction</groupId>
-                            <artifactId>lpsolve</artifactId>
+                            <file>${basedir}/lib/TransitionSystems.jar</file>
+                            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                            <artifactId>TransitionSystems</artifactId>
                             <version>${library.version}</version>
                             <packaging>jar</packaging>
                             <generatePom>true</generatePom>
@@ -125,7 +94,7 @@
 
         <dependency>
             <groupId>org.risk-aware-bpm</groupId>
-            <artifactId>risk-monitoring-and-mitigation</artifactId>
+            <artifactId>engine</artifactId>
         </dependency>
 
         <dependency>
@@ -144,43 +113,23 @@
         </dependency>
 
         <dependency>
-            <groupId>yawl.libraries.abstraction-layer</groupId>
-            <artifactId>OpenXES</artifactId>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>ProM-Contexts</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>yawl.libraries.risk-prediction</groupId>
-            <artifactId>weka</artifactId>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>ProM-Framework</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>yawl.libraries.risk-prediction</groupId>
-            <artifactId>gurobi</artifactId>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>ProM-Models</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>yawl.libraries.risk-prediction</groupId>
-            <artifactId>server</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>yawl.libraries.risk-prediction</groupId>
-            <artifactId>google-constraintsolver</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>yawl.libraries.risk-prediction</groupId>
-            <artifactId>google-linearsolver</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>yawl.libraries.risk-prediction</groupId>
-            <artifactId>lpsolve</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>colt</groupId>
-            <artifactId>colt</artifactId>
+            <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+            <artifactId>TransitionSystems</artifactId>
         </dependency>
 
     </dependencies>

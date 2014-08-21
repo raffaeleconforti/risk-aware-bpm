@@ -14,7 +14,7 @@ public class YExpression{
 	private StringTokenizer st;
 	public static final String CONTAINS = "}";
 	public static final String ISCONTAINED = "{";
-	public static final String DOT = "";
+	public static final String DOT = ".";
 	public static final String PARTA = "(";
 	public static final String PARTC = ")";
 	public static final String PARQA = "[";

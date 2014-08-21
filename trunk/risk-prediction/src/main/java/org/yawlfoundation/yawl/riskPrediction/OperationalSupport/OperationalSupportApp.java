@@ -37,15 +37,15 @@ import org.yawlfoundation.yawl.riskPrediction.DecisionPoints.DecisionPoint;
 import org.yawlfoundation.yawl.riskPrediction.DecisionPoints.DecisionPointDiscover;
 import org.yawlfoundation.yawl.riskPrediction.DecisionPoints.InstanceGenerator;
 import org.yawlfoundation.yawl.riskPrediction.DecisionPoints.YAWL_DecisionPointDiscover;
-import org.yawlfoundation.yawl.riskPrediction.OperationalSupport.multicase.DurationSplitter;
 import org.yawlfoundation.yawl.riskPrediction.OperationalSupport.multicase.TupleClassifierName;
 import org.yawlfoundation.yawl.riskPrediction.PredictionFunction.AttributeGenerator;
 import org.yawlfoundation.yawl.riskPrediction.PredictionFunction.DecisionPredictor;
 import org.yawlfoundation.yawl.sensors.databaseInterface.ActivityTuple;
 import org.yawlfoundation.yawl.sensors.databaseInterface.InterfaceManager;
-import org.yawlfoundation.yawl.util.JDOMUtil;
+//import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.sensors.databaseInterface.ProM.ImportEventLog;
 
+import org.yawlfoundation.yawl.util.JDOMUtil;
 import weka.classifiers.Classifier;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -79,24 +79,16 @@ public class OperationalSupportApp {
 	private final int cpu = 100;
 	
 	public static void main(String[] args) {
-		
-		String base = null;
-		File dir = new File("/home/stormfire");
-		if(dir.exists()) {
-			base = "stormfire";
-		}else {
-			base = "conforti";
-		}
-		
+
 		try {
-			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/FilteredCommercial15.xes");
+			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/user/DSS/FilteredCommercial15.xes");
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Demo/Log.xes");
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Demo/Test.xes");
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/stormfire/Documents/Useless/log.xes");
 			
 			String specification = null;
 			try {
-				File f = new File("/media/Data/SharedFolder/Commercial/CommercialNew.yawl");
+				File f = new File("/home/user/DSS/CommercialNew.yawl");
 //				File f = new File("/home/stormfire/InsuranceClaim.yawl");
 //				File f = new File("/home/stormfire/Dropbox/workspace/Simulated Annealing/Payment.yawl");
 				InputStream is = new FileInputStream(f);
@@ -126,7 +118,7 @@ public class OperationalSupportApp {
 			
 			String resources = null;
 			try {
-				File f = new File("/media/Data/SharedFolder/Commercial/Commercial.ybkp");
+				File f = new File("/home/user/DSS/Commercial.ybkp");
 				InputStream is = new FileInputStream(f);
 				Writer writer = new StringWriter();
 				char[] buffer = new char[1024];
@@ -159,10 +151,10 @@ public class OperationalSupportApp {
 			
 			InterfaceManager a = new InterfaceManager(InterfaceManager.PROM, parameters);
 //			InterfaceManager a = new InterfaceManager(InterfaceManager.YAWL, null);
-//			
-			OperationalSupportApp oss = new OperationalSupportApp(a, a, "weka.classifiers.trees.J48", "-C 0.25 -B -M 2");
-			
-			oss.start("Commercial", "/home/stormfire/Dropbox/workspace/RiskInformedExecution/consequenceFile");
+//
+			OperationalSupportApp oss = new OperationalSupportApp(a, a, "weka.classifiers.rules.JRip", "-F 3 -N 2.0 -O 2 -S 1");//"weka.classifiers.trees.J48", "-C 0.25 -B -M 2");//
+
+			oss.start("Commercial", "/home/user/DSS/consequenceFile", "");
 //			oss.load("/home/stormfire/Dropbox/workspace/RiskInformedExecution/");
 //			for(Entry<String, Map<String, Classifier>> entry : oss.decisionPointsPredictorsPostOffer.entrySet()) {
 //				for(Entry<String, Classifier> entry2 : entry.getValue().entrySet()) {
@@ -272,7 +264,7 @@ public class OperationalSupportApp {
 //		
 		OperationalSupportApp oss = new OperationalSupportApp(a, a, "weka.classifiers.trees.J48", "-C 0.25 -B -M 2");
 		
-		oss.start("Commercial", "");
+		oss.start("Commercial", "", "");
 //		oss.load("/home/stormfire/Dropbox/workspace/RiskInformedExecution/");
 //		for(Entry<String, Map<String, Classifier>> entry : oss.decisionPointsPredictorsPostOffer.entrySet()) {
 //			for(Entry<String, Classifier> entry2 : entry.getValue().entrySet()) {
@@ -350,7 +342,7 @@ public class OperationalSupportApp {
 		
 	}
 	
-	public void start(String specID, String basePath) {
+	public void start(String specID, String basePath, String dirPath) {
 		
 		File decisionPointsFile = new File(basePath+"decisionPointsFile");
 		File decisionPointsPredictorsFile = new File(basePath+"decisionPointsPredictorsFile");
@@ -363,7 +355,7 @@ public class OperationalSupportApp {
 		
 		try {
 			if(!decisionPointsFile.exists()) {
-				insertNewSpecification(specID, new double[] {0.333, 0.333, 0.333});
+				insertNewSpecification(specID, new double[] {0.333, 0.333, 0.333}, dirPath);
 	            
 	            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(decisionPointsFile));				
 				oos.writeObject(decisionPoints);
@@ -416,7 +408,7 @@ public class OperationalSupportApp {
 				
 				if(!decisionPointsPredictors.containsKey(specID)) {
 
-					insertNewSpecification(specID, null);
+					insertNewSpecification(specID, null, dirPath);
 		            
 		            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(decisionPointsFile));				
 					oos.writeObject(decisionPoints);
@@ -469,15 +461,15 @@ public class OperationalSupportApp {
 		
 	}
 	
-	public void updateDecisionTreeSpecification(String specID, double[] weights) {
+	public void updateDecisionTreeSpecification(String specID, double[] weights, String dirPath) {
 		
-		insertNewSpecification(specID, weights);
+		insertNewSpecification(specID, weights, dirPath);
 		
 	}
 	
-	public void insertNewSpecification(String specID, double[] weights) {
-		
-		String specification = imStarting.getWorkflowDefinitionLayer().getSpecification(specID);
+	public void insertNewSpecification(String specID, double[] weights, String dirPath) {
+
+        String specification = imStarting.getWorkflowDefinitionLayer().getSpecification(specID);
 		weightMap.put(specID, weights);
 		
 		ConcurrentHashMap<String, Classifier> newDecisionPointsPredictors = new ConcurrentHashMap<String, Classifier>();
@@ -504,7 +496,7 @@ public class OperationalSupportApp {
 		TaskExecutionAnnotator tea = new TaskExecutionAnnotator(imStarting);
 		TimeBetweenTasksAnnotator tbta = new TimeBetweenTasksAnnotator(imStarting, dpd.getDecisionPoints());
 		
-		ra.annotateLog(specID);
+		ra.annotateLog(specID, dirPath);
 		tea.annotateLog(specID);
 		tbta.annotateLog(specID);
 		
@@ -871,7 +863,7 @@ public class OperationalSupportApp {
 		Element initialSet = JDOMUtil.stringToElement(listResource);
 
 		for(Element part : (List<Element>) initialSet.getChildren()) {
-			
+
 			resources.add(part.getValue());
 			
 		}
@@ -925,7 +917,7 @@ public class OperationalSupportApp {
 		
 	}
 	
-	public synchronized void receiveEvent(YSpecificationID specID, String caseID, boolean precheck) {
+	public synchronized void receiveEvent(YSpecificationID specID, String caseID, boolean precheck, String dirPath) {
 		
 		if(!precheck) {
 			
@@ -934,7 +926,7 @@ public class OperationalSupportApp {
 				numberOfInstances.put(specID, Long.valueOf(0));
 				totalNumberOfInstances.put(specID, Long.valueOf(1));
 
-				insertNewSpecification(specID.getUri(), weightMap.get(specID.getUri()));
+				insertNewSpecification(specID.getUri(), weightMap.get(specID.getUri()), dirPath);
 				
 			}else {
 			
@@ -944,8 +936,8 @@ public class OperationalSupportApp {
 				nTotal++;
 				
 				if(Math.log(nTotal) > n) {
-	
-					updateDecisionTreeSpecification(specID.getUri(), weightMap.get(specID.getUri()));
+
+					updateDecisionTreeSpecification(specID.getUri(), weightMap.get(specID.getUri()), dirPath);
 					n++;
 					
 					if(Math.log(n) > 1) {
@@ -1210,8 +1202,8 @@ public class OperationalSupportApp {
 			if(preOffer) {
 				//Pre-Offer
 				decisionPredictor = new DecisionPredictor(resourceValues, ag.getAttributesClasses(), ag.getStringNominal(), getRisksAsArray(ra.getRiskAnnotations().getRisksAsList()), specID+decisionPoint.getName(), 1000);
-				
-				for(Entry<String, HashMap<String, Object>> entry : ag.getAttributes().entrySet()) {
+
+                for(Entry<String, HashMap<String, Object>> entry : ag.getAttributes().entrySet()) {
 					
 					decisionPredictor.addInstances(entry.getValue(), ra.getRiskAnnotations().getAnnotation(entry.getKey()));
 				

@@ -16,8 +16,8 @@ public class InstanceGenerator {
 		
 		Instance instance = new DenseInstance(instances.numAttributes());
 		instance.setDataset(instances);
-		
-		if(variableAssignment != null) {
+
+        if(variableAssignment != null) {
 			for(Entry<String, Object> entry : variableAssignment.entrySet()) {
 				
 				Attribute attr = instances.attribute(entry.getKey());

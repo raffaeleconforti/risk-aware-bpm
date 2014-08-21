@@ -621,7 +621,7 @@ public class JavCPNWebServiceExample {
 			
 			OperationalSupportApp oss = new OperationalSupportApp(a, a, "weka.classifiers.trees.J48", "-C 0.25 -B -M 5");
 			
-			oss.start(specID, null);
+			oss.start(specID, null, null);
 			
 			return oss;
 			
@@ -703,7 +703,7 @@ public class JavCPNWebServiceExample {
 			
 			OperationalSupportMultiCaseApp oss = new OperationalSupportMultiCaseApp(a, a, "weka.classifiers.trees.J48", "-C 0.25 -B -M 5", 100);
 			
-			oss.start(specID, null);
+			oss.start(specID, null, null);
 			
 			return oss;
 			

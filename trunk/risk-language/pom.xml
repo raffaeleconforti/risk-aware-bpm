@@ -24,7 +24,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jdom</groupId>
+            <groupId>yawl.libraries.engine</groupId>
             <artifactId>jdom</artifactId>
         </dependency>
 

@@ -13,125 +13,1642 @@
     <artifactId>engine</artifactId>
     <packaging>pom</packaging>
 
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.1</version>
+                <executions>
+                    <execution>
+                        <id>install1</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/activation.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>activation</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install2</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/antlr-2.7.6.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>antlr</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install3</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/apache_soap-2_3_1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>apache_soap</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install4</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/asm.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>asm</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install5</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/axis-1.1RC2.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>axis</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install6</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/axis-1_1RC2-ant.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>axis-ant</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install7</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/bcmail-jdk15-139.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>bcmail</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install8</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/bcprov-jdk15-139.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>bcprov</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install9</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/cglib-2.2.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>cglib</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install10</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/common.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>common</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install11</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-beanutils.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-beanutils</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install12</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-codec-1.4.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-codec</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install13</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-collections-3.2.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-collections</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install14</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-digester.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-digester</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install15</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-discovery.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-discovery</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install16</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-fileupload-1.1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-fileupload</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install17</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-io-1.1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-io</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install18</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-lang-2.3.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-lang</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install19</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/commons-logging-1.1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>commons-logging</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install20</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/dom4j-1.6.1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>dom4j</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install21</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/ecore.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>ecore</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install22</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/ehcache-1.3.0.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>ehcache</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install23</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/hibernate3.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>hibernate3</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install24</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/hsqldb.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>hsqldb</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install25</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/itext-1.4.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>itext</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install26</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jaxen-full.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jaxen-full</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install27</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/javassist-3.9.0.GA.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>javassist</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install28</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jaxp-api.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jaxp-api</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install29</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jaxrpc.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jaxrpc</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install30</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jcommon-1.0.0-rc1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jcommon</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install31</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jdom.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jdom</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install32</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jfreechart-1.0.0-rc1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jfreechart</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install33</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jsf-api.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jsf-api</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install34</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/appbase.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>appbase</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install35</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jsfcl.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jsfcl</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install36</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/dataprovider.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>dataprovider</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install37</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/defaulttheme-gray.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>defaulttheme-gray</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install38</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/errorhandler.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>errorhandler</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install39</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jsf-impl.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jsf-impl</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install40</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jstl.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jstl</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install41</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/rowset.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>rowset</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install42</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/standard.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>standard</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install43</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/webui.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>webui</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install44</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/jta-1.1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>jta</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install45</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/junit-4.5.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>junit</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install46</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/log4j-1.2.16.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>log4j</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install47</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/odmg-3.0.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>odmg</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install48</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/optional-1_5_1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>optional</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install49</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/postgresql-7.4.5.jdbc.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>postgresql-jdbc</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install50</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/postgresql-8.3-603.jdbc3.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>postgresql-jdbc3</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install51</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/mail.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>mail</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install52</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/mysql-connector-java-5.1.6-bin.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>mysql</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install53</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/qname-from-wsdl4j-20030807.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>qname-from-wsdl4j</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <!--<execution>-->
+                    <!--<id>install54</id>-->
+                    <!--<phase>validate</phase>-->
+                    <!--<goals>-->
+                    <!--<goal>install-file</goal>-->
+                    <!--</goals>-->
+                    <!--<configuration>-->
+                    <!--<file>${basedir}/build/3rdParty/lib/resolver.jar</file>-->
+                    <!--<groupId>yawl.libraries.engine</groupId>-->
+                    <!--<artifactId>resolver</artifactId>-->
+                    <!--<version>1.0</version>-->
+                    <!--<packaging>jar</packaging>-->
+                    <!--<generatePom>true</generatePom>-->
+                    <!--</configuration>-->
+                    <!--</execution>-->
+
+                    <execution>
+                        <id>install55</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/saaj.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>saaj</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install56</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/sax.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>sax</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install57</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/saxon9.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>saxon9</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install58</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/saxon9-s9api.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>saxon9-s9api</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install59</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/saxon9-dom.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>saxon9-dom</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install60</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/saxon9-jdom.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>saxon9-jdom</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install61</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/saxpath.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>saxpath</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install62</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/serializer.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>serializer</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install63</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/servlet-api.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>servlet-api</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install64</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/slf4j-api-1.6.0.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>slf4j-api</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install65</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/slf4j-log4j12-1.6.0.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>slf4j-log4j12</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install66</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/soaprmi-1_1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>soaprmi</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install67</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/twitter4j-2.0.8.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>twitter4j</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install68</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/wsdl4j-20030807.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>wsdl4j</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install69</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/wsif.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>wsif</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install70</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/wsif-j2c.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>wsif-j2c</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install71</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/xercesImpl.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>xercesImpl</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install72</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/xml-apis.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>xml-apis</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install73</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/xmlParserAPIs-2_2_1.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>xmlParserAPIs</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install74</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/xsd.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>xsd</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install75</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/build/3rdParty/lib/xsd.resources.jar</file>
+                            <groupId>yawl.libraries.engine</groupId>
+                            <artifactId>xsd-resources</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>${jdk.version}</source>
+                    <target>${jdk.version}</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+            </plugin>
+
+        </plugins>
+    </build>
+
     <dependencies>
+
         <dependency>
-            <groupId>org.jdom</groupId>
-            <artifactId>jdom</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>activation</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>antlr</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>apache_soap</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-distribution</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>asm</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-        </dependency>
-
-        <!--<dependency>-->
-            <!--<groupId>net.sf.saxon</groupId>-->
-            <!--<artifactId>Saxon-HE</artifactId>-->
-        <!--</dependency>-->
-
-        <dependency>
-            <groupId>net.sourceforge.saxon</groupId>
-            <artifactId>saxon</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>axis</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.sun.faces</groupId>
-            <artifactId>jsf-api</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>axis-ant</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.swinglabs</groupId>
-            <artifactId>swing-layout</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>bcmail</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.swinglabs</groupId>
-            <artifactId>swing-worker</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>bcprov</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>com.springsource.org.apache.commons.codec</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>cglib</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.nuiton.thirdparty</groupId>
-            <artifactId>JRI</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jfreechart</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-beanutils</groupId>
-            <artifactId>commons-beanutils</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>xerces</groupId>
-            <artifactId>xercesImpl</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.eclipse.emf</groupId>
+            <groupId>yawl.libraries.engine</groupId>
             <artifactId>common</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.emf</groupId>
-            <artifactId>org.eclipse.emf.ecore</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-beanutils</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.xsd</groupId>
-            <artifactId>org.eclipse.xsd</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-codec</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>javax.mail-api</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-collections</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>edu.stanford.ejalbert</groupId>
-            <artifactId>BrowserLauncher2</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-digester</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>wsdl4j</groupId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-discovery</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-fileupload</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-lang</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>commons-logging</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>dom4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>ecore</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>ehcache</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>hibernate3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>hsqldb</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>itext</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jaxen-full</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>javassist</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jaxp-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jaxrpc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jcommon</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jdom</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jfreechart</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jsf-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>appbase</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jsfcl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>dataprovider</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>defaulttheme-gray</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>errorhandler</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jsf-impl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jstl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>rowset</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>standard</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>webui</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jta</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>log4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>odmg</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>optional</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>postgresql-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>postgresql-jdbc3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>mail</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>mysql</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>qname-from-wsdl4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saaj</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>sax</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saxon9</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saxon9-s9api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saxon9-dom</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saxon9-jdom</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saxpath</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>serializer</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>servlet-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>soaprmi</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>twitter4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
             <artifactId>wsdl4j</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.twitter4j</groupId>
-            <artifactId>twitter4j-core</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>wsif</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>net.sf.saxon</groupId>
-            <artifactId>saxon-jdom</artifactId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>wsif-j2c</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.toedter</groupId>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>xercesImpl</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>xml-apis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>xmlParserAPIs</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>xsd</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>xsd-resources</artifactId>
+        </dependency>
+
+        <!--From Editor-->
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>swing-layout</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>swing-worker</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
             <artifactId>jcalendar</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>browserLauncher</artifactId>
         </dependency>
 
     </dependencies>

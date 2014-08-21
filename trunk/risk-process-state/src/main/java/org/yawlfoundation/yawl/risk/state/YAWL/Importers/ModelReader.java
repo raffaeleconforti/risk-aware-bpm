@@ -1,6 +1,7 @@
 package org.yawlfoundation.yawl.risk.state.YAWL.Importers;
 
 import org.jdom.Attribute;
+import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.Namespace;
 import org.yawlfoundation.yawl.risk.state.Node;
@@ -495,7 +496,9 @@ public class ModelReader {
 		LinkedList<Place> tmpPlace = new LinkedList<Place>();
 		LinkedList<Net> tmpNet = new LinkedList<Net>();
 
-		Element e = JDOMUtil.stringToElement(specificationXML);
+//        specificationXML = JDOMUtil.formatXMLStringAsDocument(specificationXML);
+        Document d = JDOMUtil.stringToDocument(specificationXML);
+		Element e = d.getRootElement();
 		Namespace ns = e.getNamespace();
 		Namespace ns2 = e.getNamespace("xsi");
 		List<Element> dec = e.getChild("specification", ns).getChildren("decomposition", ns);

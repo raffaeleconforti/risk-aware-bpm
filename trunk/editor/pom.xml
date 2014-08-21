@@ -13,11 +13,234 @@
     <artifactId>editor</artifactId>
     <packaging>pom</packaging>
 
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.1</version>
+                <executions>
+                    <execution>
+                        <id>install1</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/BrowserLauncher2-1_3.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>browserLauncher</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install2</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/forms_rt.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>forms_rt</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install3</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/jcalendar-1.3.2.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>jcalendar</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install4</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/looks-2.0.1.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>looks</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install5</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/servlet-api.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>servlet-api</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install6</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/swing-layout-1.0.4.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>swing-layout</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install7</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/swing-worker-1.2.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>swing-worker</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install8</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/xmlParserAPIs.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>xmlParserAPIs</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install9</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/YAWL_2.1_Standalone.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>YAWL_2.1</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install10</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/YAWL_2.1beta_Standalone.jar</file>
+                            <groupId>yawl.libraries.editor</groupId>
+                            <artifactId>YAWL_2.1beta</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
     <dependencies>
 
         <dependency>
             <groupId>org.risk-aware-bpm</groupId>
             <artifactId>engine</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>browserLauncher</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>forms_rt</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>jcalendar</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>looks</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>servlet-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>swing-layout</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>swing-worker</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>xmlParserAPIs</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>YAWL_2.1</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.editor</groupId>
+            <artifactId>YAWL_2.1beta</artifactId>
         </dependency>
 
     </dependencies>

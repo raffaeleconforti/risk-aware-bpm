@@ -23,9 +23,11 @@ public class OperationalSupportService extends InterfaceBWebsideController imple
 		
 	private static OperationalSupportService me = null;
 	private static OperationalSupportApp oss = null;
+    private static String dirPath = null;
 
-	public OperationalSupportService(InterfaceManager im, String basePath, String classifierPathAndName, String classifierOptions) {
-		
+	public OperationalSupportService(InterfaceManager im, String basePath, String classifierPathAndName, String classifierOptions, String dirPath) {
+
+        this.dirPath = dirPath;
 		me = this;
 		
 //		InterfaceManager im = new InterfaceManager(InterfaceManager.YAWL, null);
@@ -73,8 +75,13 @@ public class OperationalSupportService extends InterfaceBWebsideController imple
 			classifierOptions = urlMap.get("classifierOptions");
 		}
 		InterfaceManager im = new InterfaceManager(type, parameters);
+
+        String dirPath = null;
+        if(urlMap.containsKey("dirPath")) {
+            dirPath = urlMap.get("dirPath");
+        }
 		
-		OperationalSupportService oss = new OperationalSupportService(im, basePath, classifierPathAndName, classifierOptions);
+		OperationalSupportService oss = new OperationalSupportService(im, basePath, classifierPathAndName, classifierOptions, dirPath);
 	}
 	
 	@Override
@@ -87,7 +94,7 @@ public class OperationalSupportService extends InterfaceBWebsideController imple
 	@Override
 	public void handleCheckCaseConstraintEvent(YSpecificationID specID, String caseID, String data, boolean precheck) {
 		
-		oss.receiveEvent(specID, caseID, precheck);
+		oss.receiveEvent(specID, caseID, precheck, dirPath);
 		
 	}
 
@@ -169,7 +176,7 @@ public class OperationalSupportService extends InterfaceBWebsideController imple
 
     public static OperationalSupportService getInstance() {
     	
-    	if (me == null) me = new OperationalSupportService(null, null, null, null);
+    	if (me == null) me = new OperationalSupportService(null, null, null, null, null);
     	return me;
     	
     }

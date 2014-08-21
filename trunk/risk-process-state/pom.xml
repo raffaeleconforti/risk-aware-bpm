@@ -15,11 +15,6 @@
     <dependencies>
 
         <dependency>
-            <groupId>org.jdom</groupId>
-            <artifactId>jdom</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.risk-aware-bpm</groupId>
             <artifactId>engine</artifactId>
         </dependency>
@@ -28,6 +23,12 @@
             <groupId>org.risk-aware-bpm</groupId>
             <artifactId>risk-abstraction-layer</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jdom</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

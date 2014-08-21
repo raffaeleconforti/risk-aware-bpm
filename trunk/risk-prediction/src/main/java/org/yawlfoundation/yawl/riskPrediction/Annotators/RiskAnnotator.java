@@ -62,6 +62,8 @@ public class RiskAnnotator {
 	private final int cpu = 4;
 
 	private double[] weight;
+
+    private static String filePath = "/home/user";
 	
 	public static PrintStream outptuFile(String name) throws FileNotFoundException {
 	   return new PrintStream(new BufferedOutputStream(new FileOutputStream(name)));
@@ -70,10 +72,7 @@ public class RiskAnnotator {
 	public static void main(String[] args) throws FileNotFoundException {
 //		System.setOut(outptuFile("/media/Data/SharedFolder/risks"));
 		try {
-			String base = null;
-			File dir = new File("/home/stormfire");
-			if(dir.exists()) base = "stormfire";
-			else base = "conforti";
+			File dir = new File(filePath);
 			
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Demo/Log.xes");
 			XFactoryRegistry.instance().setCurrentDefault(new XFactoryNaiveImpl());
@@ -84,10 +83,10 @@ public class RiskAnnotator {
 //			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/OptimalLog/testLog.xes");
 //			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/Exp/new0.25/testLog.xes");
 
-			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/Exp/new1-33(2)/testLog.xes");
+			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/user/MAL/Gurobi20/Commercial/20/testLog.xes");
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/testLog.xes");
 
-			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/FilteredCommercial15.xes");
+			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/user/MAL/Gurobi20/Commercial/FilteredCommercial15.xes");
 			
 			XConceptExtension xce = XConceptExtension.instance();
 			
@@ -98,7 +97,7 @@ public class RiskAnnotator {
 			String specification = null;
 			try {
 //				File f = new File("/home/stormfire/InsuranceClaim.yawl");
-				File f = new File("/media/Data/SharedFolder/Commercial/CommercialNew.yawl");
+				File f = new File("/media/user/MAL/Gurobi20/Commercial/CommercialNew.yawl");
 				InputStream is = new FileInputStream(f);
 				Writer writer = new StringWriter();
 				char[] buffer = new char[1024];
@@ -126,7 +125,7 @@ public class RiskAnnotator {
 			
 			String resources = null;
 			try {
-				File f = new File("/home/stormfire/Insurance.ybkp");
+				File f = new File("/media/user/MAL/Gurobi20/Insurance.ybkp");
 				InputStream is = new FileInputStream(f);
 				Writer writer = new StringWriter();
 				char[] buffer = new char[1024];
@@ -169,7 +168,7 @@ public class RiskAnnotator {
 			double[] weight = new double[] {0.333, 0.333, 0.333};
 			RiskAnnotator ra = new RiskAnnotator(im, weight);
 			
-			ra.annotateLog(null);
+			ra.annotateLog(null, null);
 			
 			System.out.println(ra.getRiskAnnotations());
 			
@@ -205,7 +204,7 @@ public class RiskAnnotator {
 		
 	}
 	
-	public RiskAnnotations annotateLog(String specID) {
+	public RiskAnnotations annotateLog(String specID, String dirPath) {
 		
 		ra = new RiskAnnotations();
 		YSensorPredictionUpdater yspu = YSensorPredictionUpdater.getInstance(im);
@@ -270,7 +269,7 @@ public class RiskAnnotator {
 						
 //					System.out.println(caseID + " - " + System.currentTimeMillis());
 									
-					SensorUpdater su = new SensorUpdater(size, sensors, caseID, risksConsequences, yspu);
+					SensorUpdater su = new SensorUpdater(size, sensors, caseID, risksConsequences, yspu, dirPath);
 					
 					ai.incrementAndGet();
 					
@@ -324,12 +323,12 @@ public class RiskAnnotator {
 
 					
 					Double[] d = riskConsequence.get(entry.getKey());
-					if(!entry.getKey().startsWith("H")) 
+					if(!entry.getKey().startsWith("H"))
 						System.out.print(entry.getKey()+" "+riskpos+" "+Arrays.toString(d));
 					if(weight != null) {
 						outcome += (d[0]*d[1])*weight[riskpos-1];
 					}else {
-						outcome += (d[0]*d[1])*(1/risksConsequences.length);
+						outcome += (d[0]*d[1])*(1.0/risksConsequences.length);
 					}
 					riskpos++;
 					
@@ -505,14 +504,16 @@ public class RiskAnnotator {
 		String caseID = null;
 		Map<String, Double[]>[] risksConsequences = null;
 		YSensorPredictionUpdater yspu = null;
+        String dirPath = null;
 		
-		public SensorUpdater(int size, Element sensors, String caseID, Map<String, Double[]>[] risksConsequences, YSensorPredictionUpdater yspu) {
+		public SensorUpdater(int size, Element sensors, String caseID, Map<String, Double[]>[] risksConsequences, YSensorPredictionUpdater yspu, String dirPath) {
 			this.ySensors = new YSensor[size];
 			this.size = size;
 			this.sensors = sensors;
 			this.caseID = caseID;
 			this.risksConsequences = risksConsequences;
 			this.yspu = yspu;
+            this.dirPath = dirPath;
 		}
 		
 		@Override
@@ -531,7 +532,7 @@ public class RiskAnnotator {
 			
 			YSensor ySensor = null;
 
-			ySensors = yspu.starterSensorSystem(caseID, null, null);
+			ySensors = yspu.starterSensorSystem(caseID, null, null, dirPath);
 
 			for(count = 0; count<size; count++) {
 				yspu.updateSensor(ySensors[count], caseID);
@@ -540,20 +541,19 @@ public class RiskAnnotator {
 			yspu.updateSensorSystem(caseID);
 
 			try {
-				
-				String base = null;
-				File dir = new File("/home/stormfire");
-				if(dir.exists()) base = "stormfire";
-				else base = "conforti";
-				
-				File output = new File("/home/"+base+"/log/"+caseID+".txt");
+
+				File dir = new File(filePath+"/log/");
+                if(!dir.exists()) dir.getAbsoluteFile().mkdirs();
+                if(!dir.exists()) System.out.println("created");
+
+                File output = new File(filePath+"/log/"+caseID+".txt");
 				FileWriter fw = new FileWriter(output);
 				
 				for(count = 0; count<size; count++) {
 					ySensor = ySensors[count];
 					yspu.updateSensor(ySensor, caseID);
 					Double[] d = ySensor.evaluateForPrediction();
-					
+
 					risksConsequences[count].put(caseID, d);
 					
 					fw.append(count+"_"+Arrays.toString(d)+"\n");
