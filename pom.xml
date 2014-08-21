@@ -12,27 +12,37 @@
     <modules>
         <module>editor</module>
         <module>engine</module>
-        <module>risk-monitoring</module>
-        <module>risk-mitigation</module>
+        <module>risk-monitoring-and-mitigation</module>
         <module>risk-language</module>
         <module>risk-abstraction-layer</module>
         <module>risk-process-state</module>
+        <module>risk-prediction</module>
     </modules>
 
     <properties>
-        <jdom.version>1.1</jdom.version>
-        <log4j.version>1.2.14</log4j.version>
-        <javax.servlet.version>2.4</javax.servlet.version>
-        <hibernate.version>3.5.2-Final</hibernate.version>
-        <commons-lang.version>2.6</commons-lang.version>
-        <saxon-s9api.version>9.5.1-6</saxon-s9api.version>
-        <saxon.version>9.1.0.8</saxon.version>
-        <jsf-api.version>2.1.2</jsf-api.version>
+        <jdk.version>1.6</jdk.version>
+
+        <code.version>0.6</code.version>
+
+        <maven.dependency.plugin>2.6</maven.dependency.plugin>
+
+        <library.version>1.0</library.version>
+
+        <!--<jdom.version>1.1</jdom.version>-->
+        <!--<log4j.version>1.2.14</log4j.version>-->
+        <!--<javax.servlet.version>2.4</javax.servlet.version>-->
+        <!--<hibernate.version>3.5.2-Final</hibernate.version>-->
+        <!--<commons-lang.version>2.6</commons-lang.version>-->
+        <!--<saxon-s9api.version>9.5.1-6</saxon-s9api.version>-->
+        <!--<saxon.version>9.1.0.8</saxon.version>-->
+        <!--<jsf-api.version>2.1.2</jsf-api.version>-->
 
     </properties>
 
     <dependencyManagement>
         <dependencies>
+
+            <!--Internal Project Dependencies-->
 
             <dependency>
                 <groupId>org.risk-aware-bpm</groupId>
@@ -54,7 +64,7 @@
 
             <dependency>
                 <groupId>org.risk-aware-bpm</groupId>
-                <artifactId>risk-monitoring</artifactId>
+                <artifactId>risk-monitoring-and-mitigation</artifactId>
                 <version>1.0</version>
             </dependency>
 
@@ -66,183 +76,538 @@
 
             <dependency>
                 <groupId>org.risk-aware-bpm</groupId>
-                <artifactId>risk-mitigation</artifactId>
+                <artifactId>risk-prediction</artifactId>
                 <version>1.0</version>
             </dependency>
 
+            <!--Engine Dependencies-->
+
             <dependency>
-                <groupId>nz.ac.waikato.cms.weka</groupId>
-                <artifactId>weka-dev</artifactId>
-                <version>3.7.11</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>activation</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>net.sf.jsci</groupId>
-                <artifactId>lpsolve</artifactId>
-                <version>2003-11-03</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>antlr</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>colt</groupId>
-                <artifactId>colt</artifactId>
-                <version>1.2.0</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>apache_soap</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.hibernate</groupId>
-                <artifactId>hibernate-distribution</artifactId>
-                <version>3.5.2-Final</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>asm</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.jdom</groupId>
-                <artifactId>jdom</artifactId>
-                <version>${jdom.version}</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>axis</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>log4j</groupId>
-                <artifactId>log4j</artifactId>
-                <version>${log4j.version}</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>axis-ant</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>javax.servlet</groupId>
-                <artifactId>servlet-api</artifactId>
-                <version>${javax.servlet.version}</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>commons-lang</groupId>
-                <artifactId>commons-lang</artifactId>
-                <version>${commons-lang.version}</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>bcmail</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>net.sf.saxon</groupId>
-                <artifactId>saxon-jdom</artifactId>
-                <version>8.7</version>
-            </dependency>
-
-
-            <dependency>
-                <groupId>net.sourceforge.saxon</groupId>
-                <artifactId>saxon</artifactId>
-                <version>${saxon.version}</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>bcprov</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.sun.faces</groupId>
-                <artifactId>jsf-api</artifactId>
-                <version>${jsf-api.version}</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>cglib</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.sun.rave</groupId>
-                <artifactId>webui</artifactId>
-                <version>1.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.sun.rave.web.ui</groupId>
-                <artifactId>appbase</artifactId>
-                <version>1.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.swinglabs</groupId>
-                <artifactId>swing-layout</artifactId>
-                <version>1.0.3</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.swinglabs</groupId>
-                <artifactId>swing-worker</artifactId>
-                <version>1.1</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.nuiton.thirdparty</groupId>
-                <artifactId>JRI</artifactId>
-                <version>0.8-4</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>com.springsource.org.apache.commons.codec</artifactId>
-                <version>1.6.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jfree</groupId>
-                <artifactId>jfreechart</artifactId>
-                <version>1.0.14</version>
-            </dependency>
-
-            <dependency>
-                <groupId>commons-beanutils</groupId>
-                <artifactId>commons-beanutils</artifactId>
-                <version>1.7.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>xerces</groupId>
-                <artifactId>xercesImpl</artifactId>
-                <version>2.9.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.eclipse.emf</groupId>
+                <groupId>yawl.libraries.engine</groupId>
                 <artifactId>common</artifactId>
-                <version>2.1.0</version>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.eclipse.emf</groupId>
-                <artifactId>org.eclipse.emf.ecore</artifactId>
-                <version>2.10.0-v20140514-1158</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.eclipse.xsd</groupId>
-                <artifactId>org.eclipse.xsd</artifactId>
-                <version>2.9.1-v20140203-1126</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>javax.mail</groupId>
-                <artifactId>javax.mail-api</artifactId>
-                <version>1.5.2</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-collections</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>edu.stanford.ejalbert</groupId>
-                <artifactId>BrowserLauncher2</artifactId>
-                <version>1.3</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-digester</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>wsdl4j</groupId>
-                <artifactId>wsdl4j</artifactId>
-                <version>1.6.2</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-discovery</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.twitter4j</groupId>
-                <artifactId>twitter4j-core</artifactId>
-                <version>2.1.4</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.toedter</groupId>
-                <artifactId>jcalendar</artifactId>
-                <version>1.4</version>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${library.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>junit</groupId>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>dom4j</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>ecore</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>ehcache</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>hibernate3</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>hsqldb</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>itext</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jaxen-full</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>javassist</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jaxp-api</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jaxrpc</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jcommon</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jdom</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jfreechart</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jsf-api</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>appbase</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jsfcl</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>dataprovider</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>defaulttheme-gray</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>errorhandler</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jsf-impl</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jstl</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>rowset</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>standard</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>webui</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jta</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.10</version>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>log4j</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>odmg</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>optional</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>postgresql-jdbc</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>postgresql-jdbc3</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>mail</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>mysql</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>qname-from-wsdl4j</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>saaj</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>sax</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>saxon9</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>saxon9-s9api</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>saxon9-dom</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>saxon9-jdom</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>saxpath</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>serializer</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>servlet-api</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>soaprmi</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>twitter4j</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>wsdl4j</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>wsif</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>wsif-j2c</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>xercesImpl</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>xml-apis</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>xmlParserAPIs</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>xsd</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>xsd-resources</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <!--Editor Dependencies-->
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>browserLauncher</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>forms_rt</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>jcalendar</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>looks</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>servlet-api</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>swing-layout</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>swing-worker</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>xmlParserAPIs</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>YAWL_2.1</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.editor</groupId>
+                <artifactId>YAWL_2.1beta</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <!--Dependencies risk-abstraction-layer-->
+
+            <dependency>
+                <groupId>yawl.libraries.abstraction-layer</groupId>
+                <artifactId>OpenXES</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.abstraction-layer</groupId>
+                <artifactId>Spex</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <!--Dependencies risk-language-->
+
+            <dependency>
+                <groupId>commons-el</groupId>
+                <artifactId>commons-el</artifactId>
+                <version>1.0</version>
             </dependency>
 
             <dependency>
@@ -251,11 +616,292 @@
                 <version>2.0</version>
             </dependency>
 
+            <!--Dependencies risk-monitoring-and-mitigation-->
+
             <dependency>
-                <groupId>commons-el</groupId>
-                <artifactId>commons-el</artifactId>
-                <version>1.0</version>
+                <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                <artifactId>ProM-Contexts</artifactId>
+                <version>${library.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                <artifactId>ProM-Framework</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                <artifactId>ProM-Models</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                <artifactId>TransitionSystems</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <!--Dependencies risk-prediction-->
+
+            <dependency>
+                <groupId>yawl.libraries.risk-prediction</groupId>
+                <artifactId>weka</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-prediction</groupId>
+                <artifactId>gurobi</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-prediction</groupId>
+                <artifactId>server</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-prediction</groupId>
+                <artifactId>google-constraintsolver</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-prediction</groupId>
+                <artifactId>google-linearsolver</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.risk-prediction</groupId>
+                <artifactId>lpsolve</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>colt</groupId>
+                <artifactId>colt</artifactId>
+                <version>1.2.0</version>
+            </dependency>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <!--<dependency>-->
+                <!--<groupId>nz.ac.waikato.cms.weka</groupId>-->
+                <!--<artifactId>weka-dev</artifactId>-->
+                <!--<version>3.7.11</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>net.sf.jsci</groupId>-->
+                <!--<artifactId>lpsolve</artifactId>-->
+                <!--<version>2003-11-03</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.hibernate</groupId>-->
+                <!--<artifactId>hibernate-distribution</artifactId>-->
+                <!--<version>3.5.2-Final</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.jdom</groupId>-->
+                <!--<artifactId>jdom</artifactId>-->
+                <!--<version>${jdom.version}</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>log4j</groupId>-->
+                <!--<artifactId>log4j</artifactId>-->
+                <!--<version>${log4j.version}</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>javax.servlet</groupId>-->
+                <!--<artifactId>servlet-api</artifactId>-->
+                <!--<version>${javax.servlet.version}</version>-->
+            <!--</dependency>-->
+
+
+            <!--<dependency>-->
+                <!--<groupId>commons-lang</groupId>-->
+                <!--<artifactId>commons-lang</artifactId>-->
+                <!--<version>${commons-lang.version}</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>net.sf.saxon</groupId>-->
+                <!--<artifactId>saxon-jdom</artifactId>-->
+                <!--<version>8.7</version>-->
+            <!--</dependency>-->
+
+
+            <!--<dependency>-->
+                <!--<groupId>net.sourceforge.saxon</groupId>-->
+                <!--<artifactId>saxon</artifactId>-->
+                <!--<version>${saxon.version}</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>com.sun.faces</groupId>-->
+                <!--<artifactId>jsf-api</artifactId>-->
+                <!--<version>${jsf-api.version}</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>com.sun.rave</groupId>-->
+                <!--<artifactId>webui</artifactId>-->
+                <!--<version>1.0</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>com.sun.rave.web.ui</groupId>-->
+                <!--<artifactId>appbase</artifactId>-->
+                <!--<version>1.0</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.swinglabs</groupId>-->
+                <!--<artifactId>swing-layout</artifactId>-->
+                <!--<version>1.0.3</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.swinglabs</groupId>-->
+                <!--<artifactId>swing-worker</artifactId>-->
+                <!--<version>1.1</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.nuiton.thirdparty</groupId>-->
+                <!--<artifactId>JRI</artifactId>-->
+                <!--<version>0.8-4</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.apache.commons</groupId>-->
+                <!--<artifactId>com.springsource.org.apache.commons.codec</artifactId>-->
+                <!--<version>1.6.0</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.jfree</groupId>-->
+                <!--<artifactId>jfreechart</artifactId>-->
+                <!--<version>1.0.14</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>commons-beanutils</groupId>-->
+                <!--<artifactId>commons-beanutils</artifactId>-->
+                <!--<version>1.7.0</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>xerces</groupId>-->
+                <!--<artifactId>xercesImpl</artifactId>-->
+                <!--<version>2.9.1</version>-->
+            <!--</dependency>-->
+            <!--<dependency>-->
+                <!--<groupId>org.eclipse.emf</groupId>-->
+                <!--<artifactId>common</artifactId>-->
+                <!--<version>2.1.0</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.eclipse.emf</groupId>-->
+                <!--<artifactId>org.eclipse.emf.ecore</artifactId>-->
+                <!--<version>2.10.0-v20140514-1158</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.eclipse.xsd</groupId>-->
+                <!--<artifactId>org.eclipse.xsd</artifactId>-->
+                <!--<version>2.9.1-v20140203-1126</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>javax.mail</groupId>-->
+                <!--<artifactId>javax.mail-api</artifactId>-->
+                <!--<version>1.5.2</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>edu.stanford.ejalbert</groupId>-->
+                <!--<artifactId>BrowserLauncher2</artifactId>-->
+                <!--<version>1.3</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>wsdl4j</groupId>-->
+                <!--<artifactId>wsdl4j</artifactId>-->
+                <!--<version>1.6.2</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>org.twitter4j</groupId>-->
+                <!--<artifactId>twitter4j-core</artifactId>-->
+                <!--<version>2.1.4</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>com.toedter</groupId>-->
+                <!--<artifactId>jcalendar</artifactId>-->
+                <!--<version>1.4</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>junit</groupId>-->
+                <!--<artifactId>junit</artifactId>-->
+                <!--<version>4.10</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>javax.servlet</groupId>-->
+                <!--<artifactId>jsp-api</artifactId>-->
+                <!--<version>2.0</version>-->
+            <!--</dependency>-->
+
+            <!--<dependency>-->
+                <!--<groupId>commons-el</groupId>-->
+                <!--<artifactId>commons-el</artifactId>-->
+                <!--<version>1.0</version>-->
+            <!--</dependency>-->
 
         </dependencies>
     </dependencyManagement>

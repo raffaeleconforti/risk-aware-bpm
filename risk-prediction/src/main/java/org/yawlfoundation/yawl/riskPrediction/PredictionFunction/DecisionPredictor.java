@@ -497,11 +497,18 @@ public class DecisionPredictor {
 		}
 		
 		try {
-			
+
 			Classifier classifier = (Classifier) Utils.forName(Class.forName(ClassPathAndName), ClassPathAndName, weka.core.Utils.splitOptions(options)); // Class.forName(ClassPathAndName).newInstance();
-						
-			classifier.buildClassifier(this.instances);
-			
+
+            try {
+                classifier.buildClassifier(this.instances);
+                System.out.println("USO JRipps au");
+            }catch (weka.core.WekaException ex) {
+                System.out.println("USO J48");
+                classifier = (Classifier) Utils.forName(Class.forName("weka.classifiers.trees.J48"), "weka.classifiers.trees.J48", weka.core.Utils.splitOptions("-C 0.25 -B -M 2"));
+                classifier.buildClassifier(this.instances);
+            }
+
 			return classifier;
 			
 		} catch (InstantiationException e) {

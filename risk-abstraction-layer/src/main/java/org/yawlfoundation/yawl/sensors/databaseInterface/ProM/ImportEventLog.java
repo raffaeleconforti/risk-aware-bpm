@@ -154,10 +154,6 @@ public class ImportEventLog {
 		return stream;
 	}
 
-	protected Object importFromStream(InputStream input, String filename, long fileSizeInBytes) throws Exception {
-		return importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/stormfire/repairExample.xes");
-	}
-
 	public static void exportLog(String path, String name, XLog log) {
 		XesXmlSerializer serializer = new XesXmlSerializer();
 		 

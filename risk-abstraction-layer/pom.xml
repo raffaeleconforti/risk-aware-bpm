@@ -12,6 +12,51 @@
 
     <artifactId>risk-abstraction-layer</artifactId>
 
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>2.5.1</version>
+                <executions>
+                    <execution>
+                        <id>install1</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/OpenXES.jar</file>
+                            <groupId>yawl.libraries.abstraction-layer</groupId>
+                            <artifactId>OpenXES</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>install2</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${basedir}/lib/Spex.jar</file>
+                            <groupId>yawl.libraries.abstraction-layer</groupId>
+                            <artifactId>Spex</artifactId>
+                            <version>${library.version}</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
     <dependencies>
 
         <dependency>
@@ -20,13 +65,28 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jdom</groupId>
+            <groupId>yawl.libraries.engine</groupId>
             <artifactId>jdom</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>log4j</groupId>
+            <groupId>yawl.libraries.engine</groupId>
             <artifactId>log4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>saxon9-s9api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.abstraction-layer</groupId>
+            <artifactId>OpenXES</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.abstraction-layer</groupId>
+            <artifactId>Spex</artifactId>
         </dependency>
     </dependencies>
 

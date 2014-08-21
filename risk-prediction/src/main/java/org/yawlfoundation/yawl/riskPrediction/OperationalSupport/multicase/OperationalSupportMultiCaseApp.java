@@ -139,7 +139,7 @@ public class OperationalSupportMultiCaseApp {
 			InterfaceManager a = new InterfaceManager(InterfaceManager.PROM, parameters);
 			
 			OperationalSupportMultiCaseApp osmca = new OperationalSupportMultiCaseApp(a, a, "weka.classifiers.trees.J48", "-C 0.25 -B -M 2", 1);
-			osmca.start("InsuranceClaim", "");
+			osmca.start("InsuranceClaim", "", "");
 			
 			String[] resourcesList = new String[] {"a", "b"};
 			
@@ -187,9 +187,9 @@ public class OperationalSupportMultiCaseApp {
 		
 	}
 	
-	public void start(String specID, String basePath) {
+	public void start(String specID, String basePath, String dirPath) {
 		
-		osa.start(specID, basePath);
+		osa.start(specID, basePath, dirPath);
 		
 	}
 	
@@ -229,9 +229,9 @@ public class OperationalSupportMultiCaseApp {
 		
 	}
 	
-	public synchronized void receiveEvent(YSpecificationID specID, String caseID, boolean precheck) {
+	public synchronized void receiveEvent(YSpecificationID specID, String caseID, boolean precheck, String dirPath) {
 		
-		osa.receiveEvent(specID, caseID, precheck);
+		osa.receiveEvent(specID, caseID, precheck, dirPath);
 
 	}
 	

@@ -35,10 +35,7 @@ import org.jdom.Element;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.resourcing.rsInterface.WorkQueueGatewayClient;
 import org.yawlfoundation.yawl.riskPrediction.DatabaseInterface.CacheKey;
-import org.yawlfoundation.yawl.sensors.YSensor;
-import org.yawlfoundation.yawl.sensors.YSensorMessageUpdate;
-import org.yawlfoundation.yawl.sensors.YSensorScript;
-import org.yawlfoundation.yawl.sensors.YSensorUtilities;
+import org.yawlfoundation.yawl.sensors.*;
 import org.yawlfoundation.yawl.sensors.actions.ActionExecutor;
 import org.yawlfoundation.yawl.sensors.actions.ActionIdentifier;
 import org.yawlfoundation.yawl.sensors.actions.ActionInitializer;
@@ -66,7 +63,7 @@ import org.yawlfoundation.yawl.sensors.databaseInterface.ProM.ImportEventLog;
  * Time: 13.32.13
  */
 
-public class YSensorPredictionUpdater{ 
+public class YSensorPredictionUpdater {
 
 	public Integer cvsize;
 	public Integer bandSize;
@@ -541,12 +538,12 @@ public class YSensorPredictionUpdater{
 			int action = ActionIdentifier.getAction(logTaskItem);
 			
 			if(!netVariable) { //Analyse Task
-				
+
 				return ActionExecutor.getTaskActionResult(action, taskName, WorkDefID, variableName);
 				
 			}else { //Analyse Net
 
-				return ActionExecutor.getNetActionResult(action, taskName, WorkDefID, variableName);
+                return ActionExecutor.getNetActionResult(action, taskName, WorkDefID, variableName);
 				
 			}
 			
@@ -625,7 +622,7 @@ public class YSensorPredictionUpdater{
 		}else {
 			taskName = logTaskItem.substring(logTaskItem.indexOf(YExpression.DOT)+1);
 		}
-    	return taskName;
+        return taskName;
     }
     
     public String getVariableName(String logTaskItem) {
@@ -1027,9 +1024,9 @@ public class YSensorPredictionUpdater{
 						tableLogVariable.get(WorkDefID).put(logVariablesName, log);
 					}
 				}
-			}else {//if(!tableLogVariable.get(WorkDefID).containsKey(logVariablesName)) { 
+			}else {//if(!tableLogVariable.get(WorkDefID).containsKey(logVariablesName)) {
 				if(')' != logVariablesName.charAt(logVariablesName.length()-1)) {
-					String newSubLogCase = null;
+                    String newSubLogCase = null;
 					String ca = logVariablesName.substring(0, logVariablesName.indexOf(YExpression.PARTC)+1);
 					newSubLogCase = logVariablesName.substring(logVariablesName.indexOf(YExpression.DOT)+1);
 					String last = newSubLogCase.substring(newSubLogCase.indexOf(YExpression.DOT)+1);
@@ -1075,14 +1072,14 @@ public class YSensorPredictionUpdater{
 					String newSubLogCase = logVariablesName;
 //					newSubLogCase = fixName(WorkDefID, newSubLogCase);
 					log = getLogVariableTaskItem(newSubLogCase, WorkDefID);
-					subLogCase = newSubLogCase;
+                    subLogCase = newSubLogCase;
 					if(log != null) {
 						tableLogVariable.get(WorkDefID).put(logVariablesName, log);
 					}
 				}
 			}
 		}
-	}
+    }
     
     /**
      * Use the getLogResourceTaskItem(String, YSpecificationID, String, String) to upload the tableLogResource
@@ -1377,7 +1374,7 @@ public class YSensorPredictionUpdater{
      * @return the generic notification time (notifyTime inside the tag sensors)
      */
 
-    private String createSensors(String caseID, String URI, String Version) {
+    private String createSensors(String caseID, String URI, String Version, String dirPath) {
 		LinkedList<YSensor> listSensors = new LinkedList<YSensor>();
 		String time = null;
 		String sensorType = null;
@@ -1391,7 +1388,7 @@ public class YSensorPredictionUpdater{
 			for(Element sensor : (List<Element>)sensors.getChildren()) {
 				sensorType = sensor.getAttributeValue("type");
 				if(sensorType != null && sensorType.equals("script")) {
-					listSensors.add(new YSensorScript(caseID, _workQueueClient, JDOMUtil.elementToString(sensor), time, _monitorSensorURI, _timePredictionURI, null, URI));
+					listSensors.add(new YSensorScript(caseID, _workQueueClient, JDOMUtil.elementToString(sensor), time, _monitorSensorURI, _timePredictionURI, null, URI, dirPath));
 				}else {
 					listSensors.add(new YSensor(caseID, _workQueueClient, JDOMUtil.elementToString(sensor), time, _monitorSensorURI, _timePredictionURI, null));
 				}
@@ -1453,8 +1450,8 @@ public class YSensorPredictionUpdater{
 		return time;
 	}
     
-	public void handleCheckCaseConstraintEvent(YSpecificationID specID, String caseID, String data, boolean precheck) {
-		starterSensorSystem(caseID, specID.getUri(), specID.getVersionAsString());
+	public void handleCheckCaseConstraintEvent(YSpecificationID specID, String caseID, String data, boolean precheck, String dirPath) {
+		starterSensorSystem(caseID, specID.getUri(), specID.getVersionAsString(), dirPath);
 	}
 	
 	/**
@@ -1463,12 +1460,12 @@ public class YSensorPredictionUpdater{
 	 *
 	 */
 		
-	public YSensor[] starterSensorSystem(String caseID, String URI, String Version) {
+	public YSensor[] starterSensorSystem(String caseID, String URI, String Version, String dirPath) {
 		
 		tableLogResource.put(caseID, new HashMap<String, Object>());
 		tableLogVariable.put(caseID, new HashMap<String, Object>());
 		
-		String intervalTime = createSensors(caseID, URI, Version);
+		String intervalTime = createSensors(caseID, URI, Version, dirPath);
 				
 		LinkedList<YSensor> listSensor = tableSensor.get(caseID);
 		for(YSensor sensor : listSensor) {
@@ -1486,8 +1483,8 @@ public class YSensorPredictionUpdater{
 						
 		LinkedList<YSensor> listSensor = tableSensor.get(caseID);
 		for(YSensor sensor : listSensor) {
-			
-			getDistributionInformation(sensor.getDistributions(), caseID);
+
+            getDistributionInformation(sensor.getDistributions(), caseID);
 			updateLogVariable(sensor.getLogVariables(), caseID);
 			updateLogResources(sensor.getLogResources(), caseID);
 			

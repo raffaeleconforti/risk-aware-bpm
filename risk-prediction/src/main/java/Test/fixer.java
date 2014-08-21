@@ -378,7 +378,10 @@ public class fixer {
 //		fixLine("/media/Data/SharedFolder/Commercial/Exp/Exp0/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/Exp0/");
 //		fixLine("/media/Data/SharedFolder/Commercial/Exp/Exp0-33/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/Exp0-33/");
 //		fixLine("/media/Data/SharedFolder/Commercial/Exp/Exp0.5/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/Exp0.5/");
-		fixLine("/media/Data/SharedFolder/Commercial/Exp/new1-33(2)/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/new1-33(2)/");
+        String test = "5";
+        File f = new File("/home/user/DSS/"+test+"/");
+        f.mkdirs();
+		fixLine("/home/user/DSS/" + test + "/testLog.xes", "/media/user/MAL/Gurobi" + test + "/Commercial/Log/");
 //		fixLine("/media/Data/SharedFolder/Commercial/Exp/Exp0.5-30/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/Exp0.5-30/");
 //		fixLine("/media/Data/SharedFolder/Commercial/Exp/Exp0.5-33/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/Exp0.5-33/");
 //		fixLine("/media/Data/SharedFolder/Commercial/Exp/Exp0.25/testLog.xes", "/media/Data/SharedFolder/Commercial/Exp/Exp0.25/");
@@ -641,7 +644,7 @@ public class fixer {
 		tmpFile.delete();
 		copyFile(file, tmpFile, true);	
 		
-		for(int i = 1; i < 214; i++) {
+		for(int i = 1; i < 300; i++) {
 			file = new File(logBaseString+i+".xes");
 
 			copyFile(file, tmpFile, false);	
@@ -677,8 +680,40 @@ public class fixer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-	}
+
+        try {
+            System.out.println(newPath);
+            XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), newPath);
+            XConceptExtension xce = XConceptExtension.instance();
+
+            XLog newLog = (XLog) log.clone();
+            newLog.clear();
+
+            int count = 1;
+            for(XTrace t : log) {
+                String end = "Close_File_22";
+                boolean add = false;
+                if(t.size() > 0 && end.equals(xce.extractName(t.get(t.size() - 1)))) {
+                    add = true;
+                }
+                if(add) {
+                    xce.assignName(t, Integer.toString(count));
+                    newLog.add(t);
+                    count++;
+                }
+                if(count > 213) {
+                    break;
+                }
+            }
+
+            File f = new File(newPath);
+            System.out.println(f.getName());
+            ImportEventLog.exportLog(f.getParent()+"/", f.getName()+"1", newLog);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
 	
 	private static void copyFile(File sourceFile, File destFile, boolean delete) {
 		try {
