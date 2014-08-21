@@ -642,6 +642,18 @@
                 <version>${library.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>yawl.libraries.risk-monitoring-and-mitigation</groupId>
+                <artifactId>Uitopia</artifactId>
+                <version>${library.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-math</groupId>
+                <artifactId>commons-math</artifactId>
+                <version>1.2</version>
+            </dependency>
+
             <!--Dependencies risk-prediction-->
 
             <dependency>

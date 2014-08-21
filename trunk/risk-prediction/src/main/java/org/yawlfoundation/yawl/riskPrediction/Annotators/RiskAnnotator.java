@@ -82,11 +82,11 @@ public class RiskAnnotator {
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/AllLogs2.xes");
 //			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/OptimalLog/testLog.xes");
 //			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/Exp/new0.25/testLog.xes");
-
-			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/user/MAL/Gurobi20/Commercial/20/testLog.xes");
+            String test = "40";
+			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/user/DSS/"+test+"testLog.xes");
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/testLog.xes");
 
-			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/user/MAL/Gurobi20/Commercial/FilteredCommercial15.xes");
+			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/user/DSS/FilteredCommercial15.xes");
 			
 			XConceptExtension xce = XConceptExtension.instance();
 			
@@ -97,7 +97,7 @@ public class RiskAnnotator {
 			String specification = null;
 			try {
 //				File f = new File("/home/stormfire/InsuranceClaim.yawl");
-				File f = new File("/media/user/MAL/Gurobi20/Commercial/CommercialNew.yawl");
+				File f = new File("/home/user/DSS/CommercialNew.yawl");
 				InputStream is = new FileInputStream(f);
 				Writer writer = new StringWriter();
 				char[] buffer = new char[1024];
@@ -125,7 +125,7 @@ public class RiskAnnotator {
 			
 			String resources = null;
 			try {
-				File f = new File("/media/user/MAL/Gurobi20/Insurance.ybkp");
+				File f = new File("/home/user/DSS/Insurance.ybkp");
 				InputStream is = new FileInputStream(f);
 				Writer writer = new StringWriter();
 				char[] buffer = new char[1024];
@@ -168,7 +168,7 @@ public class RiskAnnotator {
 			double[] weight = new double[] {0.333, 0.333, 0.333};
 			RiskAnnotator ra = new RiskAnnotator(im, weight);
 			
-			ra.annotateLog(null, null);
+			ra.annotateLog(null, "/home/user/IdeaProjects/Risk-BPM/svn/trunk/risk-prediction/target/classes");
 			
 			System.out.println(ra.getRiskAnnotations());
 			
