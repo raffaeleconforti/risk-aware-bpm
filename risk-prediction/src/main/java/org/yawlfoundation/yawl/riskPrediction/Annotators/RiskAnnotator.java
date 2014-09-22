@@ -82,7 +82,7 @@ public class RiskAnnotator {
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/AllLogs2.xes");
 //			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/OptimalLog/testLog.xes");
 //			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/Exp/new0.25/testLog.xes");
-            String test = "40";
+            String test = "5";
 			XLog log2 = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/user/DSS/"+test+"testLog.xes");
 //			XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/media/Data/SharedFolder/Commercial/testLog.xes");
 

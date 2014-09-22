@@ -14,11 +14,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-
-import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
-import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;
-import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;
 import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
 
 public class Process151 implements Loader{
 	public StateYAWLProcess generateStatus(Random r) {

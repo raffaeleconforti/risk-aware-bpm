@@ -14,15 +14,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-
-import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
-import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;
-import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;
-import org.yawlfoundation.yawl.sensors.databaseInterface.InterfaceManager;
 import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
 
 public class Process1 implements Loader{
-	@Override
 	public StateYAWLProcess generateStatus(Random r) {
 		String specificationXML = null;
 		try {
@@ -66,7 +61,7 @@ public class Process1 implements Loader{
 		variables.put("case(current).Fill Out AD Report(isStarted)", "true");
 		variables.put("case(current).Fill Out AD Report(isCompleted)", "false");
 
-		mappingName.put("a11", "case(current).Fill Out Continuity Daily Report(StartTimeInMillis)");
+				mappingName.put("a11", "case(current).Fill Out Continuity Daily Report(StartTimeInMillis)");
 		mappingName.put("a12", "case(current).Fill Out Continuity Daily Report(TimeEstimationInMillis)");
 		mappingName.put("b11", "case(current).Fill Out Sound Sheets(StartTimeInMillis)");
 		mappingName.put("b12", "case(current).Fill Out Sound Sheets(TimeEstimationInMillis)");
@@ -135,7 +130,7 @@ public class Process1 implements Loader{
 		tasksLog.add("Fill_Out_Continuity_Daily_Report_3283");
 		tasksLog.add("null_3253");
 		tasksLog.add("Create_Call_Sheet_7902");
-
+		
 		ImporterYState.importModel(s, variables, resourcesMap, taskWithToken, tasksLog);
 		
 		return s;

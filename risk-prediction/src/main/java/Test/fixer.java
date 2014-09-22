@@ -2,7 +2,6 @@ package Test;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.Console;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -13,23 +12,14 @@ import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Random;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.deckfour.xes.classification.XEventClass;
-import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XLifecycleExtension;
 import org.deckfour.xes.extension.std.XOrganizationalExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
-import org.deckfour.xes.factory.XFactory;
-import org.deckfour.xes.factory.XFactoryNaiveImpl;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.info.XLogInfo;
 import org.deckfour.xes.info.XLogInfoFactory;
@@ -41,7 +31,6 @@ import org.deckfour.xes.model.XAttributeLiteral;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
-import org.deckfour.xes.model.impl.XLogImpl;
 import org.yawlfoundation.yawl.sensors.databaseInterface.ProM.ImportEventLog;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
@@ -85,7 +74,8 @@ public class fixer {
 		
 //		generateResources2();
 
-		mergeFiles();
+        count();
+//		mergeFiles();
 //		uniteFiles();
 //		averageDur();
 //		averageAct();
@@ -112,6 +102,124 @@ public class fixer {
 		
 		
 	}
+
+    private static void count() throws Exception {
+
+        XLog log = ImportEventLog.importFromStream(XFactoryRegistry.instance().currentDefault(), "/home/user/DSS/FilteredCommercial15.xes");
+
+        HashMap<Long, ArrayList<String>> startTime = new HashMap<Long, ArrayList<String>>();
+        HashMap<Long, ArrayList<String>> endTime = new HashMap<Long, ArrayList<String>>();
+
+        XConceptExtension xce = XConceptExtension.instance();
+        XTimeExtension xte = XTimeExtension.instance();
+
+        for(XTrace trace : log) {
+            String name = xce.extractName(trace);
+            Long start = xte.extractTimestamp(trace.get(0)).getTime();
+            Long end = xte.extractTimestamp(trace.get(trace.size()-1)).getTime();
+
+            ArrayList<String> list = null;
+            if((list = startTime.get(start)) == null) {
+                list = new ArrayList<String>();
+            }
+            list.add(name);
+
+            startTime.put(start, list);
+
+            list = null;
+            if((list = endTime.get(start)) == null) {
+                list = new ArrayList<String>();
+            }
+            list.add(name);
+
+            endTime.put(end, list);
+        }
+
+        Long[] start = startTime.keySet().toArray(new Long[0]);
+        Long[] end = endTime.keySet().toArray(new Long[0]);
+
+        Couple[] couples = new Couple[start.length+end.length];
+        int i = 0;
+        for(Long l : start) {
+            couples[i] = new Couple(l, true);
+            i++;
+        }
+
+        for(Long l : end) {
+            couples [i] = new Couple(l, false);
+            i++;
+        }
+
+        Arrays.sort(couples);
+
+        int open = 0;
+        int total = 0;
+        ArrayList<Integer> list = new ArrayList<Integer>();
+
+        int count = 0;
+        for(int j = 0; j < couples.length; j++) {
+            long l = couples[j].l;
+
+            if(startTime.get(l) != null) {
+                open += startTime.get(l).size();
+            }else {
+                open -= endTime.get(l).size();
+            }
+
+            total += open;
+
+            list.add(open);
+            count++;
+
+            System.out.println(open);
+        }
+        System.out.println("Count "+count);
+
+        int[] array = new int[list.size()];
+        i = 0;
+        for(int r : list) {
+            array[i] = r;
+            i++;
+        }
+
+        Arrays.sort(array);
+        System.out.println(Arrays.toString(array));
+
+        if(array.length % 2 == 0) {
+            int a = array.length / 2;
+            int b = array[a];
+            int c = array[a + 1];
+            System.out.println("Median " + (b+c)/2);
+        }else {
+            System.out.println("Median " + (array[array.length / 2]));
+        }
+
+        System.out.println("Final "+total/couples.length);
+
+    }
+
+    static class Couple implements Comparable<Couple> {
+        Long l;
+        boolean start;
+
+        public Couple(Long l, boolean start) {
+            this.l = l;
+            this.start = start;
+        }
+
+        @Override
+        public int compareTo(Couple o) {
+            return this.l.compareTo(o.l);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if(o instanceof Couple) {
+                return l.equals(((Couple) o).l);
+            }
+            return false;
+        }
+    }
 	
 	private static void averageAct() throws Exception {
 		activities( 

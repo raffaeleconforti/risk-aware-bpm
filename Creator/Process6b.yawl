@@ -1,0 +1,520 @@
+    </sensors>
+  </specification>
+  <layout>
+    <locale language="en" country="AU" />
+    <specification id="orderfulfillment">
+      <size w="799" h="642" />
+      <net id="Payment">
+        <bounds x="0" y="0" w="1499" h="914" />
+        <frame x="2" y="24" w="1517" h="864" />
+        <viewport x="0" y="0" w="1517" h="864" />
+        <vertex id="InputCondition_44">
+          <attributes>
+            <bounds x="609.0" y="13.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <vertex id="OutputCondition_45">
+          <attributes>
+            <bounds x="626.0" y="862.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <container id="Issue_Shipment_Payment_Order_602">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="285.0" y="337.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="252.0" y="368.0" w="96.0" h="72.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Issue_Shipment_Invoice_594">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="401.0" y="185.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="401.0" y="216.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <label>
+            <attributes>
+              <bounds x="368.0" y="228.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Update_Shipment_Payment_Order_604">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="137.0" y="440.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="104.0" y="472.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Produce_Freight_Invoice_595">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="925.0" y="273.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="892.0" y="304.0" w="96.0" h="28.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="null_597">
+          <vertex>
+            <attributes>
+              <bounds x="804.0" y="345.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="804.0" y="335.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+        </container>
+        <container id="null_596">
+          <vertex>
+            <attributes>
+              <bounds x="804.0" y="190.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="804.0" y="221.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+        </container>
+        <container id="Process_Shipment_Payment_603">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="285.0" y="561.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="285.0" y="551.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <decorator type="XOR_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="285.0" y="592.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <label>
+            <attributes>
+              <bounds x="252.0" y="604.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Issue_Debit_Adjustment_605">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="125.0" y="705.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="92.0" y="736.0" w="96.0" h="28.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="null_592">
+          <vertex>
+            <attributes>
+              <bounds x="609.0" y="81.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="AND_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="609.0" y="112.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+        </container>
+        <container id="Approve_Shipment_Payment_Order_593">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="285.0" y="441.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="285.0" y="431.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <decorator type="XOR_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="285.0" y="472.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <label>
+            <attributes>
+              <bounds x="252.0" y="484.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Issue_Credit_Adjustment_606">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="285.0" y="705.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="252.0" y="736.0" w="96.0" h="28.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="null_4515">
+          <vertex>
+            <attributes>
+              <bounds x="804.0" y="448.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+        </container>
+        <container id="null_607">
+          <vertex>
+            <attributes>
+              <bounds x="521.0" y="729.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="521.0" y="719.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+        </container>
+        <container id="Issue_Shipment_Remittance_Advice_601">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="537.0" y="337.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="504.0" y="368.0" w="96.0" h="56.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="null_599">
+          <vertex>
+            <attributes>
+              <bounds x="626.0" y="809.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="AND_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="626.0" y="799.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+        </container>
+        <flow source="null_599" target="OutputCondition_45">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="641.5" y="832.0" />
+              <value x="641.5" y="866.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="InputCondition_44" target="null_592">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="620.5" y="44.0" />
+              <value x="620.5" y="73.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Produce_Freight_Invoice_595" target="null_597">
+          <ports in="11" out="4" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="940.5" y="308.0" />
+              <value x="940.0" y="308.0" />
+              <value x="835.0" y="344.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Process_Shipment_Payment_603" target="Issue_Credit_Adjustment_606">
+          <label>%5Bpayment+incorrectdue+to+overcharge%5D</label>
+          <ports in="2" out="10" />
+          <attributes>
+            <offset x="0.0" y="-0.0" />
+            <labelposition x="727.3" y="-14.5" />
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="300.5" y="606.0" />
+              <value x="300.5" y="705.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_4515" target="null_599">
+          <ports in="11" out="4" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="903.5" y="479.0" />
+              <value x="716.0" y="788.0" />
+              <value x="657.0" y="804.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Shipment_Payment_Order_602" target="Approve_Shipment_Payment_Order_593">
+          <ports in="11" out="2" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="300.5" y="372.0" />
+              <value x="300.5" y="435.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Process_Shipment_Payment_603" target="Issue_Debit_Adjustment_605">
+          <label>%5Bpayment+incorrect+due+to+underpayment%5D</label>
+          <ports in="4" out="10" />
+          <attributes>
+            <offset x="-0.0" y="0.0" />
+            <labelposition x="621.8" y="37.7" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="285.0" y="597.0" />
+              <value x="148.0" y="636.0" />
+              <value x="140.5" y="705.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_597" target="null_4515">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="819.5" y="376.0" />
+              <value x="903.5" y="448.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_607" target="null_599">
+          <ports in="11" out="0" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="536.5" y="760.0" />
+              <value x="540.0" y="772.0" />
+              <value x="626.0" y="792.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Update_Shipment_Payment_Order_604" target="Approve_Shipment_Payment_Order_593">
+          <ports in="10" out="0" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="152.5" y="444.0" />
+              <value x="224.0" y="408.0" />
+              <value x="285.0" y="440.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Credit_Adjustment_606" target="null_607">
+          <label>account+settled</label>
+          <ports in="13" out="1" />
+          <attributes>
+            <offset x="-0.0" y="-0.0" />
+            <labelposition x="526.1" y="10.3" />
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="316.0" y="720.5" />
+              <value x="528.8" y="719.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Approve_Shipment_Payment_Order_593" target="Process_Shipment_Payment_603">
+          <ports in="2" out="2" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="300.5" y="486.0" />
+              <value x="300.5" y="555.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Shipment_Invoice_594" target="Issue_Shipment_Remittance_Advice_601">
+          <label>%5Bpre-paid+shipments%5D</label>
+          <ports in="0" out="10" />
+          <attributes>
+            <offset x="0.0" y="0.0" />
+            <labelposition x="496.8" y="-23.2" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="432.0" y="221.0" />
+              <value x="536.0" y="240.0" />
+              <value x="552.5" y="333.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Shipment_Invoice_594" target="Issue_Shipment_Payment_Order_602">
+          <label>%5Belse%5D</label>
+          <ports in="4" out="10" />
+          <attributes>
+            <offset x="-0.0" y="0.0" />
+            <labelposition x="409.7" y="13.0" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="401.0" y="221.0" />
+              <value x="320.0" y="236.0" />
+              <value x="300.5" y="337.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Shipment_Remittance_Advice_601" target="null_607">
+          <ports in="11" out="4" />
+          <attributes>
+            <lineStyle>12</lineStyle>
+            <points>
+              <value x="552.5" y="368.0" />
+              <value x="552.0" y="720.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_592" target="null_596">
+          <label>payment+for+the+freight</label>
+          <ports in="0" out="10" />
+          <attributes>
+            <offset x="0.0" y="-0.0" />
+            <labelposition x="419.3" y="-33.2" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="640.0" y="117.0" />
+              <value x="816.0" y="172.0" />
+              <value x="819.5" y="194.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_596" target="null_597">
+          <label>%5Belse%5D</label>
+          <ports in="2" out="2" />
+          <attributes>
+            <labelposition x="500.0" y="0.0" />
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="819.5" y="239.0" />
+              <value x="819.5" y="339.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Debit_Adjustment_605" target="Process_Shipment_Payment_603">
+          <label>customer+makes+the+payment</label>
+          <ports in="12" out="0" />
+          <attributes>
+            <offset x="103.5" y="-36.9" />
+            <labelposition x="1000.0" y="25.4" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="125.0" y="720.5" />
+              <value x="92.0" y="712.0" />
+              <value x="72.0" y="632.0" />
+              <value x="285.0" y="560.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_596" target="Produce_Freight_Invoice_595">
+          <label>%5BInvoice+required%5D</label>
+          <ports in="0" out="10" />
+          <attributes>
+            <offset x="0.0" y="0.0" />
+            <labelposition x="545.4" y="-32.6" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="835.0" y="230.0" />
+              <value x="940.0" y="264.0" />
+              <value x="940.5" y="273.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Approve_Shipment_Payment_Order_593" target="Update_Shipment_Payment_Order_604">
+          <ports in="3" out="11" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="292.8" y="486.0" />
+              <value x="220.0" y="512.0" />
+              <value x="152.5" y="475.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Process_Shipment_Payment_603" target="null_607">
+          <label>%5Bpayment+correct%5D</label>
+          <ports in="0" out="2" />
+          <attributes>
+            <offset x="-0.0" y="0.0" />
+            <labelposition x="267.1" y="-27.2" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="316.0" y="601.0" />
+              <value x="532.0" y="656.0" />
+              <value x="536.5" y="719.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_592" target="Issue_Shipment_Invoice_594">
+          <label>payment+for+the+shipment</label>
+          <ports in="4" out="10" />
+          <attributes>
+            <offset x="0.0" y="-0.0" />
+            <labelposition x="409.9" y="35.2" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="609.0" y="117.0" />
+              <value x="416.0" y="180.0" />
+              <value x="416.5" y="185.0" />
+            </points>
+          </attributes>
+        </flow>
+      </net>
+      <labelFontSize>11</labelFontSize>
+    </specification>
+  </layout>
+</specificationSet>
