@@ -14,8 +14,32 @@ import java.io.Writer;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
 public class Test {
+    
+    public static String path = "/home/user/IdeaProjects/Risk-BPM/svn/trunk/";
 	
 	public static void main(String[] args) {
+
+        for(int i = 2; i < 7; i++) {
+            File f = new File(path + "Process" + i);
+            f.mkdirs();
+
+            int z = 0;
+            switch (i) {
+                case 2 : z = 7;
+                    break;
+                case 4 : z = 4;
+                    break;
+                case 5 : z = 3;
+                    break;
+                case 6 : z = 5;
+                    break;
+            }
+            for(int j = 1; j <= z; j++) {
+                f = new File(path + "Process" + i+"/"+j+" risks");
+                f.mkdirs();
+            }
+        }
+
 		String process = "Process2";
 		int pro = 2;
 		int limit = 9;
@@ -47,7 +71,7 @@ public class Test {
 		String specificationXMLb = null;
 		
 		try {
-			File f = new File("Creator/"+process+"a.yawl");
+			File f = new File(path+"Creator/"+process+"a.yawl");
 			InputStream is = new FileInputStream(f);
 			Writer writer = new StringWriter();
 			char[] buffer = new char[1024];
@@ -74,7 +98,7 @@ public class Test {
 		}
 		
 		try {
-			File f = new File("Creator/"+process+"b.yawl");
+			File f = new File(path+"Creator/"+process+"b.yawl");
 			InputStream is = new FileInputStream(f);
 			Writer writer = new StringWriter();
 			char[] buffer = new char[1024];
@@ -112,23 +136,23 @@ public class Test {
 		
 		switch(pro) {
 			case 2:
-				sensor1 = "<sensor name=\"risk1\"><vars><var name=\"a11\" mapping=\"case(current).Fill Out Continuity Daily Report(StartTimeInMillis)\" type=\"\" /><var name=\"a12\" mapping=\"case(current).Fill Out Continuity Daily Report(TimeEstimationInMillis)\" type=\"\" /><var name=\"b11\" mapping=\"case(current).Fill Out Sound Sheets(StartTimeInMillis)\" type=\"\" /><var name=\"b12\" mapping=\"case(current).Fill Out Sound Sheets(TimeEstimationInMillis)\" type=\"\" /><var name=\"c11\" mapping=\"case(current).Fill Out Camera Sheets(isStarted)\" type=\"\" /><var name=\"c12\" mapping=\"case(current).Fill Out Camera Sheets(isCompleted)\" type=\"\" /><var name=\"d11\" mapping=\"case(current).Fill Out AD Report(isStarted)\" type=\"\" /><var name=\"d12\" mapping=\"case(current).Fill Out AD Report(isCompleted)\" type=\"\" /></vars><riskProbability>IF[((a11+a12)&lt;(b11+b12))&amp;((c11&amp;!c12)|(d11&amp;!d12))]THEN[0.9]ELSE[0.2]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor2 = "<sensor name=\"risk2\"><vars><var name=\"a21\" mapping=\"case(current).Fill Out Continuity Daily Report(allocateResource)\" type=\"\" /><var name=\"b21\" mapping=\"case(current).Fill Out Sound Sheets(allocateResource)\" type=\"\" /></vars><riskProbability>IF[a21==b21]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor3 = "<sensor name=\"risk3\"><vars><var name=\"a31\" mapping=\"case(current).Fill Out Continuity Daily Report(isStarted)\" type=\"\" /><var name=\"a32\" mapping=\"case(current).Fill Out Continuity Daily Report(isCompleted)\" type=\"\" /><var name=\"b31\" mapping=\"case(current).Fill Out Sound Sheets(isCompleted)\" type=\"\" /></vars><riskProbability>IF[a31&amp;!a32&amp;!b31]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor4 = "<sensor name=\"risk4\"><vars><var name=\"a41\" mapping=\"case(current).Revise Shooting Schedule(Count)\" type=\"\" /><var name=\"b41\" mapping=\"case(current).Input Shooting Schedule(CompleteTimeInMillis)\" type=\"\" /><var name=\"a42\" mapping=\"case(current).Revise Shooting Schedule(TimeEstimationInMillis)\" type=\"\" /><var name=\"a43\" mapping=\"case(current).Revise Shooting Schedule(isCompleted)\" type=\"\" /><var name=\"a44\" mapping=\"case(current).Revise Shooting Schedule(isStarted)\" type=\"\" /><var name=\"a45\" mapping=\"case(current).Revise Shooting Schedule(StartTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a41&gt;5)&amp;(!a43&amp;a44)&amp;(a45-b41&gt;a42)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor5 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Revise Shooting Schedule(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Revise Shooting Schedule(TimeEstimationInMillis)\" type=\"\" /></vars><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor6 = "<sensor name=\"risk6\"><vars><var name=\"a61\" mapping=\"case(current).Input Cast List.callSheet\" type=\"\" /><var name=\"b61\" mapping=\"case(current).Input Crew List.timeSheetInfo\" type=\"\" /><var name=\"c61\" mapping=\"case(current).Fill Out Camera Sheets(allocateResource)\" type=\"\" /><var name=\"d61\" mapping=\"case(current).Fill Out Continuity Daily Report(allocateResource)\" type=\"\" /></vars><riskProbability>IF[!(a61==b61)&amp;!(c61==d61)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor7 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Input Crew List.production\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Input Cast List(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Input Shooting Schedule(PassTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor8 = "<sensor name=\"risk8\"><vars><var name=\"a81\" mapping=\"case(current).Fill Out Continuity Report.producer\" type=\"\" /><var name=\"b81\" mapping=\"case(current).Fill Out Sound Sheets.production\" type=\"\" /><var name=\"c81\" mapping=\"case(current).Fill Out Camera Sheets.production\" type=\"\" /><var name=\"d81\" mapping=\"case(current).Fill Out AD Report.production\" type=\"\" /></vars><riskProbability>IF[!(c81==b81)&amp;(!(b81==a81)|!(b81==d81))]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
+				sensor1 = "<sensor name=\"risk1\"><vars><var name=\"a11\" mapping=\"case(current).Fill Out Continuity Daily Report(StartTimeInMillis)\" type=\"\" /><var name=\"a12\" mapping=\"case(current).Fill Out Continuity Daily Report(TimeEstimationInMillis)\" type=\"\" /><var name=\"b11\" mapping=\"case(current).Fill Out Sound Sheets(StartTimeInMillis)\" type=\"\" /><var name=\"b12\" mapping=\"case(current).Fill Out Sound Sheets(TimeEstimationInMillis)\" type=\"\" /><var name=\"c11\" mapping=\"case(current).Fill Out Camera Sheets(isStarted)\" type=\"\" /><var name=\"c12\" mapping=\"case(current).Fill Out Camera Sheets(isCompleted)\" type=\"\" /><var name=\"d11\" mapping=\"case(current).Fill Out AD Report(isStarted)\" type=\"\" /><var name=\"d12\" mapping=\"case(current).Fill Out AD Report(isCompleted)\" type=\"\" /></vars><risk><riskProbability>IF[((a11+a12)&lt;(b11+b12))&amp;((c11&amp;!c12)|(d11&amp;!d12))]THEN[0.9]ELSE[0.2]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor2 = "<sensor name=\"risk2\"><vars><var name=\"a21\" mapping=\"case(current).Fill Out Continuity Daily Report(allocateResource)\" type=\"\" /><var name=\"b21\" mapping=\"case(current).Fill Out Sound Sheets(allocateResource)\" type=\"\" /></vars><risk><riskProbability>IF[a21==b21]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor3 = "<sensor name=\"risk3\"><vars><var name=\"a31\" mapping=\"case(current).Fill Out Continuity Daily Report(isStarted)\" type=\"\" /><var name=\"a32\" mapping=\"case(current).Fill Out Continuity Daily Report(isCompleted)\" type=\"\" /><var name=\"b31\" mapping=\"case(current).Fill Out Sound Sheets(isCompleted)\" type=\"\" /></vars><risk><riskProbability>IF[a31&amp;!a32&amp;!b31]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor4 = "<sensor name=\"risk4\"><vars><var name=\"a41\" mapping=\"case(current).Revise Shooting Schedule(Count)\" type=\"\" /><var name=\"b41\" mapping=\"case(current).Input Shooting Schedule(CompleteTimeInMillis)\" type=\"\" /><var name=\"a42\" mapping=\"case(current).Revise Shooting Schedule(TimeEstimationInMillis)\" type=\"\" /><var name=\"a43\" mapping=\"case(current).Revise Shooting Schedule(isCompleted)\" type=\"\" /><var name=\"a44\" mapping=\"case(current).Revise Shooting Schedule(isStarted)\" type=\"\" /><var name=\"a45\" mapping=\"case(current).Revise Shooting Schedule(StartTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a41&gt;5)&amp;(!a43&amp;a44)&amp;(a45-b41&gt;a42)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor5 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Revise Shooting Schedule(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Revise Shooting Schedule(TimeEstimationInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor6 = "<sensor name=\"risk6\"><vars><var name=\"a61\" mapping=\"case(current).Input Cast List.callSheet\" type=\"\" /><var name=\"b61\" mapping=\"case(current).Input Crew List.timeSheetInfo\" type=\"\" /><var name=\"c61\" mapping=\"case(current).Fill Out Camera Sheets(allocateResource)\" type=\"\" /><var name=\"d61\" mapping=\"case(current).Fill Out Continuity Daily Report(allocateResource)\" type=\"\" /></vars><risk><riskProbability>IF[!(a61==b61)&amp;!(c61==d61)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor7 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Input Crew List.production\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Input Cast List(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Input Shooting Schedule(PassTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor8 = "<sensor name=\"risk8\"><vars><var name=\"a81\" mapping=\"case(current).Fill Out Continuity Report.producer\" type=\"\" /><var name=\"b81\" mapping=\"case(current).Fill Out Sound Sheets.production\" type=\"\" /><var name=\"c81\" mapping=\"case(current).Fill Out Camera Sheets.production\" type=\"\" /><var name=\"d81\" mapping=\"case(current).Fill Out AD Report.production\" type=\"\" /></vars><risk><riskProbability>IF[!(c81==b81)&amp;(!(b81==a81)|!(b81==d81))]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
 				sensor = new String[]{"", sensor1, sensor2, sensor3, sensor4, sensor5, sensor6, sensor7, sensor8};
 				break;
 				
 			case 4:
-				sensor1 = "<sensor name=\"risk2\"><vars><var name=\"a21\" mapping=\"case(current).Initiate Shipment Status Inquiry(allocateResource)\" type=\"\" /><var name=\"b21\" mapping=\"case(current).Issue Trackpoint Notice(allocateResource)\" type=\"\" /></vars><riskProbability>IF[a21==b21]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor2 = "<sensor name=\"risk3\"><vars><var name=\"a31\" mapping=\"case(current).Initiate Shipment Status Inquiry(isStarted)\" type=\"\" /><var name=\"a32\" mapping=\"case(current).Initiate Shipment Status Inquiry(isCompleted)\" type=\"\" /><var name=\"b31\" mapping=\"case(current).Issue Trackpoint Notice(isCompleted)\" type=\"\" /></vars><riskProbability>IF[a31&amp;!a32&amp;!b31]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor3 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Issue Trackpoint Notice(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Issue Trackpoint Notice(TimeEstimationInMillis)\" type=\"\" /></vars><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor4 = "<sensor name=\"risk6\"><vars><var name=\"a61\" mapping=\"case(current).Issue Trackpoint Notice.AcceptanceCertificate\" type=\"\" /><var name=\"b61\" mapping=\"case(current).Initiate Shipment Status Inquiry.TrackpointNotice\" type=\"\" /><var name=\"c61\" mapping=\"case(current).Log Trackpoint Order Entry(allocateResource)\" type=\"\" /><var name=\"d61\" mapping=\"case(current).Create Acceptance Certificate(allocateResource)\" type=\"\" /></vars><riskProbability>IF[!(a61==b61)&amp;!(c61==d61)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor5 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Initiate Shipment Status Inquiry.Report\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Issue Trackpoint Notice(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Log Trackpoint Order Entry(PassTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
+				sensor1 = "<sensor name=\"risk2\"><vars><var name=\"a21\" mapping=\"case(current).Initiate Shipment Status Inquiry(allocateResource)\" type=\"\" /><var name=\"b21\" mapping=\"case(current).Issue Trackpoint Notice(allocateResource)\" type=\"\" /></vars><risk><riskProbability>IF[a21==b21]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor2 = "<sensor name=\"risk3\"><vars><var name=\"a31\" mapping=\"case(current).Initiate Shipment Status Inquiry(isStarted)\" type=\"\" /><var name=\"a32\" mapping=\"case(current).Initiate Shipment Status Inquiry(isCompleted)\" type=\"\" /><var name=\"b31\" mapping=\"case(current).Issue Trackpoint Notice(isCompleted)\" type=\"\" /></vars><risk><riskProbability>IF[a31&amp;!a32&amp;!b31]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor3 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Issue Trackpoint Notice(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Issue Trackpoint Notice(TimeEstimationInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor4 = "<sensor name=\"risk6\"><vars><var name=\"a61\" mapping=\"case(current).Issue Trackpoint Notice.AcceptanceCertificate\" type=\"\" /><var name=\"b61\" mapping=\"case(current).Initiate Shipment Status Inquiry.TrackpointNotice\" type=\"\" /><var name=\"c61\" mapping=\"case(current).Log Trackpoint Order Entry(allocateResource)\" type=\"\" /><var name=\"d61\" mapping=\"case(current).Create Acceptance Certificate(allocateResource)\" type=\"\" /></vars><risk><riskProbability>IF[!(a61==b61)&amp;!(c61==d61)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor5 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Initiate Shipment Status Inquiry.Report\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Issue Trackpoint Notice(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Log Trackpoint Order Entry(PassTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
 				sensor6 = "";
 				sensor7 = "";
 				sensor8 = "";
@@ -136,9 +160,9 @@ public class Test {
 				break;
 				
 			case 5:
-				sensor1 = "<sensor name=\"risk4\"><vars><var name=\"a41\" mapping=\"case(current).Approve Purchase Order(Count)\" type=\"\" /><var name=\"b41\" mapping=\"case(current).Create Purchase Order(CompleteTime)\" type=\"\" /><var name=\"a42\" mapping=\"case(current).Approve Purchase Order(TimeEstimationInMillis)\" type=\"\" /><var name=\"a43\" mapping=\"case(current).Approve Purchase Order(isCompleted)\" type=\"\" /><var name=\"a44\" mapping=\"case(current).Approve Purchase Order(isStarted)\" type=\"\" /><var name=\"a45\" mapping=\"case(current).Approve Purchase Order(StartTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a41&gt;5)&amp;(!a43&amp;a44)&amp;(a45+b41&gt;a42)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor2 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Modify Purchase Order(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Modify Purchase Order(TimeEstimationInMillis)\" type=\"\" /></vars><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor3 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Modify Purchase Order.POApproval\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Approve Purchase Order(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Confirm Puchase Order(PassTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
+				sensor1 = "<sensor name=\"risk4\"><vars><var name=\"a41\" mapping=\"case(current).Approve Purchase Order(Count)\" type=\"\" /><var name=\"b41\" mapping=\"case(current).Create Purchase Order(CompleteTime)\" type=\"\" /><var name=\"a42\" mapping=\"case(current).Approve Purchase Order(TimeEstimationInMillis)\" type=\"\" /><var name=\"a43\" mapping=\"case(current).Approve Purchase Order(isCompleted)\" type=\"\" /><var name=\"a44\" mapping=\"case(current).Approve Purchase Order(isStarted)\" type=\"\" /><var name=\"a45\" mapping=\"case(current).Approve Purchase Order(StartTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a41&gt;5)&amp;(!a43&amp;a44)&amp;(a45+b41&gt;a42)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor2 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Modify Purchase Order(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Modify Purchase Order(TimeEstimationInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor3 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Modify Purchase Order.POApproval\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Approve Purchase Order(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Confirm Puchase Order(PassTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
 				sensor4 = "";
 				sensor5 = "";
 				sensor6 = "";
@@ -148,12 +172,12 @@ public class Test {
 				break;
 				
 			case 6:
-				sensor1 = "<sensor name=\"risk2\"><vars><var name=\"a21\" mapping=\"case(current).Produce Freight Invoice(allocateResource)\" type=\"\" /><var name=\"b21\" mapping=\"case(current).Issue Shipment Payment Order(allocateResource)\" type=\"\" /></vars><riskProbability>IF[a21==b21]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor2 = "<sensor name=\"risk3\"><vars><var name=\"a31\" mapping=\"case(current).Produce Freight Invoice(isStarted)\" type=\"\" /><var name=\"a32\" mapping=\"case(current).Produce Freight Invoice(isCompleted)\" type=\"\" /><var name=\"b31\" mapping=\"case(current).Issue Shipment Invoice(isCompleted)\" type=\"\" /></vars><riskProbability>IF[a31&amp;!a32&amp;!b31]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor3 = "<sensor name=\"risk4\"><vars><var name=\"a41\" mapping=\"case(current).Approve Shipment Payment Order(Count)\" type=\"\" /><var name=\"b41\" mapping=\"case(current).Issue Shipment Payment Order(CompleteTime)\" type=\"\" /><var name=\"a42\" mapping=\"case(current).Approve Shipment Payment Order(TimeEstimationInMillis)\" type=\"\" /><var name=\"a43\" mapping=\"case(current).Approve Shipment Payment Order(isCompleted)\" type=\"\" /><var name=\"a44\" mapping=\"case(current).Approve Shipment Payment Order(isStarted)\" type=\"\" /><var name=\"a45\" mapping=\"case(current).Approve Shipment Payment Order(StartTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a41&gt;5)&amp;(!a43&amp;a44)&amp;(a45+b41&gt;a42)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor4 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Approve Shipment Payment Order(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Approve Shipment Payment Order(TimeEstimationInMillis)\" type=\"\" /></vars><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor5 = "<sensor name=\"risk6\"><vars><var name=\"a61\" mapping=\"case(current).Produce Freight Invoice.ShipmentPaymentOrder\" type=\"\" /><var name=\"b61\" mapping=\"case(current).Approve Shipment Payment Order.ShipmentPaymentOrder\" type=\"\" /><var name=\"c61\" mapping=\"case(current).Issue Shipment Invoice(allocateResource)\" type=\"\" /><var name=\"d61\" mapping=\"case(current).Issue Shipment Payment Order(allocateResource)\" type=\"\" /></vars><riskProbability>IF[!(a61==b61)&amp;!(c61==d61)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
-				sensor6 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Produce Freight Invoice.ShipmentPaymentOrder\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Issue Shipment Payment Order(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Approve Shipment Payment Order(PassTimeInMillis)\" type=\"\" /></vars><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold><consequence>10</consequence></sensor>";
+				sensor1 = "<sensor name=\"risk2\"><vars><var name=\"a21\" mapping=\"case(current).Produce Freight Invoice(allocateResource)\" type=\"\" /><var name=\"b21\" mapping=\"case(current).Issue Shipment Payment Order(allocateResource)\" type=\"\" /></vars><risk><riskProbability>IF[a21==b21]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor2 = "<sensor name=\"risk3\"><vars><var name=\"a31\" mapping=\"case(current).Produce Freight Invoice(isStarted)\" type=\"\" /><var name=\"a32\" mapping=\"case(current).Produce Freight Invoice(isCompleted)\" type=\"\" /><var name=\"b31\" mapping=\"case(current).Issue Shipment Invoice(isCompleted)\" type=\"\" /></vars><risk><riskProbability>IF[a31&amp;!a32&amp;!b31]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor3 = "<sensor name=\"risk4\"><vars><var name=\"a41\" mapping=\"case(current).Approve Shipment Payment Order(Count)\" type=\"\" /><var name=\"b41\" mapping=\"case(current).Issue Shipment Payment Order(CompleteTime)\" type=\"\" /><var name=\"a42\" mapping=\"case(current).Approve Shipment Payment Order(TimeEstimationInMillis)\" type=\"\" /><var name=\"a43\" mapping=\"case(current).Approve Shipment Payment Order(isCompleted)\" type=\"\" /><var name=\"a44\" mapping=\"case(current).Approve Shipment Payment Order(isStarted)\" type=\"\" /><var name=\"a45\" mapping=\"case(current).Approve Shipment Payment Order(StartTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a41&gt;5)&amp;(!a43&amp;a44)&amp;(a45+b41&gt;a42)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor4 = "<sensor name=\"risk5\"><vars><var name=\"a51\" mapping=\"case(current).Approve Shipment Payment Order(PassTimeInMillis)\" type=\"\" /><var name=\"a52\" mapping=\"case(current).Approve Shipment Payment Order(TimeEstimationInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[a51+a52&gt;5]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor5 = "<sensor name=\"risk6\"><vars><var name=\"a61\" mapping=\"case(current).Produce Freight Invoice.ShipmentPaymentOrder\" type=\"\" /><var name=\"b61\" mapping=\"case(current).Approve Shipment Payment Order.ShipmentPaymentOrder\" type=\"\" /><var name=\"c61\" mapping=\"case(current).Issue Shipment Invoice(allocateResource)\" type=\"\" /><var name=\"d61\" mapping=\"case(current).Issue Shipment Payment Order(allocateResource)\" type=\"\" /></vars><risk><riskProbability>IF[!(a61==b61)&amp;!(c61==d61)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
+				sensor6 = "<sensor name=\"risk7\"><vars><var name=\"a71\" mapping=\"case(current).Produce Freight Invoice.ShipmentPaymentOrder\" type=\"\" /><var name=\"b71\" mapping=\"case(current).Issue Shipment Payment Order(PassTimeInMillis)\" type=\"\" /><var name=\"c71\" mapping=\"case(current).Approve Shipment Payment Order(PassTimeInMillis)\" type=\"\" /></vars><risk><riskProbability>IF[(a71==5)&amp;((b71+c71)&lt;20)]THEN[0.7]ELSE[0.3]</riskProbability><riskThreshold>0.5</riskThreshold></risk><consequence>10</consequence></sensor>";
 				sensor7 = "";
 				sensor8 = "";
 				sensor = new String[]{"", sensor1, sensor2, sensor3, sensor4, sensor5, sensor6, sensor7, sensor8};
@@ -165,7 +189,7 @@ public class Test {
 			
 			if(!spec.contains("risk3")) {
 			
-			File f = new File(""+process+"/1 risks/Process"+count+" - "+pro+".yawl");
+			File f = new File(path+process+"/1 risks/Process"+count+" - "+pro+".yawl");
 			try {
 				FileWriter fw = new FileWriter(f);
     			fw.write(JDOMUtil.formatXMLString(spec));
@@ -187,7 +211,7 @@ public class Test {
 				
 				if(!spec.contains("risk3")) {
 				
-				File f = new File(""+process+"/2 risks/Process"+count+" - "+pro+".yawl");
+				File f = new File(path+process+"/2 risks/Process"+count+" - "+pro+".yawl");
 				try {
 					FileWriter fw = new FileWriter(f);
         			fw.write(JDOMUtil.formatXMLString(spec));
@@ -210,7 +234,7 @@ public class Test {
 					String spec = specificationXMLa+sensor[i]+sensor[j]+sensor[k]+specificationXMLb;
 					
 					if(!spec.contains("risk3")) {
-					File f = new File(""+process+"/3 risks/Process"+count+" - "+pro+".yawl");
+					File f = new File(path+process+"/3 risks/Process"+count+" - "+pro+".yawl");
 					try {
 						FileWriter fw = new FileWriter(f);
 	        			fw.write(JDOMUtil.formatXMLString(spec));
@@ -234,7 +258,7 @@ public class Test {
 						String spec = specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+specificationXMLb;
 						
 						if(!spec.contains("risk3")) {
-						File f = new File(""+process+"/4 risks/Process"+count+" - "+pro+".yawl");
+						File f = new File(path+process+"/4 risks/Process"+count+" - "+pro+".yawl");
 						try {
 							FileWriter fw = new FileWriter(f);
 		        			fw.write(JDOMUtil.formatXMLString(spec));
@@ -260,7 +284,7 @@ public class Test {
 							String spec = specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+specificationXMLb;
 							
 							if(!spec.contains("risk3")) {
-							File f = new File(""+process+"/5 risks/Process"+count+" - "+pro+".yawl");
+							File f = new File(path+process+"/5 risks/Process"+count+" - "+pro+".yawl");
 							try {
 								FileWriter fw = new FileWriter(f);
 			        			fw.write(JDOMUtil.formatXMLString(spec));
@@ -288,7 +312,7 @@ public class Test {
 								String spec = specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+sensor[d]+specificationXMLb;
 								
 								if(!spec.contains("risk3")) {
-								File f = new File(""+process+"/6 risks/Process"+count+" - "+pro+".yawl");
+								File f = new File(path+process+"/6 risks/Process"+count+" - "+pro+".yawl");
 								try {
 									FileWriter fw = new FileWriter(f);
 				        			fw.write(JDOMUtil.formatXMLString(spec));
@@ -318,7 +342,7 @@ public class Test {
 									String spec = specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+sensor[d]+sensor[c]+specificationXMLb;
 
 									if(!spec.contains("risk3")) {
-									File f = new File(""+process+"/7 risks/Process"+count+" - "+pro+".yawl");
+									File f = new File(path+process+"/7 risks/Process"+count+" - "+pro+".yawl");
 									try {
 										FileWriter fw = new FileWriter(f);
 					        			fw.write(JDOMUtil.formatXMLString(spec));
@@ -350,7 +374,7 @@ public class Test {
 										String spec = specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+sensor[d]+sensor[c]+sensor[b]+specificationXMLb;
 										
 										if(!spec.contains("risk3")) {
-										File f = new File(""+process+"/8 risks/Process"+count+" - "+pro+".yawl");
+										File f = new File(path+process+"/8 risks/Process"+count+" - "+pro+".yawl");
 										try {
 											FileWriter fw = new FileWriter(f);
 						        			fw.write(JDOMUtil.formatXMLString(spec));
@@ -378,7 +402,7 @@ public class Test {
 		String specificationXMLb = null;
 		
 		try {
-			File f = new File("Creator/"+process+"a.data");
+			File f = new File(path+"Creator/"+process+"a.data");
 			InputStream is = new FileInputStream(f);
 			Writer writer = new StringWriter();
 			char[] buffer = new char[1024];
@@ -405,7 +429,7 @@ public class Test {
 		}
 		
 		try {
-			File f = new File("Creator/"+process+"b.data");
+			File f = new File(path+"Creator/"+process+"b.data");
 			InputStream is = new FileInputStream(f);
 			Writer writer = new StringWriter();
 			char[] buffer = new char[1024];
@@ -689,7 +713,7 @@ public class Test {
 		}
 		
 		for(int i = 1; i<limit; i++) {
-			String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+			String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 					"import java.io.BufferedReader;\n" +
 					"import java.io.File;\n" +
 					"import java.io.FileInputStream;\n" +
@@ -706,8 +730,8 @@ public class Test {
 					"import java.util.List;\n" +
 					"import java.util.Random;\n" +
 					"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-					"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-					"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+					 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+					"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 					"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 					"\n" +
 					"public class ";
@@ -721,7 +745,7 @@ public class Test {
 			
 			String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+specificationXMLb;
 			
-			File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+			File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 			try {
 				FileWriter fw = new FileWriter(f);
     			fw.write(spec);
@@ -737,7 +761,7 @@ public class Test {
 		
 		for(int i = 1; i<limit; i++) {
 			for(int j = i+1; j<limit; j++) {
-				String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+				String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 						"import java.io.BufferedReader;\n" +
 						"import java.io.File;\n" +
 						"import java.io.FileInputStream;\n" +
@@ -754,8 +778,8 @@ public class Test {
 						"import java.util.List;\n" +
 						"import java.util.Random;\n" +
 						"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-						"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-						"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+						 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+						"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 						"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 						"\n" +
 						"public class ";
@@ -770,7 +794,7 @@ public class Test {
 				String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+specificationXMLb;
 				
 				if(!spec.contains("a31")) {
-				File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+				File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 				try {
 					FileWriter fw = new FileWriter(f);
         			fw.write(spec);
@@ -789,7 +813,7 @@ public class Test {
 		for(int i = 1; i<limit; i++) {
 			for(int j = i+1; j<limit; j++) {
 				for(int k = j+1; k<limit; k++) {
-					String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+					String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 							"import java.io.BufferedReader;\n" +
 							"import java.io.File;\n" +
 							"import java.io.FileInputStream;\n" +
@@ -806,8 +830,8 @@ public class Test {
 							"import java.util.List;\n" +
 							"import java.util.Random;\n" +
 							"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-							"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-							"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+							 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+							"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 							"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 							"\n" +
 							"public class ";
@@ -822,7 +846,7 @@ public class Test {
 					String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+sensor[k]+specificationXMLb;
 					
 					if(!spec.contains("a31")) {
-					File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+					File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 					try {
 						FileWriter fw = new FileWriter(f);
 	        			fw.write(spec);
@@ -843,7 +867,7 @@ public class Test {
 			for(int j = i+1; j<limit; j++) {
 				for(int k = j+1; k<limit; k++) {
 					for(int h = k+1; h<limit; h++) {
-						String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+						String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 								"import java.io.BufferedReader;\n" +
 								"import java.io.File;\n" +
 								"import java.io.FileInputStream;\n" +
@@ -860,8 +884,8 @@ public class Test {
 								"import java.util.List;\n" +
 								"import java.util.Random;\n" +
 								"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-								"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-								"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+								 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+								"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 								"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 								"\n" +
 								"public class ";
@@ -876,7 +900,7 @@ public class Test {
 						String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+specificationXMLb;
 						
 						if(!spec.contains("a31")) {
-						File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+						File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 						try {
 							FileWriter fw = new FileWriter(f);
 		        			fw.write(spec);
@@ -899,7 +923,7 @@ public class Test {
 				for(int k = j+1; k<limit; k++) {
 					for(int h = k+1; h<limit; h++) {
 						for(int g = h+1; g<limit; g++) {
-							String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+							String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 									"import java.io.BufferedReader;\n" +
 									"import java.io.File;\n" +
 									"import java.io.FileInputStream;\n" +
@@ -916,8 +940,8 @@ public class Test {
 									"import java.util.List;\n" +
 									"import java.util.Random;\n" +
 									"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-									"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-									"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+									 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+									"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 									"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 									"\n" +
 									"public class ";
@@ -932,7 +956,7 @@ public class Test {
 							String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+specificationXMLb;
 							
 							if(!spec.contains("a31")) {
-							File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+							File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 							try {
 								FileWriter fw = new FileWriter(f);
 			        			fw.write(spec);
@@ -957,7 +981,7 @@ public class Test {
 					for(int h = k+1; h<limit; h++) {
 						for(int g = h+1; g<limit; g++) {
 							for(int d = g+1; d<limit; d++) {
-								String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+								String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 										"import java.io.BufferedReader;\n" +
 										"import java.io.File;\n" +
 										"import java.io.FileInputStream;\n" +
@@ -974,8 +998,8 @@ public class Test {
 										"import java.util.List;\n" +
 										"import java.util.Random;\n" +
 										"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-										"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-										"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+										 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+										"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 										"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 										"\n" +
 										"public class ";
@@ -990,7 +1014,7 @@ public class Test {
 								String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+sensor[d]+specificationXMLb;
 								
 								if(!spec.contains("a31")) {
-								File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+								File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 								try {
 									FileWriter fw = new FileWriter(f);
 				        			fw.write(spec);
@@ -1017,7 +1041,7 @@ public class Test {
 						for(int g = h+1; g<limit; g++) {
 							for(int d = g+1; d<limit; d++) {
 								for(int c = d+1; c<limit; c++) {
-									String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+									String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 											"import java.io.BufferedReader;\n" +
 											"import java.io.File;\n" +
 											"import java.io.FileInputStream;\n" +
@@ -1034,8 +1058,8 @@ public class Test {
 											"import java.util.List;\n" +
 											"import java.util.Random;\n" +
 											"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-											"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-											"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+											 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+											"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 											"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 											"\n" +
 											"public class ";
@@ -1050,7 +1074,7 @@ public class Test {
 									String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+sensor[d]+sensor[c]+specificationXMLb;
 									
 									if(!spec.contains("a31")) {
-									File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+									File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 									try {
 										FileWriter fw = new FileWriter(f);
 					        			fw.write(spec);
@@ -1079,7 +1103,7 @@ public class Test {
 							for(int d = g+1; d<limit; d++) {
 								for(int c = d+1; c<limit; c++) {
 									for(int b = c+1; b<limit; b++) {
-										String intro = "package org.yawlfoundation.yawl.risk.state.YAWL.Loaders;\n" +
+										String intro = "package org.yawlfoundation.yawl.riskMitigation.State.YAWL.Loaders;\n" +
 												"import java.io.BufferedReader;\n" +
 												"import java.io.File;\n" +
 												"import java.io.FileInputStream;\n" +
@@ -1096,8 +1120,8 @@ public class Test {
 												"import java.util.List;\n" +
 												"import java.util.Random;\n" +
 												"import org.yawlfoundation.yawl.util.JDOMUtil;\n" +
-												"import org.yawlfoundation.yawl.risk.state.YAWL.Loader;" +
-												"import org.yawlfoundation.yawl.risk.state.YAWL.StateYAWLProcess;" +
+												 "import org.yawlfoundation.yawl.riskMitigation.State.YAWL.Importers.ImporterYState;" +
+												"import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;" +
 												"import org.yawlfoundation.yawl.risk.state.YAWL.Resource;\n" +
 												"\n" +
 												"public class ";
@@ -1112,7 +1136,7 @@ public class Test {
 										String spec = intro+"Process"+count+postIntro+a+specificationXMLa+sensor[i]+sensor[j]+sensor[k]+sensor[h]+sensor[g]+sensor[d]+sensor[c]+sensor[b]+specificationXMLb;
 										
 										if(!spec.contains("a31")) {
-										File f = new File("src/org.yawlfoundation.yawl.risk.state/YAWL/Loaders/Process"+count+".java");
+										File f = new File(path+"risk-monitoring-and-mitigation/src/main/java/org/yawlfoundation/yawl/riskMitigation/State/YAWL/Loaders/Process"+count+".java");
 										try {
 											FileWriter fw = new FileWriter(f);
 						        			fw.write(spec);

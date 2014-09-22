@@ -35,13 +35,39 @@ public class NeighbourGenerator {
 		return -1;
 	}
 
+    public static int numberAtomicOperation(StateYAWLProcess status) {
+        StateYAWLProcess neighbour = status.clone();
+        boolean[] operations = YStateProcessDiscover.discoverPossibleAtomicOperation(neighbour, neighbour.getOperations());
+
+        return numberAtomicOperation(operations);
+    }
+
+    private static int numberAtomicOperation(boolean[] operations) {
+        int x = 0;
+        for(boolean operation: operations) {
+            if(operation) x++;
+        }
+        return x;
+    }
+
 	private static int selectAtomicOperation(boolean[] operations, Random r) {
-		int x = 0;
-		for(boolean operation: operations) {
-			if(operation) x++;
-		}
+		int x = numberAtomicOperation(operations);
 		if(x == 0) return -1;
 		return YStateProcessUtilities.selectRandom(x, r);
 	}
+
+    public static StateYAWLProcess generateNeighbourStateNonRandom(StateYAWLProcess status, int pos) {
+
+        StateYAWLProcess neighbour = status.clone();
+        boolean[] operations = YStateProcessDiscover.discoverPossibleAtomicOperation(neighbour, neighbour.getOperations());
+        neighbour.setOperations(operations);
+
+        int i = fixNumber(operations, pos);
+        if(i == -1) return neighbour;
+
+        YStateProcessNeighbourCreator.createNeighbour(neighbour, status, i);
+
+        return neighbour;
+    }
 
 }

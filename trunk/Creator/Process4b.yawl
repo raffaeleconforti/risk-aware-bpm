@@ -1,0 +1,224 @@
+    </sensors>
+  </specification>
+  <layout>
+    <locale language="en" country="AU" />
+    <specification id="orderfulfillment">
+      <size w="799" h="642" />
+      <net id="Freight_in_Transit">
+        <bounds x="0" y="0" w="1514" h="772" />
+        <frame x="2" y="24" w="1517" h="775" />
+        <viewport x="0" y="0" w="1517" h="775" />
+        <vertex id="InputCondition_46">
+          <attributes>
+            <bounds x="199.0" y="7.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <vertex id="OutputCondition_47">
+          <attributes>
+            <bounds x="259.0" y="451.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <container id="Log_Trackpoint_Order_Entry_4514">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="136.0" y="332.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="104.0" y="364.0" w="96.0" h="54.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="null_815">
+          <vertex>
+            <attributes>
+              <bounds x="200.0" y="65.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="AND_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="200.0" y="96.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+        </container>
+        <container id="Issue_Trackpoint_Notice_813">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="136.0" y="161.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="136.0" y="151.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <label>
+            <attributes>
+              <bounds x="104.0" y="192.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Create_Acceptance_Certificate_814">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="260.0" y="353.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="AND_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="260.0" y="343.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <label>
+            <attributes>
+              <bounds x="228.0" y="384.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Initiate_Shipment_Status_Inquiry_929">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="348.0" y="148.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="316.0" y="180.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <vertex id="null_812">
+          <attributes>
+            <bounds x="260.0" y="153.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <vertex id="null_4366">
+          <attributes>
+            <bounds x="136.0" y="248.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <flow source="Create_Acceptance_Certificate_814" target="OutputCondition_47">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="271.5" y="328.0" />
+              <value x="274.5" y="395.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="InputCondition_46" target="null_815">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="210.5" y="38.0" />
+              <value x="211.5" y="65.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_812" target="Initiate_Shipment_Status_Inquiry_929">
+          <ports in="13" out="11" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="287.0" y="168.5" />
+              <value x="348.0" y="196.0" />
+              <value x="359.5" y="179.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_4366" target="Issue_Trackpoint_Notice_813">
+          <label>%5Bmore+trackpoints%5D</label>
+          <ports in="12" out="0" />
+          <attributes>
+            <offset x="-0.0" y="-0.0" />
+            <labelposition x="275.3" y="-63.8" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="136.0" y="263.5" />
+              <value x="108.0" y="260.0" />
+              <value x="100.0" y="160.0" />
+              <value x="136.0" y="156.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_812" target="Create_Acceptance_Certificate_814">
+          <label>the+freight+is+physically+delivered</label>
+          <ports in="11" out="2" />
+          <attributes>
+            <labelposition x="783.7" y="-27.5" />
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="271.5" y="184.0" />
+              <value x="271.5" y="287.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_4366" target="Log_Trackpoint_Order_Entry_4514">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+          </attributes>
+        </flow>
+        <flow source="Initiate_Shipment_Status_Inquiry_929" target="null_812">
+          <ports in="10" out="13" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="359.5" y="148.0" />
+              <value x="340.0" y="136.0" />
+              <value x="287.0" y="168.5" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Issue_Trackpoint_Notice_813" target="null_4366">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+          </attributes>
+        </flow>
+        <flow source="null_815" target="null_812">
+          <ports in="0" out="10" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="227.0" y="101.0" />
+              <value x="268.0" y="108.0" />
+              <value x="271.5" y="153.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_815" target="Issue_Trackpoint_Notice_813">
+          <ports in="4" out="2" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="196.0" y="101.0" />
+              <value x="160.0" y="108.0" />
+              <value x="147.5" y="151.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Log_Trackpoint_Order_Entry_4514" target="Create_Acceptance_Certificate_814">
+          <ports in="13" out="0" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+          </attributes>
+        </flow>
+      </net>
+      <labelFontSize>11</labelFontSize>
+    </specification>
+  </layout>
+</specificationSet>

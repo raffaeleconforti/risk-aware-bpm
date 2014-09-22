@@ -1,0 +1,226 @@
+    </sensors>
+  </specification>
+  <layout>
+    <locale language="en" country="AU" />
+    <specification id="orderfulfillment">
+      <size w="799" h="642" />
+      <net id="Ordering">
+        <bounds x="0" y="0" w="1514" h="861" />
+        <frame x="2" y="24" w="1517" h="864" />
+        <viewport x="0" y="0" w="1517" h="864" />
+        <vertex id="InputCondition_16">
+          <attributes>
+            <bounds x="165.0" y="5.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <container id="OutputCondition_17">
+          <vertex>
+            <attributes>
+              <bounds x="165.0" y="437.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="126.0" y="468.0" w="109.0" h="18.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Create_Purchase_Order_104">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="165.0" y="77.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="132.0" y="108.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Confirm_Purchase_Order_2013">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="164.0" y="316.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="132.0" y="348.0" w="96.0" h="28.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Order_Timeout_1791">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Timer.png</iconpath>
+            <attributes>
+              <bounds x="252.0" y="316.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="220.0" y="348.0" w="96.0" h="14.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Approve_Purchase_Order_1901">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="164.0" y="164.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <decorator type="XOR_join">
+            <position>10</position>
+            <attributes>
+              <bounds x="164.0" y="154.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <decorator type="XOR_split">
+            <position>11</position>
+            <attributes>
+              <bounds x="164.0" y="195.0" w="32.0" h="11.0" />
+              <size w="32" h="11" />
+            </attributes>
+          </decorator>
+          <label>
+            <attributes>
+              <bounds x="132.0" y="208.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <container id="Modify_Purchase_Order_2768">
+          <vertex>
+            <iconpath>/org/yawlfoundation/yawl/editor/resources/taskicons/Manual.png</iconpath>
+            <attributes>
+              <bounds x="68.0" y="316.0" w="32.0" h="32.0" />
+            </attributes>
+          </vertex>
+          <label>
+            <attributes>
+              <bounds x="36.0" y="348.0" w="96.0" h="42.0" />
+            </attributes>
+          </label>
+        </container>
+        <vertex id="null_156">
+          <attributes>
+            <bounds x="165.0" y="241.0" w="32.0" h="32.0" />
+          </attributes>
+        </vertex>
+        <flow source="Order_Timeout_1791" target="OutputCondition_17">
+          <ports in="11" out="13" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="263.5" y="347.0" />
+              <value x="248.0" y="432.0" />
+              <value x="192.0" y="452.5" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Approve_Purchase_Order_1901" target="null_156">
+          <ports in="2" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="175.5" y="205.0" />
+              <value x="176.5" y="241.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_156" target="Modify_Purchase_Order_2768">
+          <ports in="12" out="10" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="161.0" y="256.5" />
+              <value x="88.0" y="276.0" />
+              <value x="79.5" y="316.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_156" target="Confirm_Purchase_Order_2013">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="176.5" y="272.0" />
+              <value x="175.5" y="316.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="null_156" target="Order_Timeout_1791">
+          <ports in="13" out="10" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="192.0" y="256.5" />
+              <value x="260.0" y="272.0" />
+              <value x="263.5" y="316.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Confirm_Purchase_Order_2013" target="OutputCondition_17">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="175.5" y="347.0" />
+              <value x="176.5" y="437.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Approve_Purchase_Order_1901" target="OutputCondition_17">
+          <ports in="0" out="13" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="191.0" y="200.0" />
+              <value x="288.0" y="224.0" />
+              <value x="280.0" y="440.0" />
+              <value x="192.0" y="452.5" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="InputCondition_16" target="Create_Purchase_Order_104">
+          <ports in="11" out="10" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="176.5" y="36.0" />
+              <value x="176.5" y="77.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Modify_Purchase_Order_2768" target="Approve_Purchase_Order_1901">
+          <ports in="11" out="0" />
+          <attributes>
+            <lineStyle>13</lineStyle>
+            <points>
+              <value x="79.5" y="347.0" />
+              <value x="76.0" y="384.0" />
+              <value x="56.0" y="392.0" />
+              <value x="56.0" y="184.0" />
+              <value x="160.0" y="159.0" />
+            </points>
+          </attributes>
+        </flow>
+        <flow source="Create_Purchase_Order_104" target="Approve_Purchase_Order_1901">
+          <ports in="11" out="2" />
+          <attributes>
+            <lineStyle>11</lineStyle>
+            <points>
+              <value x="176.5" y="108.0" />
+              <value x="175.5" y="154.0" />
+            </points>
+          </attributes>
+        </flow>
+      </net>
+      <labelFontSize>11</labelFontSize>
+    </specification>
+  </layout>
+</specificationSet>
+
+
