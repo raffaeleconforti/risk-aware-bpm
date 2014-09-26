@@ -89,23 +89,28 @@ public class Process13 implements Loader{
 		StateYAWLProcess s = new StateYAWLProcess(null, specificationXML, mappingName, r);
 		
 		Resource ISPO = new Resource("<participant id=\"PA-0b7f1d4c-f3b2-4fd4-8e77-c33f65bb2821\"><userid>fc</userid><firstname>Fredo</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>");
-		ISPO.addOffer("Fill Out Continuity Daily Report");
-		ISPO.addAllocate("Fill Out Continuity Daily Report");
-		ISPO.addStart("Fill Out Continuity Daily Report");
-		ISPO.addOffer("Fill Out Sound Sheets");
-		ISPO.addAllocate("Fill Out Sound Sheets");
-		ISPO.addStart("Fill Out Sound Sheets");
+		ISPO.addOffer("Fill_Out_Continuity_Daily_Report_3283");
+		ISPO.addAllocate("Fill_Out_Continuity_Daily_Report_3283");
+		ISPO.addStart("Fill_Out_Continuity_Daily_Report_3283");
+		ISPO.addOffer("Fill_Out_Sound_Sheets_39");
+		ISPO.addAllocate("Fill_Out_Sound_Sheets_39");
+		ISPO.addStart("Fill_Out_Sound_Sheets_39");
 		resourcesMap.put(JDOMUtil.formatXMLString("<participant id=\"PA-0b7f1d4c-f3b2-4fd4-8e77-c33f65bb2821\"><userid>fc</userid><firstname>Fredo</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>"), ISPO);
 		
 		Resource Test1 = new Resource("<participant id=\"PA-223a865e-9b16-4c0b-a496-4e445eaad1ec\"><userid>mac</userid><firstname>Mama</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>");
-		ISPO.addOffer("Fill Out Camera Sheets");
-		ISPO.addAllocate("Fill Out Camera Sheets");
+		Test1.addOffer("Fill_Out_Camera_Sheets_40");
+		Test1.addAllocate("Fill_Out_Camera_Sheets_40");
+		Test1.addStart("Fill_Out_Camera_Sheets_40");
 		resourcesMap.put(JDOMUtil.formatXMLString("<participant id=\"PA-223a865e-9b16-4c0b-a496-4e445eaad1ec\"><userid>mac</userid><firstname>Mama</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>"), Test1);
 		
 		Resource Test2 = new Resource("<participant id=\"PA-3dad7d51-ffbd-4e02-aeba-462deac95ef8\"><userid>mc</userid><firstname>Michael</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>");
+		Test2.addOffer("Fill_Out_AD_Report_41");
+		Test2.addAllocate("Fill_Out_AD_Report_41");
+		Test2.addStart("Fill_Out_AD_Report_41");
 		resourcesMap.put(JDOMUtil.formatXMLString("<participant id=\"PA-3dad7d51-ffbd-4e02-aeba-462deac95ef8\"><userid>mc</userid><firstname>Michael</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>"), Test2);
 		
 		Resource Test3 = new Resource("<participant id=\"PA-7933b9de-5aa6-4d9c-be12-d1a5cc8a8c67\"><userid>dvc</userid><firstname>Don Vito</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>");
+		Test3.addOffer("Create_Call_Sheet_7902");
 		resourcesMap.put(JDOMUtil.formatXMLString("<participant id=\"PA-7933b9de-5aa6-4d9c-be12-d1a5cc8a8c67\"><userid>dvc</userid><firstname>Don Vito</firstname><lastname>Corleone</lastname><isAdministrator>true</isAdministrator><roles></roles><positions></positions><capabilities></capabilities></participant>"), Test3);
 		
 		List<String> tasksLog = new LinkedList<String>();
