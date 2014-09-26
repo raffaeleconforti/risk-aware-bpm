@@ -1,5 +1,7 @@
 package org.yawlfoundation.yawl.risk.state.YAWL;
 
+import org.yawlfoundation.yawl.util.JDOMUtil;
+
 import java.util.LinkedList;
 
 public class Resource implements Cloneable{
@@ -9,7 +11,11 @@ public class Resource implements Cloneable{
     public LinkedList<String> startedList = new LinkedList<String>();
 	
 	public Resource(String resourceID) {
-		id = resourceID;
+        if(resourceID.contains("<") && resourceID.contains(">")) {
+            id = JDOMUtil.formatXMLString(resourceID);
+        }else {
+            id = resourceID;
+        }
 		//populate lists
 	}
 	

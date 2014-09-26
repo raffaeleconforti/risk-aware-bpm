@@ -1,7 +1,4 @@
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,11 +45,97 @@ public class Analizer {
 	static int[] riskArray7 = new int[4];
 	static int[] riskArray8 = new int[4];
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
+
+        BufferedReader br = new BufferedReader(new FileReader("Test"));
+        String s = null;
+        int model = 1;
+        int count = 0;
+        int process = 2;
+        double time = 0L;
+        double minTime = Double.MAX_VALUE;
+        double maxTime = Double.MIN_VALUE;
+        while((s = br.readLine()) != null) {
+            StringTokenizer st = new StringTokenizer(s, "[,]", true);
+            StringBuilder sb = new StringBuilder();
+            String token = st.nextToken();
+            double ts= findTime(token);
+            while(st.hasMoreTokens()) {
+                token = st.nextToken();
+                if(token.equals("[")) {
+                    String value1 = st.nextToken();
+                    for(int i = 0; i < 6; i++) st.nextToken();
+                    sb.append(value1 + " ");
+                }else if(token.equals(",")) {
+                    String value1 = st.nextToken();
+                    boolean found = false;
+                    for(int i = 0; i < 6; i++) {
+                        if(st.nextToken().equals("]")) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if(!found) {
+                        sb.append(value1 + " ");
+                    }else {
+                        break;
+                    }
+                }else if(token.equals("]")) {
+                    break;
+                }
+            }
+            st = new StringTokenizer(sb.toString(), " ");
+            boolean good = true;
+
+            while (st.hasMoreTokens()) {
+                token = st.nextToken();
+                if(!token.equals("null")) {
+                    double d = Double.parseDouble(token);
+                    if (d > 0.5) {
+                        good = false;
+                        break;
+                    }
+                }
+            }
+            if(good) {
+                count++;
+                time += ts;
+//                System.out.println(minTime +" "+ ts);
+                minTime = Math.min(minTime, ts);
+//                System.out.println(minTime +" "+ ts);
+                maxTime = Math.max(maxTime, ts);
+//                System.out.println("Model "+model+" "+sb.toString());
+            }
+            model++;
+            if(model == 128) {
+                System.out.println("Process "+process+" Count "+count+" MinTime "+minTime+" MaxTime "+maxTime+" AvgTime "+(time/count));
+                process = 4;
+//                count = 0;
+//                time = 0L;
+                minTime = Double.MAX_VALUE;
+                maxTime = Double.MIN_VALUE;
+            }else if(model == 143) {
+                System.out.println("Process "+process+" Count "+count+" MinTime "+minTime+" MaxTime "+maxTime+" AvgTime "+(time/count));
+                process = 5;
+//                count = 0;
+//                time = 0L;
+                minTime = Double.MAX_VALUE;
+                maxTime = Double.MIN_VALUE;
+            }else if(model == 150) {
+                System.out.println("Process "+process+" Count "+count+" MinTime "+minTime+" MaxTime "+maxTime+" AvgTime "+(time/count));
+                process = 6;
+//                count = 0;
+//                time = 0L;
+                minTime = Double.MAX_VALUE;
+                maxTime = Double.MIN_VALUE;
+            }else if(model == 181) {
+                System.out.println("Process "+process+" Count "+count+" MinTime "+minTime+" MaxTime "+maxTime+" AvgTime "+(time/count));
+            }
+        }
 		
-		for(int i=1; i<181; i++) {
-			System.out.println(task(i));
-		}
+//		for(int i=1; i<181; i++) {
+//			System.out.println(task(i));
+//		}
 		
 //		riskProcess(8);
 //		riskProcess(5);
@@ -105,7 +188,17 @@ public class Analizer {
 //		System.out.println(modelComplete);
 	}
 
-	private static String analyze(String[] s) {
+    private static double findTime(String token) {
+        StringTokenizer st = new StringTokenizer(token, ":");
+        st.nextToken();
+        st.nextToken();
+        String time = st.nextToken();
+        time = time.substring(1, time.length()-3);
+        double ts = Double.parseDouble(time);
+        return ts / 1000000000;
+    }
+
+    private static String analyze(String[] s) {
 		String model = s[0].substring(0, s[0].indexOf("-")-1);
 		int[] VarNum = new int[1];
 		int[] TaskNum = new int[1];
