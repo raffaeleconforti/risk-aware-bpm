@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,17 +18,16 @@
 
 package org.yawlfoundation.yawl.logging;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
-import java.util.List;
-import java.util.Vector;
+import java.util.ArrayList;
 
 /**
  * Author: Michael Adams
  * Creation Date: 9/04/2009
  */
-public class YLogDataItemList extends Vector<YLogDataItem> {
+public class YLogDataItemList extends ArrayList<YLogDataItem> {
 
     public YLogDataItemList() {
         super();
@@ -60,16 +59,13 @@ public class YLogDataItemList extends Vector<YLogDataItem> {
     }
 
 
-    private void fromXML(String xml) {
+    public void fromXML(String xml) {
         Element e = JDOMUtil.stringToElement(xml);
         if (e != null) {
-            List children = e.getChildren();
-            for (Object child : children) {
-               this.add(new YLogDataItem((Element) child));
+            for (Element child : e.getChildren()) {
+               this.add(new YLogDataItem(child));
             }
         }    
     }
-
-
 
 }

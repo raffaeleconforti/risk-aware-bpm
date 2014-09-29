@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -22,15 +22,15 @@ import org.yawlfoundation.yawl.util.StringUtil;
 
 /**
  * One row of the logTask table, representing a unique task 'template' of a parent net
- *
+ * <p/>
  * Author: Michael Adams
  * Creation Date: 6/04/2009
  */
 public class YLogTask {
 
     private long taskID;                          // PK - auto generated
-    private String name ;
-    private long parentNetID ;                    // FK to YLogNet
+    private String name;
+    private long parentNetID;                    // FK to YLogNet
     private long childNetID;                      // FK to YLogNet (composite tasks only)
 
     public YLogTask() { }
@@ -57,6 +57,12 @@ public class YLogTask {
         this.name = name;
     }
 
+    public String getUnqualifiedName() {
+
+        // truncate unique _digits from end of task id (e.g. _98)
+        return name.split("_\\d+$")[0];
+    }
+
     public long getParentNetID() {
         return parentNetID;
     }
@@ -71,6 +77,16 @@ public class YLogTask {
 
     public void setChildNetID(long childNetID) {
         this.childNetID = childNetID;
+    }
+
+
+    public boolean equals(Object other) {
+        return (other instanceof YLogTask) &&
+                (this.getTaskID() == ((YLogTask) other).getTaskID());
+    }
+
+    public int hashCode() {
+        return (int) (31 * getTaskID()) % Integer.MAX_VALUE;
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,12 +18,10 @@
 
 package org.yawlfoundation.yawl.worklet.selection;
 
+import org.yawlfoundation.yawl.worklet.support.*;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 
 import org.apache.log4j.Logger;
-import org.yawlfoundation.yawl.worklet.support.Library;
-import org.yawlfoundation.yawl.worklet.support.RdrConversionTools;
-import org.yawlfoundation.yawl.worklet.support.WorkletRecord;
 
 
 /** The CheckedOutChildItem class maintains a dataset for a 'child' workitem

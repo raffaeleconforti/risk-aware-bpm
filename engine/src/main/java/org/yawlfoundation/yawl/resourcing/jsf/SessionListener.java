@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -56,7 +56,8 @@ public class SessionListener implements HttpSessionListener {
             handleSessionTimeout(session);
         }
         catch(Exception e) {
-            _log.error("Error while logging out at session destroyed : ", e) ;
+            _log.warn("Session [" + session.getId() +  "] was destroyed before " +
+                      "an expired session audit event could be logged for it.") ;
         }
     }
 

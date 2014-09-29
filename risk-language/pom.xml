@@ -24,11 +24,6 @@
         </dependency>
 
         <dependency>
-            <groupId>yawl.libraries.engine</groupId>
-            <artifactId>jdom</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>jsp-api</artifactId>
         </dependency>
@@ -36,6 +31,11 @@
         <dependency>
             <groupId>commons-el</groupId>
             <artifactId>commons-el</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jdom</groupId>
+            <artifactId>jdom</artifactId>
         </dependency>
 
     </dependencies>

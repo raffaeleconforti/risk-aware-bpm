@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,36 +19,34 @@
 package org.yawlfoundation.yawl.engine;
 
 import org.apache.log4j.Logger;
+import org.hibernate.Hibernate;
 import org.hibernate.Query;
 import org.yawlfoundation.yawl.authentication.YClient;
 import org.yawlfoundation.yawl.authentication.YExternalClient;
 import org.yawlfoundation.yawl.elements.*;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.elements.state.YInternalCondition;
+import org.yawlfoundation.yawl.engine.time.YLaunchDelayer;
+import org.yawlfoundation.yawl.engine.time.YTimedObject;
 import org.yawlfoundation.yawl.engine.time.YTimer;
 import org.yawlfoundation.yawl.engine.time.YWorkItemTimer;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 import org.yawlfoundation.yawl.unmarshal.YMarshal;
 import org.yawlfoundation.yawl.util.JDOMUtil;
-import org.yawlfoundation.yawl.util.PasswordEncryptor;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.*;
 
 /**
  * Handles the restoration of persisted objects and data pertaining to the Engine.
  *
  * @author Michael Adams
- * Creation Date: 25/06/2008
+ *         Creation Date: 25/06/2008
  */
 
 public class YEngineRestorer {
 
-    private YEngine _engine ;
-    private YPersistenceManager _pmgr ;
+    private YEngine _engine;
+    private YPersistenceManager _pmgr;
     private Hashtable<String, YIdentifier> _idLookupTable;
     private Vector<YNetRunner> _runners;
     private Hashtable<String, YTask> _taskLookupTable;
@@ -62,8 +60,8 @@ public class YEngineRestorer {
     protected YEngineRestorer() {}
 
     protected YEngineRestorer(YEngine engine, YPersistenceManager pmgr) {
-        _engine = engine ;
-        _pmgr = pmgr ;
+        _engine = engine;
+        _pmgr = pmgr;
         _idLookupTable = new Hashtable<String, YIdentifier>();
         _taskLookupTable = new Hashtable<String, YTask>();
         _log = Logger.getLogger(this.getClass());
@@ -76,14 +74,14 @@ public class YEngineRestorer {
      * @throws YPersistenceException if there's a problem reading from the tables
      */
     protected void restoreYAWLServices() throws YPersistenceException {
-        _log.info("Restoring Services - Starts");
+        _log.debug("Restoring Services - Starts");
         Query query = _pmgr.createQuery("from YAWLServiceReference");
         Iterator it = query.iterate();
         _hasServices = it.hasNext();
         while (it.hasNext()) {
             _engine.addYawlService((YAWLServiceReference) it.next());
         }
-        _log.info("Restoring Services - Ends");
+        _log.debug("Restoring Services - Ends");
     }
 
 
@@ -93,23 +91,22 @@ public class YEngineRestorer {
      * @throws YPersistenceException if there's a problem reading from the tables
      */
     protected void restoreExternalClients() throws YPersistenceException {
-        _log.info("Restoring External Clients - Starts");
+        _log.debug("Restoring External Clients - Starts");
         Query query = _pmgr.createQuery("from YExternalClient");
         Iterator it = query.iterate();
         if (it.hasNext()) {
             while (it.hasNext()) {
                 _engine.addExternalClient((YExternalClient) it.next());
             }
-        }
-        else {
-            if (! _hasServices) {
+        } else {
+            if (!_hasServices) {
 
                 // no services and no clientapps indicates a fresh db (there should be at
-                // least a row for the editor user - so needs default rows to be added
-                initDefaultServicesAndApps();
+                // least a row for the editor user) - so needs default accounts to be added
+                _addedDefaultClients = _engine.loadDefaultClients();
             }
         }
-        _log.info("Restoring External Clients - Ends");
+        _log.debug("Restoring External Clients - Ends");
     }
 
 
@@ -119,12 +116,12 @@ public class YEngineRestorer {
      * @throws YPersistenceException if there's a problem reading from the tables
      */
     protected void restoreSpecifications() throws YPersistenceException {
-        _log.info("Restoring Specifications - Starts");
+        _log.debug("Restoring Specifications - Starts");
         Query query = _pmgr.createQuery("from YSpecification");
-        for (Iterator it = query.iterate(); it.hasNext();) {
+        for (Iterator it = query.iterate(); it.hasNext(); ) {
             loadSpecification((YSpecification) it.next());
         }
-        _log.info("Restoring Specifications - Ends");
+        _log.debug("Restoring Specifications - Ends");
     }
 
 
@@ -137,24 +134,22 @@ public class YEngineRestorer {
     protected YCaseNbrStore restoreNextAvailableCaseNumber() throws YPersistenceException {
         YCaseNbrStore caseNbrStore = YCaseNbrStore.getInstance();
         Query query = _pmgr.createQuery("from YCaseNbrStore");
-        if ((query != null) && (! query.list().isEmpty())) {
+        if ((query != null) && (!query.list().isEmpty())) {
             caseNbrStore = (YCaseNbrStore) query.iterate().next();
             caseNbrStore.setPersisted(true);               // flag to update only
-        }
-        else {
+        } else {
 
             // secondary attempt: eg. if there's no case number stored (as will be
             // the case if this is the first restart after a database rebuild)
-            query = _pmgr.createQuery("select max(engineInstanceID) from YLogNetInstance") ;
-            if ((query != null) && (! query.list().isEmpty())) {
+            query = _pmgr.createQuery("select max(engineInstanceID) from YLogNetInstance");
+            if ((query != null) && (!query.list().isEmpty())) {
                 String engineID = (String) query.iterate().next();
                 try {
                     // only want integral case numbers
                     caseNbrStore.setCaseNbr(new Double(engineID).intValue());
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
                     // last resort - assumes tables must be empty
-                    caseNbrStore.setCaseNbr(1);
+                    caseNbrStore.setCaseNbr(0);           // will inc on first get
                 }
             }
         }
@@ -162,38 +157,38 @@ public class YEngineRestorer {
         // persisting flag must be reset as it is not itself persisted
         caseNbrStore.setPersisting(true);
 
-        return caseNbrStore ;
+        return caseNbrStore;
     }
 
 
     protected void restoreProcessInstances() throws YPersistenceException {
-        _log.info("Restoring process instances - Starts");
+        _log.debug("Restoring process instances - Starts");
         Query query = _pmgr.createQuery("from YNetRunner order by case_id");
 
         _runners = new Vector<YNetRunner>();
-        for (Iterator it = query.iterate(); it.hasNext();) {
+        for (Iterator it = query.iterate(); it.hasNext(); ) {
             _runners.add((YNetRunner) it.next());
         }
 
         _runners = removeDeadRunners(_runners);
-        restoreRunners(_runners) ;
-        _log.info("Restoring process instances - Ends");
+        restoreRunners(_runners);
+        _log.debug("Restoring process instances - Ends");
     }
 
 
     protected void restoreWorkItems() throws YPersistenceException {
-        _log.info("Restoring work items - Starts");
+        _log.debug("Restoring work items - Starts");
         List<YWorkItem> toBeRestored = new ArrayList<YWorkItem>();
         List<YWorkItem> toBeRemoved = new ArrayList<YWorkItem>();
 
         // get workitems from persistence
         Query query = _pmgr.createQuery("from YWorkItem");
-        for (Iterator it = query.iterate(); it.hasNext();) {
+        for (Iterator it = query.iterate(); it.hasNext(); ) {
             YWorkItem witem = (YWorkItem) it.next();
-            if (hasRestoredIdentifier(witem)) 
-               toBeRestored.add(witem);
+            if (hasRestoredIdentifier(witem))
+                toBeRestored.add(witem);
             else
-               toBeRemoved.add(witem);
+                toBeRemoved.add(witem);
         }
 
         List<YWorkItem> orphans = checkWorkItemFamiliesIntact(toBeRestored);
@@ -222,12 +217,9 @@ public class YEngineRestorer {
             } else {
                 witem.setWorkItemID(new YWorkItemID(yCaseID, taskID));
             }
-            
+
             witem.setTask(getTaskReference(witem.getSpecificationID(), taskID));
             witem.addToRepository();
-
-            // re-add to instance cache
-            _engine.getInstanceCache().addWorkItem(witem);
 
             // MJF: for any work items with data, restore to netrunner instance
             witem.restoreDataToNet(_engine.getYAWLServices());
@@ -235,21 +227,28 @@ public class YEngineRestorer {
 
         removeWorkItems(toBeRemoved);
 
-        _log.info("Restoring work items - Ends");
+        _log.debug("Restoring work items - Ends");
     }
 
 
-    protected Set<YWorkItemTimer> restoreWorkItemTimers() throws YPersistenceException {
-        _log.info("Restoring work item timers - Starts");
-        Set<YWorkItemTimer> expiredTimers = new HashSet<YWorkItemTimer>();
+    protected Set<YTimedObject> restoreTimedObjects() throws YPersistenceException {
+        Set<YTimedObject> expiredObjects = restoreWorkItemTimers();
+        expiredObjects.addAll(restoreDelayedLaunches());
+        return expiredObjects;
+    }
+
+
+    protected Set<YTimedObject> restoreWorkItemTimers() throws YPersistenceException {
+        _log.debug("Restoring work item timers - Starts");
+        Set<YTimedObject> expiredTimers = new HashSet<YTimedObject>();
         Set<YWorkItemTimer> orphanedTimers = new HashSet<YWorkItemTimer>();
         Query query = _pmgr.createQuery("from YWorkItemTimer");
-        for (Iterator it = query.iterate(); it.hasNext();) {
+        for (Iterator it = query.iterate(); it.hasNext(); ) {
             YWorkItemTimer witemTimer = (YWorkItemTimer) it.next();
             witemTimer.setPersisting(true);
-            
+
             // check to see if workitem still exists
-            YWorkItem witem = _engine.getWorkItem(witemTimer.getOwnerID()) ;
+            YWorkItem witem = _engine.getWorkItem(witemTimer.getOwnerID());
             if (witem == null)
                 orphanedTimers.add(witemTimer);
             else {
@@ -267,32 +266,55 @@ public class YEngineRestorer {
         }
 
         for (YWorkItemTimer orphan : orphanedTimers) {
-            _pmgr.deleteObject(orphan) ;                   // remove from persistence            
+            _pmgr.deleteObject(orphan);                   // remove from persistence
         }
 
-        _log.info("Restoring work item timers - Ends");
+        _log.debug("Restoring work item timers - Ends");
         return expiredTimers;
     }
 
-    
+
+    protected Set<YTimedObject> restoreDelayedLaunches() throws YPersistenceException {
+        _log.debug("Restoring delayed launch timers - Starts");
+        Set<YTimedObject> expiredTimers = new HashSet<YTimedObject>();
+        Query query = _pmgr.createQuery("from YLaunchDelayer");
+        for (Iterator it = query.iterate(); it.hasNext(); ) {
+            YLaunchDelayer delayer = (YLaunchDelayer) it.next();
+            delayer.setPersisting(true);
+
+            long endTime = delayer.getEndTime();
+
+            // if the deadline has passed, launch the instance when engine is ready
+            if (endTime < System.currentTimeMillis()) {
+                expiredTimers.add(delayer);
+            } else {
+                // reschedule the launches timer
+                YTimer.getInstance().schedule(delayer, new Date(endTime));
+            }
+        }
+
+        _log.debug("Restoring delayed launch timers - Ends");
+        return expiredTimers;
+    }
+
+
     protected void restartRestoredProcessInstances() throws YPersistenceException {
         /*
           Start net runners. This is a restart of a NetRunner not a clean start,
           therefore the net runner should not create any new work items, if they
           have already been created.
          */
-        _log.info("Restarting restored process instances - Starts");
+        _log.debug("Restarting restored process instances - Starts");
 
         for (YNetRunner runner : _runners) {
             _log.debug("Restarting " + runner.get_caseID());
             try {
                 runner.start(_pmgr);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 throw new YPersistenceException(e.getMessage());
             }
         }
-        _log.info("Restarting restored process instances - Ends");
+        _log.debug("Restarting restored process instances - Ends");
     }
 
 
@@ -302,14 +324,15 @@ public class YEngineRestorer {
                 for (YClient client : _addedDefaultClients) {
                     _engine.storeObject(client);
                 }
-            }
-            catch (YPersistenceException ype) {
+            } catch (YPersistenceException ype) {
                 _log.warn("Unable to persist added default clients.", ype);
             }
         }
     }
 
-    /*****************************************************************************/
+    /**
+     * *************************************************************************
+     */
 
     private YSpecification getSpecification(YNetRunner runner) {
         return _engine.getSpecification(runner.getSpecificationID());
@@ -319,11 +342,12 @@ public class YEngineRestorer {
     private void loadSpecification(YSpecification spec) throws YPersistenceException {
         try {
             long key = spec.getRowKey();
-            spec = YMarshal.unmarshalSpecifications(spec.getRestoredXML()).get(0);
+
+            // false == don't validate, since it has already been done when first loaded
+            spec = YMarshal.unmarshalSpecifications(spec.getRestoredXML(), false).get(0);
             spec.setRowKey(key);
             _engine.loadSpecification(spec);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new YPersistenceException("Failure whilst restoring specification", e);
         }
     }
@@ -335,23 +359,22 @@ public class YEngineRestorer {
 
         for (YNetRunner runner : runners) {
             if (getSpecification(runner) != null) {
-                result.add(runner) ;
-            }
-            else {
+                result.add(runner);
+            } else {
                 /* This occurs when a specification has been unloaded, but the case is
                    still there. This case is removed, since we must have the
                    specification stored as well. */
                 String msg = String.format("YEngineRestorer: The specification '%s' for" +
-                         " active case '%s' is not loaded; the active case cannot" +
-                         " continue and so has been removed.",
-                         runner.getSpecificationID().getUri(),
-                         runner.getCaseID().toString());
+                        " active case '%s' is not loaded; the active case cannot" +
+                        " continue and so has been removed.",
+                        runner.getSpecificationID().getUri(),
+                        runner.getCaseID().toString());
                 _log.warn(msg);
                 _pmgr.deleteObject(runner);
             }
         }
 
-        return result ;
+        return result;
     }
 
 
@@ -367,8 +390,7 @@ public class YEngineRestorer {
                 YNet net = (YNet) getSpecification(runner).getRootNet().clone();
                 runner.setNet(net);
                 result.put(runner.getCaseID().toString(), runner);
-            }
-            else {
+            } else {
 
                 //This is not a root net, but a decomposition
                 // Find the parent runner
@@ -379,31 +401,30 @@ public class YEngineRestorer {
                     _log.debug("Restoring composite YNetRunner: " + parentID);
                     YNet parentnet = parentrunner.getNet();
                     YCompositeTask task = (YCompositeTask) parentnet.getNetElement(
-                                                           runner.getContainingTaskID());
+                            runner.getContainingTaskID());
                     runner.setContainingTask(task);
                     try {
                         YNet net = (YNet) task.getDecompositionPrototype().clone();
                         runner.setNet(net);
-                    }
-                    catch (CloneNotSupportedException cnse) {
+                    } catch (CloneNotSupportedException cnse) {
                         String msg = String.format("YEngineRestorer: The decomposition" +
-                                     "'%s' for  active case '%s' could not be set." +
-                                     task.getDecompositionPrototype().getID(),
-                                     runner.getCaseID().toString());
+                                "'%s' for  active case '%s' could not be set." +
+                                task.getDecompositionPrototype().getID(),
+                                runner.getCaseID().toString());
                         throw new YPersistenceException(msg);
                     }
                     result.put(runner.getCaseID().toString(), runner);
                 }
             }
         }
-        return result ;
+        return result;
     }
-    
 
-    private void restoreRunners(Vector<YNetRunner> runners) 
+
+    private void restoreRunners(Vector<YNetRunner> runners)
             throws YPersistenceException {
 
-        Hashtable<String, YNetRunner> runnerMap = restoreNets(runners) ;
+        Hashtable<String, YNetRunner> runnerMap = restoreNets(runners);
         for (YNetRunner runner : runners) {
             YNet net = runner.getNet();
             if (runner.getContainingTaskID() == null) {
@@ -411,9 +432,8 @@ public class YEngineRestorer {
                 // This is a root net runner
                 restoreYIdentifiers(runnerMap, runner.getCaseID(), null, net);
                 _engine.addRunner(runner);
-            }
-            else {
-                YWorkItemRepository.getInstance().addNetRunner(runner);   // a subnet
+            } else {
+                _engine.getNetRunnerRepository().add(runner);         // a subnet
             }
 
             // restore enabled and busy tasks
@@ -432,13 +452,16 @@ public class YEngineRestorer {
 
             // restore case & exception observers (where they exist)
             runner.restoreObservers();
+
+            // create a clean announcement transport
+            runner.refreshAnnouncements();
         }
         removeOrphanedIdentifiers();
     }
 
 
     protected YIdentifier restoreYIdentifiers(Hashtable<String, YNetRunner> runnermap,
-                                         YIdentifier id, YIdentifier parent, YNet net)
+                                              YIdentifier id, YIdentifier parent, YNet net)
             throws YPersistenceException {
 
         YNet sendnet = net;
@@ -456,14 +479,14 @@ public class YEngineRestorer {
                 if (netRunner != null) {
                     netRunner.set_caseIDForNet(caseid);
                 }
-            }    
+            }
         }
         return restoreLocations(runnermap, id, parent, net);
     }
 
 
     protected YIdentifier restoreLocations(Hashtable<String, YNetRunner> runnermap,
-                                         YIdentifier id, YIdentifier parent, YNet net)
+                                           YIdentifier id, YIdentifier parent, YNet net)
             throws YPersistenceException {
 
         YTask task;
@@ -486,24 +509,21 @@ public class YEngineRestorer {
                 }
 
                 // Get the task associated with this condition
-                if (name.indexOf("CompositeTask") != -1) {
+                if (name.contains("CompositeTask")) {
                     task = (YTask) runner.getNet().getNetElement(splitname[1]);
-                }
-                else {
+                } else {
                     task = (YTask) net.getNetElement(splitname[1]);
                 }
 
-                postTaskCondition(task, net, splitname[0], id) ;
-            }
-            else {
+                postTaskCondition(task, net, splitname[0], id);
+            } else {
                 if (element instanceof YTask) {
                     task = (YTask) element;
                     task.setI(id);
                     task.prepareDataDocsForTaskOutput();
                     id.addLocation(null, task);
-                }
-                else if (element instanceof YCondition) {
-                   ((YConditionInterface) element).add(_pmgr, id);
+                } else if (element instanceof YCondition) {
+                    ((YConditionInterface) element).add(_pmgr, id);
                 }
             }
         }
@@ -513,35 +533,31 @@ public class YEngineRestorer {
     }
 
 
-    /*******************************************************************************/
+    /**
+     * ***************************************************************************
+     */
 
     private void postTaskCondition(YTask task, YNet net, String condName, YIdentifier id)
-            throws YPersistenceException{
+            throws YPersistenceException {
         if (task != null) {
             _log.debug("Posting conditions on task " + task);
             YInternalCondition condition = null;
             if (condName.startsWith(YInternalCondition._mi_active)) {
                 condition = task.getMIActive();
-            }
-            else if (condName.startsWith(YInternalCondition._mi_complete)) {
+            } else if (condName.startsWith(YInternalCondition._mi_complete)) {
                 condition = task.getMIComplete();
-            }
-            else if (condName.startsWith(YInternalCondition._mi_entered)) {
+            } else if (condName.startsWith(YInternalCondition._mi_entered)) {
                 condition = task.getMIEntered();
-            }
-            else if (condName.startsWith(YInternalCondition._mi_executing)) {
+            } else if (condName.startsWith(YInternalCondition._mi_executing)) {
                 condition = task.getMIExecuting();
-            }
-            else {
-                _log.error("Unknown YInternalCondition org.yawlfoundation.yawl.risk.state");
+            } else {
+                _log.error("Unknown YInternalCondition state");
             }
             if (condition != null) condition.add(null, id);
-        }
-        else {
+        } else {
             if (condName.startsWith("InputCondition")) {
                 net.getInputCondition().add(null, id);
-            }
-            else if (condName.startsWith("OutputCondition")) {
+            } else if (condName.startsWith("OutputCondition")) {
                 net.getOutputCondition().add(null, id);
             }
         }
@@ -551,12 +567,13 @@ public class YEngineRestorer {
     /**
      * Checks if a workitem restored from persistence has had its YIdentifier
      * previously restored.
+     *
      * @param item the workitem to check
      * @return true if there has been a YIdentifier restored for the workitem
      */
     private boolean hasRestoredIdentifier(YWorkItem item) {
         String[] caseTaskSplit = item.get_thisID().split(":");
-        return _idLookupTable.get(caseTaskSplit[0]) != null;        
+        return _idLookupTable.get(caseTaskSplit[0]) != null;
     }
 
 
@@ -565,6 +582,7 @@ public class YEngineRestorer {
      * list of items to restore, all of its children are in the list also; and (2) each
      * child workitem in the list has a parent. If either is false, the workitem is
      * put in a list of items to not be restored and to be removed from persistence
+     *
      * @param itemList the list of workitems to potentially restore
      * @return the sublist of items not to restore (if any)
      */
@@ -573,23 +591,27 @@ public class YEngineRestorer {
         for (YWorkItem witem : itemList) {
             if (witem.getStatus().equals(YWorkItemStatus.statusIsParent)) {
                 Set<YWorkItem> children = witem.getChildren();
-                if ((children != null) && (! itemList.containsAll(children))) {
+                if ((children != null) && (!itemList.containsAll(children))) {
                     orphans.add(witem);
                 }
-            }
-            else {
+            } else {
                 YWorkItem parent = witem.getParent();
-                if ((parent != null) && (! itemList.contains(parent))) {
+                if ((parent != null) && (!itemList.contains(parent))) {
                     orphans.add(witem);
                 }
+
+                // if not a parent and not an orphan, must init (possibly future)
+                // children collection to avoid potential future LazyInitializationException
+                else Hibernate.initialize(witem.getChildren());
             }
         }
-        return orphans ;
+        return orphans;
     }
 
 
     /**
      * Removes the workitems in the list from persistence
+     *
      * @param items the workitems to remove
      */
     private void removeWorkItems(List<YWorkItem> items) {
@@ -597,7 +619,7 @@ public class YEngineRestorer {
 
             // clear child items first (to avoid foreign key constraint exceptions)
             for (YWorkItem item : items) {
-                if (! item.getStatus().equals(YWorkItemStatus.statusIsParent))
+                if (!item.getStatus().equals(YWorkItemStatus.statusIsParent))
                     _pmgr.deleteObject(item);
             }
 
@@ -606,8 +628,7 @@ public class YEngineRestorer {
                 if (item.getStatus().equals(YWorkItemStatus.statusIsParent))
                     _pmgr.deleteObject(item);
             }
-        }
-        catch (YPersistenceException ype) {
+        } catch (YPersistenceException ype) {
             _log.error("Exception removing orphaned workitems from persistence.", ype);
         }
     }
@@ -626,13 +647,13 @@ public class YEngineRestorer {
 
         try {
             Query query = _pmgr.createQuery("from YIdentifier");
-            for (Iterator it = query.iterate(); it.hasNext();) {
+            for (Iterator it = query.iterate(); it.hasNext(); ) {
                 YIdentifier id = (YIdentifier) it.next();
                 String idString = id.toString();
                 if (idString.contains(".")) {
                     idString = idString.substring(0, idString.indexOf('.'));
                 }
-                if (! caseIDs.contains(idString)) {
+                if (!caseIDs.contains(idString)) {
                     orphaned.add(id);
                 }
             }
@@ -640,8 +661,7 @@ public class YEngineRestorer {
             for (YIdentifier id : orphaned) {
                 _pmgr.deleteObject(id);
             }
-        }
-        catch (YPersistenceException ype) {
+        } catch (YPersistenceException ype) {
             _log.error("Exception removing orphaned identifiers from persistence.", ype);
         }
     }
@@ -651,6 +671,7 @@ public class YEngineRestorer {
      * Gets the YTask for the specification and task id passed. Any new requests are
      * stored in a lookup table to minimise engine calls for subsequent identical
      * requests (where many workitems are active for a spec/task combination)
+     *
      * @param specID the spec ID
      * @param taskID the task ID
      * @return the task reference
@@ -663,70 +684,6 @@ public class YEngineRestorer {
             _taskLookupTable.put(key, task);
         }
         return task;
-    }
-
-
-    private void initDefaultServicesAndApps() {
-        _log.info("Loading default client and service account details - Starts");
-        InputStream in = getClass().getResourceAsStream("defaultServices.properties");
-        if (in != null) {
-            _addedDefaultClients = new HashSet<YClient>();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-            try {
-                String line = reader.readLine();
-                while (line != null) {
-                    if (line.startsWith("extClient:")) {
-                        addDefaultExternalClient(line);
-                    }
-                    else if (line.startsWith("service:")) {
-                        addDefaultService(line);
-                    }
-                    line = reader.readLine();
-                }
-            }
-            catch (IOException ioe) {
-                _log.warn("Error loading default client and service account details");
-            }
-        }
-        _log.info("Loading default client and service account details - Ends");
-    }
-
-
-    private void addDefaultExternalClient(String rawLine) {
-        rawLine = rawLine.substring(rawLine.indexOf(':') + 1);   // strip header
-        String[] parts = rawLine.split(",");
-        if (parts.length == 3) {
-            String password = PasswordEncryptor.encrypt(parts[1].trim(), null);
-            YExternalClient client = new YExternalClient(
-                    parts[0].trim(), password, parts[2].trim());
-            try {
-                _engine.addExternalClient(client);
-                _addedDefaultClients.add(client);
-            }
-            catch (YPersistenceException ype) {
-                _log.warn("Could not load default external client: persistence.", ype);
-            }
-        }
-        else _log.warn("Could not load default external client: malformed entry.");
-    }
-
-    private void addDefaultService(String rawLine) {
-        rawLine = rawLine.substring(rawLine.indexOf(':') + 1);   // strip header
-        String[] parts = rawLine.split(",");
-        if (parts.length == 5) {
-            String password = PasswordEncryptor.encrypt(parts[1].trim(), null);
-            YAWLServiceReference service = new YAWLServiceReference(
-                    parts[3].trim(), null, parts[0].trim(), password, parts[2].trim());
-            service.setAssignable(parts[4].trim().equalsIgnoreCase("true"));
-            try {
-                _engine.addYawlService(service);
-                _addedDefaultClients.add(service);
-            }
-            catch (YPersistenceException ype) {
-                _log.warn("Could not load default external client: persistence.", ype);
-            }
-        }
-        else _log.warn("Could not load default external client: malformed entry.");
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.logging.table;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.StringUtil;
 
 import java.text.SimpleDateFormat;
@@ -86,6 +86,10 @@ public class YLogEvent {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date(timestamp));
     }
 
+    public String getTimestampMidString() {
+        return new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss.SSS").format(new Date(timestamp));
+    }
+
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
@@ -104,6 +108,15 @@ public class YLogEvent {
 
     public void setRootNetInstanceID(long rootNetInstanceID) {
         this.rootNetInstanceID = rootNetInstanceID;
+    }
+
+    public boolean equals(Object other) {
+        return (other instanceof YLogEvent) &&
+                (this.getEventID() == ((YLogEvent) other).getEventID());
+    }
+
+    public int hashCode() {
+        return (int) (31 * getEventID()) % Integer.MAX_VALUE;
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,6 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing.datastore.eventlog;
 
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.StringUtil;
 
 import java.text.SimpleDateFormat;
@@ -56,10 +57,21 @@ public abstract class BaseEvent {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date(_timeStamp));
     }
 
-    
+    public String getTimeStampMidString() {
+        return new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss.SSS").format(new Date(_timeStamp));
+    }
+
+
     public String toXML() {
         return StringUtil.wrap(_event, "eventtype") +
                StringUtil.wrap(String.valueOf(_timeStamp), "timestamp");        
+    }
+
+
+    public void fromXML(Element xml) {
+        _id = StringUtil.strToLong(xml.getAttributeValue("key"), -1);
+        _event = xml.getChildText("eventtype");
+        _timeStamp = StringUtil.strToLong(xml.getChildText("timestamp"), -1);
     }
     
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,26 +18,28 @@
 
 package org.yawlfoundation.yawl.engine.interfce.interfaceA;
 
-import org.jdom.JDOMException;
+import org.jdom2.JDOMException;
 import org.yawlfoundation.yawl.authentication.YExternalClient;
 import org.yawlfoundation.yawl.elements.YAWLServiceReference;
 import org.yawlfoundation.yawl.elements.YSpecification;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.engine.YAnnouncer;
+import org.yawlfoundation.yawl.engine.YEngine;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.YWorkItem;
 import org.yawlfoundation.yawl.engine.announcement.AnnouncementContext;
 import org.yawlfoundation.yawl.exceptions.YEngineStateException;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 import org.yawlfoundation.yawl.exceptions.YStateException;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Defines the 'A' interface into the YAWL Engine corresponding to WfMC interface 5 - Administration + Monitoring.
+ * Defines the 'A' interface into the YAWL Engine corresponding to WfMC interface 5 -
+ * Administration + Monitoring.
  *
  * @author Andrew Hastie
  *         Creation Date: 10-Jun-2005
@@ -68,12 +70,12 @@ public interface InterfaceAManagement {
      * @throws YPersistenceException
      */
     List<YSpecificationID> addSpecifications(String specificationStr, boolean ignoreErors,
-                                             List<YVerificationMessage> errorMessages)
+                                             YVerificationHandler errorMessages)
                                throws JDOMException, IOException, YPersistenceException;
 
     boolean loadSpecification(YSpecification spec);
     
-    Set<YSpecificationID> getLoadedSpecifications() throws YPersistenceException;
+    Set<YSpecificationID> getLoadedSpecificationIDs() throws YPersistenceException;
 
     /**
      * Returns the process specification identified by its ID.<P>
@@ -118,16 +120,16 @@ public interface InterfaceAManagement {
     YIdentifier getCaseID(String caseIDStr) throws YPersistenceException;
 
     /**
-     * Returns the text description for the org.yawlfoundation.yawl.risk.state that a case is currently in.<P>
+     * Returns the text description for the state that a case is currently in.<P>
      * @param caseID
-     * @return a text description of the current case org.yawlfoundation.yawl.risk.state
+     * @return a text description of the current case state
      */
     String getStateTextForCase(YIdentifier caseID) throws YPersistenceException;
 
     /**
-     * Returns the org.yawlfoundation.yawl.risk.state for a case.<P>
+     * Returns the state for a case.<P>
      * @param caseID
-     * @return the current case org.yawlfoundation.yawl.risk.state
+     * @return the current case state
      */
     String getStateForCase(YIdentifier caseID) throws YPersistenceException;
 
@@ -155,17 +157,6 @@ public interface InterfaceAManagement {
      * @throws YPersistenceException
      */
     void resumeCase(YIdentifier id) throws YPersistenceException, YStateException;
-
-    /**
-     * Returns the execution status of a case.
-     *
-     * @param id
-     * @return the current case execution org.yawlfoundation.yawl.risk.state
-     * @throws YPersistenceException
-     */
-    int getCaseExecutionStatus(YIdentifier id) throws YPersistenceException;
-
-
 
 
     /**
@@ -204,28 +195,28 @@ public interface InterfaceAManagement {
     String getLoadStatus(YSpecificationID specID);
 
     /**
-     * Causes the engine to re-announce all workitems which are in an "enabled" org.yawlfoundation.yawl.risk.state.<P>
+     * Causes the engine to re-announce all workitems which are in an "enabled" state.<P>
      *
      * @return The number of enabled workitems that were reannounced
      */
     int reannounceEnabledWorkItems() throws YStateException;
 
     /**
-     * Causes the engine to re-announce all workitems which are in an "executing" org.yawlfoundation.yawl.risk.state.<P>
+     * Causes the engine to re-announce all workitems which are in an "executing" state.<P>
      *
      * @return The number of executing workitems that were reannounced
      */
     int reannounceExecutingWorkItems() throws YStateException;
 
     /**
-     * Causes the engine to re-announce all workitems which are in an "fired" org.yawlfoundation.yawl.risk.state.<P>
+     * Causes the engine to re-announce all workitems which are in an "fired" state.<P>
      *
      * @return The number of fired workitems that were reannounced
      */
     int reannounceFiredWorkItems() throws YStateException;
 
     /**
-     * Causes the engine to re-announce a specific workitem regardless of org.yawlfoundation.yawl.risk.state.<P>
+     * Causes the engine to re-announce a specific workitem regardless of state.<P>
      *
      * Note: This interface current;y only supported workitems in the following states:
      * <li>Enabled
@@ -255,9 +246,9 @@ public interface InterfaceAManagement {
      */
     void dump();
 
-    void setEngineStatus(int engineStatus);
+    void setEngineStatus(YEngine.Status engineStatus);
 
-    int getEngineStatus();
+    YEngine.Status getEngineStatus();
 
     AnnouncementContext getAnnouncementContext();
 

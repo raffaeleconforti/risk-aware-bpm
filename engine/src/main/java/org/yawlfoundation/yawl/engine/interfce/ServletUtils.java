@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -41,7 +41,7 @@ import java.util.Map;
 public class ServletUtils {
 
     public static OutputStreamWriter prepareResponse(HttpServletResponse response) throws IOException {
-        response.setContentType("text/xml");
+        response.setContentType("text/xml; charset=UTF-8");
         return new OutputStreamWriter(response.getOutputStream(), "UTF-8");
     }
 
@@ -65,7 +65,7 @@ public class ServletUtils {
 
 
     public static void doNotFound(HttpServletRequest request, HttpServletResponse response) {
-        response.setContentType("text/html");
+        response.setContentType("text/html; charset=UTF-8");
         try {
             PrintWriter outputWriter = response.getWriter();
 

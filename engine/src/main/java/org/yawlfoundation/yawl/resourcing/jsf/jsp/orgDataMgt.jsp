@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
     <!--
-      ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+      ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
       ~ The YAWL Foundation is a collaboration of individuals and
       ~ organisations who are committed to improving workflow technology.
       ~
@@ -28,7 +28,7 @@
         <ui:page binding="#{orgDataMgt.page1}" id="page1">
             <ui:html binding="#{orgDataMgt.html1}" id="html1">
                 <ui:head binding="#{orgDataMgt.head1}" id="head1"
-                         title="YAWL 2.1: Organisational Data Management">
+                         title="YAWL #{ApplicationBean.yawlVersion}: Organisational Data Management">
 
                     <ui:link binding="#{orgDataMgt.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
@@ -51,6 +51,7 @@
                         <center>
                         <ui:panelLayout binding="#{orgDataMgt.pnlContainer}"
                                         id="pnlContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="orgDataMgtContainerPanel">
 
                         <ui:tabSet binding="#{orgDataMgt.tabSet}"
@@ -108,6 +109,10 @@
                             </ui:tab>
                         </ui:tabSet>
 
+                            <div style="position: absolute;">
+                                <jsp:directive.include file="pfOrgData.jspf"/>
+                            </div>
+
                             <ui:button binding="#{orgDataMgt.btnExport}"
                                        action="#{orgDataMgt.btnExport_action}"
                                        id="btnExport"
@@ -133,10 +138,6 @@
                                    toolTip="Refresh"
                                    text=""/>
 
-                        <div style="position: absolute;">
-                            <jsp:directive.include file="pfOrgData.jspf"/>
-                        </div>
-                            
                             <ui:panelLayout binding="#{SessionBean.pnlUploadBlockout}"
                                             id="uploadBlockoutPanel"
                                             styleClass="transPanel"
@@ -176,7 +177,6 @@
                                            text="Cancel"/>
 
                             </ui:panelLayout>
-
 
                             <div><jsp:include page="pfMsgPanel.jspf"/></div>
                         </ui:panelLayout>

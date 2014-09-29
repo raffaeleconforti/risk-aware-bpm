@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,8 +18,8 @@
 
 package org.yawlfoundation.yawl.resourcing.jsf.dynform;
 
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.schema.XSDType;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
@@ -99,11 +99,10 @@ public class DynFormFieldRestriction {
     private List<String> getEnumeratedValues(Element restriction, Namespace ns) {
         List<String> result = null;
         if (restriction != null) {
-            List enumChildren = restriction.getChildren("enumeration", ns);
+            List<Element> enumChildren = restriction.getChildren("enumeration", ns);
             if ((enumChildren != null) && ! enumChildren.isEmpty()) {
                 result = new ArrayList<String>();
-                for (int i = 0; i < enumChildren.size(); i++) {
-                    Element enumChild = (Element) enumChildren.get(i);
+                for (Element enumChild : enumChildren) {
                     result.add(enumChild.getAttributeValue("value"));
                 }
             }
@@ -459,5 +458,7 @@ public class DynFormFieldRestriction {
     public boolean hasTotalDigits()    { return _totalDigits != null; }
     public boolean hasFractionDigits() { return _fractionDigits != null; }
     public boolean hasEnumeration()    { return _enumeration != null; }
+
+
 
 }

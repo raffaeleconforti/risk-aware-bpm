@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -21,6 +21,7 @@ package org.yawlfoundation.yawl.engine.interfce.interfaceB;
 import org.yawlfoundation.yawl.authentication.YClient;
 import org.yawlfoundation.yawl.elements.YTask;
 import org.yawlfoundation.yawl.engine.ObserverGateway;
+import org.yawlfoundation.yawl.engine.YEngine;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.YWorkItem;
 import org.yawlfoundation.yawl.exceptions.*;
@@ -49,25 +50,25 @@ public interface InterfaceBClient {
      *  
      * @param gateway
      */
-    void registerInterfaceBObserverGateway(ObserverGateway gateway);
+    void registerInterfaceBObserverGateway(ObserverGateway gateway) throws YAWLException;
 
     /**
      * Returns a set of all availkable workitems from the engine.<P>
      *
      * @return  Set of available work items
      */
-    public Set getAvailableWorkItems();
+    Set<YWorkItem> getAvailableWorkItems();
 
     /**
-     * Returns a set of all work items, regardless of org.yawlfoundation.yawl.risk.state, from the engine.<P>
+     * Returns a set of all work items, regardless of state, from the engine.<P>
      *
      * @return  Set of work items
      */
-    public Set getAllWorkItems();
+    Set<YWorkItem> getAllWorkItems();
 
-    YWorkItem startWorkItem(YWorkItem workItem, YClient client) throws YStateException, YDataStateException, YQueryException, YSchemaBuildingException, YPersistenceException, YEngineStateException;
+    YWorkItem startWorkItem(YWorkItem workItem, YClient client) throws YStateException, YDataStateException, YQueryException, YPersistenceException, YEngineStateException;
 
-    void completeWorkItem(YWorkItem workItem, String data, String logPredicate, boolean force) throws YStateException, YDataStateException, YQueryException, YSchemaBuildingException, YPersistenceException, YEngineStateException;
+    void completeWorkItem(YWorkItem workItem, String data, String logPredicate, YEngine.WorkItemCompletion flag) throws YStateException, YDataStateException, YQueryException, YPersistenceException, YEngineStateException;
 
     void rollbackWorkItem(String workItemID) throws YStateException, YPersistenceException, YLogException;
 
@@ -82,7 +83,7 @@ public interface InterfaceBClient {
      * @param caseID to retrieve net data of
      * @return XML representation of the net
      */
-    public String getCaseData(String caseID) throws YStateException;
+    String getCaseData(String caseID) throws YStateException;
 
     /**
      * Starts an instance of a specification (known as a 'case') within the engine.<P>
@@ -93,12 +94,11 @@ public interface InterfaceBClient {
      * @return the caseid of the started case
      * @throws YStateException
      * @throws YDataStateException
-     * @throws YSchemaBuildingException
      */
     String launchCase(YSpecificationID specID,
                       String caseParams, URI completionObserver, YLogDataItemList logData)
-            throws YStateException, YDataStateException, YSchemaBuildingException,
-                   YPersistenceException, YEngineStateException, YLogException, YQueryException, YStateException, YDataStateException;
+            throws YStateException, YDataStateException, YPersistenceException,
+                   YEngineStateException, YLogException, YQueryException;
 
     /**
      * Starts an instance of a specification (known as a 'case') within the engine.<P>
@@ -110,13 +110,12 @@ public interface InterfaceBClient {
      * @return the caseid of the started case
      * @throws YStateException
      * @throws YDataStateException
-     * @throws YSchemaBuildingException
      */
     String launchCase(YSpecificationID specID, String caseParams,
                       URI completionObserver, String caseID,
-                      YLogDataItemList logData, String serviceHandle)
-            throws YStateException, YDataStateException, YSchemaBuildingException,
-                   YPersistenceException, YEngineStateException, YLogException, YQueryException, YEngineStateException, YSchemaBuildingException, YQueryException;
+                      YLogDataItemList logData, String serviceHandle, boolean delayed)
+            throws YStateException, YDataStateException, YPersistenceException,
+                   YEngineStateException, YLogException, YQueryException;
 
     /**
      * Returns the next available caseID to be used when launching a new case where this is required to be known

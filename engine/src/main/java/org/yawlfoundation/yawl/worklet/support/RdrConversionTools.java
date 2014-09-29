@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,11 +18,12 @@
 
 package org.yawlfoundation.yawl.worklet.support;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.worklet.rdr.RdrNode;
+import org.yawlfoundation.yawl.worklet.rdr.RdrPair;
 import org.yawlfoundation.yawl.worklet.rdr.RdrTree;
 
 import java.util.*;
@@ -76,26 +77,7 @@ public class RdrConversionTools {
      * @return the reconstructed WorkItemRecord
      */
     public static WorkItemRecord xmlStringtoWIR(String xmlStr) {
-        Element eWIR = JDOMUtil.stringToElement(xmlStr) ;    // reform as Element
-
-        String status = eWIR.getChildText("status");
-        String specID = eWIR.getChildText("specid");
-        String caseid = eWIR.getChildText("caseid");
-        String taskid = eWIR.getChildText("taskid");
-
-        String taskName = Library.getTaskNameFromId(taskid);
-
-        // call the wir constructor
-        WorkItemRecord wir = new WorkItemRecord(caseid, taskid, specID,
-                              null, status);
-
-        // add data list if non-parent item
-        Element data = eWIR.getChild("data").getChild(taskName) ;
-        if (data != null) {
-            data = (Element) data.detach() ;
-            wir.setDataList(data);
-        }
-        return wir;
+        return Marshaller.unmarshalWorkItem(xmlStr);
     }
 
     /******************************************************************************/
@@ -108,14 +90,13 @@ public class RdrConversionTools {
      * @param tree - the tree that contains these two nodes
      * @return  - the reconstructed pair of nodes
      */
-    public static RdrNode[] stringToSearchPair(String s, RdrTree tree) {
+    public static RdrPair stringToSearchPair(String s, RdrTree tree) {
 
-        RdrNode[] result = null ;
+        RdrPair result = null ;
         if ((s != null) && (s.length() > 0)) {
             String[] nodeStr = s.split(":::");             // ':::' separates the 2 nodes
-            result = new RdrNode[2];
-            result[0] = stringToNode(nodeStr[0], tree);    // convert each to a node
-            result[1] = stringToNode(nodeStr[1], tree);
+            return new RdrPair(stringToNode(nodeStr[0], tree),
+                    stringToNode(nodeStr[1], tree));
         }
         return result ;
     }
@@ -156,9 +137,7 @@ public class RdrConversionTools {
         Element wirElem = JDOMUtil.stringToElement(xml);
         if (wirElem != null) {
             List<WorkItemRecord> result = new ArrayList<WorkItemRecord>();
-            List children = wirElem.getChildren();
-            for (Object o : children) {
-                Element child = (Element) o;
+            for (Element child : wirElem.getChildren()) {
                 result.add(Marshaller.unmarshalWorkItem(child));
             }
             return result;
@@ -171,7 +150,7 @@ public class RdrConversionTools {
      * @param list - list of String values
      * @return the String of comma separated values
      */
-    public static String StringListToString(List list) {
+    public static String StringListToString(List<String> list) {
         if (list != null)
             return itrToString(list.iterator());
         else

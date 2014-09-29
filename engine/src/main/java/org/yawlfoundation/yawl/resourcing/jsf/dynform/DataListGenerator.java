@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -114,6 +114,10 @@ public class DataListGenerator {
 
     private String getFieldValue(PanelLayout panel, Label label, DynFormField field) {
 
+        if (field.isYDocument()) {
+            return formatField(getDocValue(panel, label), field);
+        }
+
         // get the component this label is 'for', then get its value
         String forID = label.getFor();
         String value = "";
@@ -124,15 +128,29 @@ public class DataListGenerator {
            value =  ((Checkbox) component).getValue().toString();
         else if (component instanceof Calendar) {
             Date date = ((Calendar) component).getSelectedDate();
-            if (date != null)
-                value = _sdf.format(date);
-            else
-                value = null;
+            value = (date != null) ? _sdf.format(date) : null;
         }
         else if (component instanceof DropDown)
             value = (String) ((DropDown) component).getSelected();
+        else if (component instanceof TextArea)
+            value = JDOMUtil.encodeEscapes((String) ((TextArea) component).getValue());
+        else if (component instanceof FieldBase)
+            value = (String) ((FieldBase) component).getText();    // default fallthrough
 
         return formatField(value, field);
+    }
+    
+    
+    private String getDocValue(PanelLayout panel, Label label) {
+        for (Object o : panel.getChildren()) {
+            if (o instanceof DocComponent) {
+                DocComponent docComponent = (DocComponent) o;
+                if (docComponent.getLabel().equals(label)) {
+                    return docComponent.getOutputXML();
+                }
+            }
+        }
+        return "<name/>";                                           // default minimum
     }
 
 
@@ -143,7 +161,21 @@ public class DataListGenerator {
             return "";
         }
 
+        // special case (1) - optional enum list, no selection
+        if ((value != null) && value.equals("<-- Choose (optional) -->")) {
+            return "";
+        }
+
+        // special case (2) - empty complex type flag definition
+        if (field.isEmptyComplexTypeFlag()) {
+            if ((value == null) || value.equals("false")) {
+                return "";                         // no data element for this field
+            }
+            else value = "";                       // empty data element for this field
+        }
+
         if (field.hasBlackoutAttribute()) value = field.getValue();
+
         return StringUtil.wrap(value, field.getName());
     }
 
@@ -165,7 +197,21 @@ public class DataListGenerator {
             }
         }
         else {
-            id = (String) ((Label) component).getText();
+
+            // first try to get field directly
+            Label label = (Label) component;
+            try {
+                DynFormField formField = _factory.getFieldForComponent(
+                        (UIComponent) label.getLabeledComponent());
+                if (formField != null) return formField;
+            }
+            catch (ClassCastException cce) {
+                // fall through to code that follows...
+            }
+
+            // fallback to label text for identification (may be ambiguous if two
+            // fields have the same label)
+            id = (String) label.getText();
             id = id.replaceAll(":", "").trim();
             for (DynFormField field : fieldList) {
                 if (field.getLabelText().equals(id))

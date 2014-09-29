@@ -1,6 +1,6 @@
 package org.yawlfoundation.yawl.sensors.language.loops;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.sensors.YSensorUtilities;
 import org.yawlfoundation.yawl.sensors.language.YExpression;
 import org.yawlfoundation.yawl.sensors.language.functions.FunctionInterpreter;

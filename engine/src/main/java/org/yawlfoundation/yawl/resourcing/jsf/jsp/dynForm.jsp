@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
     <!--
-      ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+      ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
       ~ The YAWL Foundation is a collaboration of individuals and
       ~ organisations who are committed to improving workflow technology.
       ~
@@ -60,13 +60,12 @@
                                         id="compPanel"
                                         styleClass="dynformOuterPanel"/>
 
-                            <ui:button action="#{dynForm.btnCancel_action}"
-                                       binding="#{dynForm.btnCancel}"
-                                       id="btnCancel"
-                                       text="Cancel"
-                                       immediate="true"
+                            <ui:button action="#{dynForm.btnComplete_action}"
+                                       binding="#{dynForm.btnComplete}"
+                                       id="btnComplete"
+                                       text="Complete"
                                        styleClass="dynformButton"
-                                       style="#{DynFormFactory.btnCancelStyle}"/>
+                                       style="#{DynFormFactory.btnCompleteStyle}"/>
 
                             <ui:button action="#{dynForm.btnOK_action}"
                                        binding="#{dynForm.btnOK}"
@@ -74,19 +73,13 @@
                                        styleClass="dynformButton"
                                        style="#{DynFormFactory.btnOKStyle}"/>
 
-                            <ui:button action="#{dynForm.btnComplete_action}"
-                                       binding="#{dynForm.btnComplete}"
-                                       id="btnComplete"
-                                       text="Complete"
+                            <ui:button action="#{dynForm.btnCancel_action}"
+                                       binding="#{dynForm.btnCancel}"
+                                       id="btnCancel"
+                                       text="Cancel"
+                                       immediate="true"
                                        styleClass="dynformButton"
-                                       style="#{DynFormFactory.btnCompleteStyle}"/>
-                                       
-                            <ui:button action="#{dynForm.btnPredict_action}"
-                                       binding="#{dynForm.btnPredict}"
-                                       id="btnPredict"
-                                       text="Predict"
-                                       styleClass="dynformButton"
-                                       style="#{DynFormFactory.btnPredictStyle}"/>
+                                       style="#{DynFormFactory.btnCancelStyle}"/>
 
                             <ui:panelLayout binding="#{dynForm.bottomPanel}"
                                             id="bottomPanel"
@@ -99,11 +92,6 @@
 
                         </center>
                     </ui:form>
-                    
-                    <div style="float: right">
-                    	<h:graphicImage id="imgRiskIndicator" value="resources/noRisk.png" width="200" height="635"/>
-                    </div>
-                    
                 </ui:body>
             </ui:html>
         </ui:page>

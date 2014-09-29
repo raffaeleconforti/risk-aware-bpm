@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -91,21 +91,7 @@ public class XSDType {
             totalDigits, fractionDigits, whiteSpace, pattern, enumeration }
 
 
-    private static XSDType _me;
-    private static String[] _simpleYAWLTypes;
-    private static List<String> _typeList;
-
-
-    private XSDType() {
-        _simpleYAWLTypes = makeYAWLTypeArray();
-        _typeList = makeList();
-    }
-
-
-    public static XSDType getInstance() {
-        if (_me == null) _me = new XSDType();
-        return _me;
-    }
+    private static final List<String> _typeList = makeList();
 
 
     public static String getString(int type) {
@@ -160,28 +146,7 @@ public class XSDType {
     }
 
 
-    private String[] makeYAWLTypeArray() {
-        String[] simpleYAWLTypes = {"NCName", "anyURI", "boolean", "date", "double",
-                                    "duration", "long", "string", "time" } ;
-        return simpleYAWLTypes;
-    }
-
-
-    private List<String> makeList() {
-        _typeList = new ArrayList<String>();
-        for (int i = ANY_TYPE; i<= ANY_URI; i++) {
-            _typeList.add(getString(i));
-        }
-        return _typeList;
-    }
-
-
-    public boolean isSimpleYAWLType(String type) {
-        return Arrays.binarySearch(_simpleYAWLTypes, type) >= 0 ;
-    }
-
-
-    public boolean isBuiltInType(String type) {
+    public static boolean isBuiltInType(String type) {
         return _typeList.contains(type);
     }
 
@@ -190,43 +155,106 @@ public class XSDType {
         return _typeList.indexOf(type);
     }
 
-    public boolean isNumericType(String type) {
+    public static boolean isNumericType(String type) {
         int ordinal = getOrdinal(type);
         return (ordinal >= INTEGER) && (ordinal <= DECIMAL);
     }
 
-    public boolean isIntegralType(String type) {
+    public static boolean isIntegralType(String type) {
         int ordinal = getOrdinal(type);
         return (ordinal >= INTEGER) && (ordinal <= UNSIGNED_BYTE);
     }
 
-    public boolean isFloatType(String type) {
+    public static boolean isFloatType(String type) {
         int ordinal = getOrdinal(type);
         return (ordinal >= DOUBLE) && (ordinal <= DECIMAL);        
     }
 
-    public boolean isBooleanType(String type) {
+    public static boolean isBooleanType(String type) {
         return getOrdinal(type) == BOOLEAN;
     }
 
-    public boolean isDateType(String type) {
+    public static boolean isDateType(String type) {
         int ordinal = getOrdinal(type);
         return (ordinal >= DATE) && (ordinal <= DATETIME);
     }
 
-    public boolean isStringForType(String s, int type) {
+    public static boolean isListType(String type) {
+        int ordinal = getOrdinal(type);
+        return ordinal == NMTOKENS || ordinal == ENTITIES || ordinal == IDREFS;
+    }
+
+    public static boolean isBinaryType(String type) {
+        int ordinal = getOrdinal(type);
+        return ordinal == HEX_BINARY || ordinal == BASE64_BINARY;
+    }
+
+    public static boolean isStringForType(String s, int type) {
         return getString(type).equals(s);
     }
 
-    public List<String> getBuiltInTypeList() {
+    public static List<String> getBuiltInTypeList() {
         return new ArrayList<String>(_typeList);                        // send a copy  
     }
 
-    public String[] getBuiltInTypeArray() {
+    public static String[] getBuiltInTypeArray() {
         return _typeList.toArray(new String[_typeList.size()]);
     }
 
-    public char[] getConstrainingFacetMap(String type) {
+
+    public static String getSampleValue(String type) {
+        switch (getOrdinal(type)) {
+            case INTEGER:
+            case POSITIVE_INTEGER:
+            case INT:
+            case LONG:
+            case SHORT:
+            case UNSIGNED_LONG:
+            case UNSIGNED_INT:
+            case UNSIGNED_SHORT:
+            case UNSIGNED_BYTE:
+            case NON_NEGATIVE_INTEGER:
+            case GYEAR:
+            case BYTE:
+            case DECIMAL:               return "100";
+            case NEGATIVE_INTEGER:
+            case NON_POSITIVE_INTEGER:  return "-100";
+            case STRING:
+            case NORMALIZED_STRING:     return "a string";
+            case TOKEN:
+            case NMTOKEN:
+            case NMTOKENS:              return "token";
+            case NAME:
+            case NCNAME:
+            case ID:
+            case IDREF:
+            case IDREFS:
+            case ENTITY:
+            case ENTITIES:
+            case BASE64_BINARY:
+            case NOTATION:
+            case ANY_URI:
+            case ANY_TYPE:    return "name";
+            case BOOLEAN:     return "false";
+            case LANGUAGE:    return "en";
+            case QNAME:       return "xs:name";
+            case HEX_BINARY:  return "FF";
+            case DOUBLE:
+            case FLOAT:       return "3.142";
+            case DATE:        return "2013-01-01";
+            case TIME:        return "12:12:12";
+            case DATETIME:    return "2013-01-01T12:12:12";
+            case DURATION:    return "PY2";
+            case GDAY:        return "---01";
+            case GMONTH:      return "--01";
+            case GMONTHDAY:   return "--01-01";
+            case GYEARMONTH:  return "2013-01";
+        }
+        return "name";
+    }
+
+
+    public static char[] getConstrainingFacetMap(String type) {
         String vMap;
         switch (getOrdinal(type)) {
             case INTEGER:
@@ -280,7 +308,7 @@ public class XSDType {
     }
 
 
-    public boolean isValidFacet(String facetName, String type) {
+    public static boolean isValidFacet(String facetName, String type) {
         char[] validationMap = getConstrainingFacetMap(type);
         try {
             RestrictionFacet facet = RestrictionFacet.valueOf(facetName);
@@ -292,5 +320,20 @@ public class XSDType {
         }
     }
 
+
+    private static String[] makeYAWLTypeArray() {
+        String[] simpleYAWLTypes = {"NCName", "anyURI", "boolean", "date", "double",
+                                    "duration", "long", "string", "time" } ;
+        return simpleYAWLTypes;
+    }
+
+
+    private static List<String> makeList() {
+        List<String> typeList = new ArrayList<String>();
+        for (int i = ANY_TYPE; i<= ANY_URI; i++) {
+            typeList.add(getString(i));
+        }
+        return typeList;
+    }
 
 }

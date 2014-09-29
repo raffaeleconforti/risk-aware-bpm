@@ -12,7 +12,7 @@ import java.util.Vector;
 
 import net.sf.saxon.s9api.SaxonApiException;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.sensors.YSensorUtilities;
 import org.yawlfoundation.yawl.sensors.databaseInterface.Activity;
 import org.yawlfoundation.yawl.sensors.databaseInterface.ActivityTuple;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 
 /**
  *  InterfaceX_ServiceSideServer passes exception event calls from the engine to the
@@ -38,8 +39,8 @@ import java.io.PrintWriter;
  *  This class is a member class of Interface X, which provides an interface
  *  between the YAWL Engine and a Custom YAWL Service that manages exception
  *  handling at the process level.
- *
- *  InterfaceB_EnvironmentBasedServer was used as a template for this class.
+ */
+/*  InterfaceB_EnvironmentBasedServer was used as a template for this class.
  *
  *  Schematic of Interface X:
  *                                          |
@@ -68,8 +69,16 @@ public class InterfaceX_ServiceSideServer extends HttpServlet {
                 context.getInitParameter("InterfaceX_Service");
         try {
             Class controllerClass = Class.forName(controllerClassName);
-            _controller = (InterfaceX_Service) controllerClass.newInstance();
-            context.setAttribute("controller", _controller);
+
+            // If the class has a getInstance() method, call that method rather than
+            // calling a constructor (& thus instantiating 2 instances of the class)
+            try {
+                Method instMethod = controllerClass.getDeclaredMethod("getInstance");
+                _controller = (InterfaceX_Service) instMethod.invoke(null);
+            }
+            catch (NoSuchMethodException nsme) {
+                _controller = (InterfaceX_Service) controllerClass.newInstance();
+            }
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -84,7 +93,7 @@ public class InterfaceX_ServiceSideServer extends HttpServlet {
 
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        response.setContentType("text/xml");
+        response.setContentType("text/xml; charset=UTF-8");
         PrintWriter outputWriter = response.getWriter();
         StringBuilder output = new StringBuilder();
         output.append("<response>");
@@ -107,6 +116,10 @@ public class InterfaceX_ServiceSideServer extends HttpServlet {
         String sPreCheck = request.getParameter("preCheck") ;
         if (sPreCheck != null) preCheck = sPreCheck.equalsIgnoreCase("TRUE");
 
+        boolean primary = true;
+        String sPrimary = request.getParameter("primary");
+        if (sPrimary != null) primary = sPrimary.equalsIgnoreCase("TRUE");
+
         // unpack the strings
         String data = request.getParameter("data");
         String caseID = request.getParameter("caseID");
@@ -114,6 +127,7 @@ public class InterfaceX_ServiceSideServer extends HttpServlet {
         String specVersion = request.getParameter("specVersion");
         String specURI = request.getParameter("specURI");
         String taskList = request.getParameter("taskList");
+        String resourceID = request.getParameter("resourceid");
 
         switch (actionToNotifyType(request.getParameter("action"))) {
             case InterfaceX_EngineSideClient.NOTIFY_CHECK_CASE_CONSTRAINTS:
@@ -125,16 +139,16 @@ public class InterfaceX_ServiceSideServer extends HttpServlet {
                 _controller.handleCheckWorkItemConstraintEvent(wir, data, preCheck);
                break;
             case InterfaceX_EngineSideClient.NOTIFY_WORKITEM_ABORT:
-               _controller.handleWorkItemAbortException(wir);
+               _controller.handleWorkItemAbortException(wir, data);
                break;
             case InterfaceX_EngineSideClient.NOTIFY_TIMEOUT:
                _controller.handleTimeoutEvent(wir, taskList);
                break;
             case InterfaceX_EngineSideClient.NOTIFY_RESOURCE_UNAVAILABLE:
-               _controller.handleResourceUnavailableException(wir);
+               _controller.handleResourceUnavailableException(resourceID, wir, data, primary);
                break;
             case InterfaceX_EngineSideClient.NOTIFY_CONSTRAINT_VIOLATION:
-               _controller.handleConstraintViolationException(wir);
+               _controller.handleConstraintViolationException(wir, data);
                break;
             case InterfaceX_EngineSideClient.NOTIFY_CANCELLED_CASE:
                _controller.handleCaseCancellationEvent(caseID);

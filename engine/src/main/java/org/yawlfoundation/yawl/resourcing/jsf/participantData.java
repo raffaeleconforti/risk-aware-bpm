@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -22,6 +22,7 @@ import com.sun.rave.web.ui.appbase.AbstractPageBean;
 import com.sun.rave.web.ui.component.*;
 import org.yawlfoundation.yawl.resourcing.resource.Participant;
 import org.yawlfoundation.yawl.resourcing.resource.UserPrivileges;
+import org.yawlfoundation.yawl.resourcing.rsInterface.ResourceGatewayException;
 
 import javax.faces.FacesException;
 import javax.faces.event.ValueChangeEvent;
@@ -229,27 +230,6 @@ public class participantData extends AbstractPageBean {
     public void setCbxReorderItems(Checkbox c) { cbxReorderItems = c; }
 
 
-//    private Checkbox cbxViewAllOffered = new Checkbox();
-//
-//    public Checkbox getCbxViewAllOffered() { return cbxViewAllOffered; }
-//
-//    public void setCbxViewAllOffered(Checkbox c) { cbxViewAllOffered = c; }
-//
-//
-//    private Checkbox cbxViewAllAllocated = new Checkbox();
-//
-//    public Checkbox getCbxViewAllAllocated() { return cbxViewAllAllocated; }
-//
-//    public void setCbxViewAllAllocated(Checkbox c) { cbxViewAllAllocated = c; }
-//
-//
-//    private Checkbox cbxViewAllExecuting = new Checkbox();
-//
-//    public Checkbox getCbxViewAllExecuting() { return cbxViewAllExecuting; }
-//
-//    public void setCbxViewAllExecuting(Checkbox c) { cbxViewAllExecuting = c; }
-
-
     private Checkbox cbxViewTeamItems = new Checkbox();
 
     public Checkbox getCbxViewTeamItems() { return cbxViewTeamItems; }
@@ -453,15 +433,19 @@ public class participantData extends AbstractPageBean {
 
     private enum Mode {edit, add}
 
-    private SessionBean _sb = getSessionBean();
-    private MessagePanel msgPanel = _sb.getMessagePanel() ;
+    private final SessionBean _sb = getSessionBean();
+    private final MessagePanel msgPanel = _sb.getMessagePanel() ;
     
 
     // This method is called immediately before the page is rendered
     public void prerender() {
         _sb.checkLogon();                // check if session still active
         _sb.setActivePage(ApplicationBean.PageRef.participantData);
-        _sb.showMessagePanel();
+
+        // abort load if org data isn't currently available
+        if (_sb.orgDataIsRefreshing()) return;
+
+        showMessagePanel();
 
         // a null btnAdd tooltip indicates the first rendering of this page
         if (btnAdd.getToolTip() == null) {
@@ -481,6 +465,8 @@ public class participantData extends AbstractPageBean {
                 enableFields(true);
             }
             else {
+                clearFields();
+                cbbParticipants.setSelected("");
                 _sb.setAvailableResourceAttributes(null);
                 _sb.setOwnedResourceAttributes(null);
                 enableFields(false);
@@ -492,6 +478,8 @@ public class participantData extends AbstractPageBean {
 
         // set active page and show any pending messages to user
         _sb.setBlankStartOfParticipantList(true);
+
+        checkDataModsEnabled();
     }
 
 
@@ -501,9 +489,17 @@ public class participantData extends AbstractPageBean {
         if (checkValidPasswordChange(true) && (checkValidUserID(p, true))) {
             boolean nameChange = ! (txtLastName.getText()).equals(p.getLastName());
             saveChanges(p);
-            _sb.saveParticipantUpdates(p);
-            if (nameChange) _sb.refreshOrgDataParticipantList();
-            msgPanel.success("Participant changes successfully saved.");
+            try {
+                _sb.saveParticipantUpdates(p);
+                if (nameChange) _sb.refreshOrgDataParticipantList();
+                msgPanel.success("Participant changes successfully saved.");
+            }
+            catch (CloneNotSupportedException cnse) {
+                msgPanel.error("Could not save changes: cloning Exception");
+            }
+            catch (ResourceGatewayException rge) {
+                msgPanel.error("Could not save changes: " + rge.getMessage());
+            }
         }
         return null;
     }
@@ -519,8 +515,13 @@ public class participantData extends AbstractPageBean {
         }
         else {
             // if already in edit mode, discard edits
-            Participant p = _sb.resetParticipant();
-            populateFields(p) ;
+            try {
+                Participant p = _sb.resetParticipant();
+                populateFields(p) ;
+            }
+            catch (CloneNotSupportedException cnse) {
+                msgPanel.error("Could not reset changes: cloning Exception");
+            }
         }
         return null;   
     }
@@ -548,11 +549,16 @@ public class participantData extends AbstractPageBean {
         else {
             // we're in add mode - add new participant and go back to edit mode
             if (validateNewData()) {
-                Participant p = createParticipant();
-                String newID = _sb.addParticipant(p);
-                cbbParticipants.setSelected(newID);
-                setMode(Mode.edit);
-                msgPanel.success("New participant added successfully.");
+                try {
+                    Participant p = createParticipant();
+                    String newID = _sb.addParticipant(p);
+                    cbbParticipants.setSelected(newID);
+                    setMode(Mode.edit);
+                    msgPanel.success("New participant added successfully.");
+                }
+                catch (CloneNotSupportedException cnse) {
+                    msgPanel.error("Could not add participant: cloning Exception");
+                }
             }
         }
         return null;
@@ -575,7 +581,7 @@ public class participantData extends AbstractPageBean {
             ((pfAddRemove) getBean("pfAddRemove")).populateAvailableList();
             _sb.setAddParticipantMode(true);
             _sb.setAddedParticipant(new Participant());
-            _sb.setEditedParticipant((Participant) null);
+            _sb.setEditedParticipantToNull();
         }
         else {   // edit mode
             btnAdd.setText("New");
@@ -623,12 +629,17 @@ public class participantData extends AbstractPageBean {
     public void cbbParticipants_processValueChange(ValueChangeEvent event) {
         String pid = (String) event.getNewValue();
         if (pid.length() > 0) {
-            Participant p = _sb.setEditedParticipant(pid);
-            populateFields(p) ;
+            try {
+                Participant p = _sb.setEditedParticipant(pid);
+                populateFields(p) ;
+            }
+            catch (CloneNotSupportedException cnse) {
+                msgPanel.error("Could not change selected Participant: cloning Exception");
+            }
         }
         else {
             clearFields();                    // blank (first) option selected
-            _sb.setEditedParticipant((Participant) null) ;
+            _sb.setEditedParticipantToNull() ;
         }
         setMode(Mode.edit);
     }
@@ -655,9 +666,6 @@ public class participantData extends AbstractPageBean {
         cbxManageCases.setValue(up.canManageCases());
         cbxReorderItems.setValue(up.canReorder());
         cbxStartConcurrent.setValue(up.canStartConcurrent());
-//        cbxViewAllAllocated.setValue(up.canViewAllAllocated());
-//        cbxViewAllExecuting.setValue(up.canViewAllExecuting());
-//        cbxViewAllOffered.setValue(up.canViewAllOffered());
         cbxViewOrgGroupItems.setValue(up.canViewOrgGroupItems());
         cbxViewTeamItems.setValue(up.canViewTeamItems());
         
@@ -676,8 +684,8 @@ public class participantData extends AbstractPageBean {
         txtDesc.setText("");
         txtNotes.setText("");
         cbxAdmin.setValue("");
-        txtNewPassword.setPassword("");
-        txtConfirmPassword.setPassword("");
+        if (txtNewPassword != null) txtNewPassword.setPassword("");
+        if (txtConfirmPassword != null) txtConfirmPassword.setPassword("");
 
         // clear privileges
         cbxChooseItemToStart.setSelected(false);
@@ -685,9 +693,6 @@ public class participantData extends AbstractPageBean {
         cbxManageCases.setSelected(false);
         cbxReorderItems.setSelected(false);
         cbxStartConcurrent.setSelected(false);
-//        cbxViewAllAllocated.setSelected(false);
-//        cbxViewAllExecuting.setSelected(false);
-//        cbxViewAllOffered.setSelected(false);
         cbxViewOrgGroupItems.setSelected(false);
         cbxViewTeamItems.setSelected(false);
 
@@ -719,9 +724,6 @@ public class participantData extends AbstractPageBean {
             cbxManageCases.setDisabled(!enabled);
             cbxReorderItems.setDisabled(!enabled);
             cbxStartConcurrent.setDisabled(!enabled);
-//        cbxViewAllAllocated.setDisabled(!enabled);
-//        cbxViewAllExecuting.setDisabled(!enabled);
-//        cbxViewAllOffered.setDisabled(!enabled);
             cbxViewOrgGroupItems.setDisabled(!enabled);
             cbxViewTeamItems.setDisabled(!enabled);
 
@@ -762,9 +764,6 @@ public class participantData extends AbstractPageBean {
         up.setCanManageCases((Boolean) cbxManageCases.getValue());
         up.setCanReorder((Boolean) cbxReorderItems.getValue());
         up.setCanStartConcurrent((Boolean) cbxStartConcurrent.getValue());
-//        up.setCanViewAllAllocated((Boolean) cbxViewAllAllocated.getValue());
-//        up.setCanViewAllExecuting((Boolean) cbxViewAllExecuting.getValue());
-//        up.setCanViewAllOffered((Boolean) cbxViewAllOffered.getValue());
         up.setCanViewOrgGroupItems((Boolean) cbxViewOrgGroupItems.getValue());
         up.setCanViewTeamItems((Boolean) cbxViewTeamItems.getValue());
     }
@@ -876,34 +875,31 @@ public class participantData extends AbstractPageBean {
         }
         else {
             msgPanel.error("Please supply a userid.");
-            result = false;
+            result = false; 
         }
         return result;
     }
 
 
-    // below are tags removed from the jsp - may be reused later - here for safekeeping
-    
-//                <ui:checkbox binding="#{participantData.cbxViewAllOffered}"
-//                    id="cbxViewAllOffered"
-//                    label="View All Offered Work items"
-//                    styleClass="orgDataPrivCheckBox"
-//                    selected="false"
-//                    style="top: 127px"/>
-//
-//                <ui:checkbox binding="#{participantData.cbxViewAllAllocated}"
-//                    id="cbxViewAllAllocated"
-//                    label="View All Allocated Work Items"
-//                    styleClass="orgDataPrivCheckBox"
-//                    selected="false"
-//                    style="top: 156px"/>
-//
-//                <ui:checkbox binding="#{participantData.cbxViewAllExecuting}"
-//                    id="cbxViewAllExecuting"
-//                    label="View All Executing Work Items"
-//                    styleClass="orgDataPrivCheckBox"
-//                    selected="false"
-//                    style="top: 185px"/>
+    private void showMessagePanel() {
+        if (msgPanel.hasMessage()) body1.setFocus("form1:pfMsgPanel:btnOK001");
+        _sb.showMessagePanel();
+    }
+
+    private void checkDataModsEnabled() {
+        if (! getApplicationBean().getResourceManager().getOrgDataSet()
+                .isExternalOrgDataModsAllowed()) {
+            disableButton(btnAdd);
+            disableButton(btnRemove);
+            disableButton(btnSave);
+            disableButton(btnReset);
+        }
+    }
+
+    private void disableButton(Button b) {
+       b.setToolTip("External data modifications are disabled");
+       b.setDisabled(true);
+    }
 
 }
 

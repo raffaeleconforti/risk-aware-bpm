@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.sensors.YSensorUtilities;
 import org.yawlfoundation.yawl.sensors.databaseInterface.Activity;
 import org.yawlfoundation.yawl.sensors.databaseInterface.ActivityRole;

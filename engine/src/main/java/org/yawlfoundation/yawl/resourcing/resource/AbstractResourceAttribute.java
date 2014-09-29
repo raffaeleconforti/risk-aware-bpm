@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,8 +18,9 @@
 
 package org.yawlfoundation.yawl.resourcing.resource;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
+import org.yawlfoundation.yawl.resourcing.datastore.orgdata.ResourceDataSet;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
 import java.util.HashSet;
@@ -42,16 +43,16 @@ public abstract class AbstractResourceAttribute {
     protected String _notes ;
 
     // the set of resources that have this attribute
-    protected HashSet<AbstractResource> _resources = new HashSet<AbstractResource>() ;
-
-    protected ResourceManager _resMgr = ResourceManager.getInstance() ;
+    protected Set<AbstractResource> _resources = new HashSet<AbstractResource>();
 
     protected boolean _persisting ;
 
     protected AbstractResourceAttribute() {}
 
 
-    public void save() { _resMgr.getOrgDataSet().updateResourceAttribute(this); }
+    public abstract void setLabel(String label);
+
+    public void save() { getOrgDataSet().updateResourceAttribute(this); }
 
     public void setPersisting(boolean persisting) {
         _persisting = persisting ;
@@ -91,6 +92,10 @@ public abstract class AbstractResourceAttribute {
 
     public Set<AbstractResource> getResources() { return _resources ; }
 
+    public ResourceDataSet getOrgDataSet() {
+        return ResourceManager.getInstance().getOrgDataSet();
+    }
+
 
     public void fromXML(String xml) {
         if (xml != null) reconstitute(JDOMUtil.stringToElement(xml));
@@ -107,6 +112,12 @@ public abstract class AbstractResourceAttribute {
     public int hashCode() {
        return 31 + (_id != null? _id.hashCode() : 0);
     }
+
+    public String toString() {
+        return String.format("%s: %s (%s)", getClass().getName(), getName(), getID());
+    }
+
+    public abstract String getName();
 
     // hibernate mappings
 

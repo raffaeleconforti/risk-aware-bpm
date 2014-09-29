@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.monitor;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.instance.CaseInstance;
 import org.yawlfoundation.yawl.engine.instance.ParameterInstance;
 import org.yawlfoundation.yawl.engine.instance.WorkItemInstance;
@@ -94,11 +94,11 @@ public class MonitorClient implements Serializable{
         String xml = _interfaceBClient.getCaseInstanceSummary(getEngineHandle());
         Element cases = JDOMUtil.stringToElement(xml);
         if (cases != null) {
-            List children = cases.getChildren();
+            List<Element> children = cases.getChildren();
             if (! children.isEmpty()) {
                 caseList = new ArrayList<CaseInstance>();
-                for (Object child : children) {
-                    caseList.add(new CaseInstance((Element) child));
+                for (Element child : children) {
+                    caseList.add(new CaseInstance(child));
                 }
             }
             String startTime = cases.getAttributeValue("startuptime");
@@ -115,14 +115,11 @@ public class MonitorClient implements Serializable{
         Element items = JDOMUtil.stringToElement(xml);
         if (items != null) {
             itemList = new ArrayList<WorkItemInstance>();
-            List children = items.getChildren();
-            for (Object child : children) {
-                Element eChild = (Element) child;
+            for (Element child : items.getChildren()) {
 
                 // ignore parent workitems
-                if (! "statusIsParent".equals(eChild.getChildText("status"))) {
-                    WorkItemInstance instance = new WorkItemInstance((Element) child);
-                    itemList.add(instance);
+                if (! "statusIsParent".equals(child.getChildText("status"))) {
+                    itemList.add(new WorkItemInstance(child));
                 }
             }
         }
@@ -132,13 +129,12 @@ public class MonitorClient implements Serializable{
     public List<ParameterInstance> getParameters(String itemID) throws IOException {
         List<ParameterInstance> paramList = new ArrayList<ParameterInstance>();
         String caseID = getCaseFromItemID(itemID);
+        itemID = checkForItemStarted(itemID, caseID);
         String xml = _interfaceBClient.getParameterInstanceSummary(caseID, itemID, getEngineHandle());
         Element params = JDOMUtil.stringToElement(xml);
         if (params != null) {
-            List children = params.getChildren();
-            for (Object child : children) {
-                ParameterInstance instance = new ParameterInstance((Element) child);
-                paramList.add(instance);
+            for (Element child : params.getChildren()) {
+                paramList.add(new ParameterInstance(child));
             }
         }
         return paramList;
@@ -148,7 +144,15 @@ public class MonitorClient implements Serializable{
     public long getStartupTime() { return _startupTime; }
 
 
-    //== LOGIN & SESSION ===================================//
+    //== PRIVATE ===================================//
+
+    private String getCaseFromItemID(String itemID) {
+        String caseID = itemID;
+        if (caseID.contains(":")) caseID = itemID.substring(0, itemID.indexOf(':'));
+        if (caseID.contains(".")) caseID = caseID.substring(0, caseID.indexOf('.'));
+        return caseID;
+    }
+
 
     /* tests that a sessionhandle is valid */
     private boolean connected(String handle) {
@@ -183,6 +187,28 @@ public class MonitorClient implements Serializable{
     }
 
 
+    private String validateUserCredentials(String userid, String password) {
+        try {
+            return _resClient.validateUserCredentials(userid, password, true, getResourceHandle());
+        }
+        catch (IOException ioe) {
+            return "<failure>Unable to validate user - service unreachable.</failure>";
+        }
+    }
+
+
+    private String checkForItemStarted(String itemID, String caseID) throws IOException {
+        for (WorkItemInstance item : getWorkItems(caseID)) {
+            if (itemID.endsWith(":" + item.getTaskID())) {
+                return item.getID();
+            }
+        }
+        return itemID;     // fallback
+    }
+
+
+    //== LOGIN & SESSION ===================================//
+
     /* called from msLogin to log a user with admin credentials into the service */
     public String login(String userid, String password) {
         try {
@@ -198,27 +224,8 @@ public class MonitorClient implements Serializable{
     }
 
 
-    private String validateUserCredentials(String userid, String password) {
-        try {
-            return _resClient.validateUserCredentials(userid, password, true, getResourceHandle());
-        }
-        catch (IOException ioe) {
-            return "<failure>Unable to validate user - service unreachable.</failure>";
-        }
-    }
-
-
     public boolean successful(String msg) {
         return _interfaceBClient.successful(msg);
-    }
-
-
-    //== PRIVATE ===================================//
-
-    private String getCaseFromItemID(String itemID) {
-        String caseID = itemID.split(":")[0];
-        if (caseID.contains(".")) caseID = caseID.split("\\.")[0];
-        return caseID;
     }
 
 
@@ -244,14 +251,13 @@ public class MonitorClient implements Serializable{
 
     public List<YLogEvent> getEventsForWorkItem(String itemID) throws IOException {
         List<YLogEvent> eventList = new ArrayList<YLogEvent>();
+        itemID = checkForItemStarted(itemID, getCaseFromItemID(itemID));
         String xml = _logClient.getEventsForTaskInstance(itemID, getEngineHandle()) ;
         if (successful(xml)) {
             Element events = JDOMUtil.stringToElement(xml);
             if (events != null) {
-                List children = events.getChildren();
-                for (Object child : children) {
-                    YLogEvent event = new YLogEvent((Element) child);
-                    eventList.add(event);
+                for (Element child : events.getChildren()) {
+                    eventList.add(new YLogEvent(child));
                 }
             }
         }
@@ -261,14 +267,13 @@ public class MonitorClient implements Serializable{
 
     public List<ResourceEvent> getResourceEventsForWorkItem(String itemID) throws IOException {
         List<ResourceEvent> eventList = new ArrayList<ResourceEvent>();
+        itemID = checkForItemStarted(itemID, getCaseFromItemID(itemID));
         String xml = _resLogClient.getWorkItemEvents(itemID, true, getResourceHandle());
         if (successful(xml)) {
             Element events = JDOMUtil.stringToElement(xml);
             if (events != null) {
-                List children = events.getChildren();
-                for (Object child : children) {
-                    ResourceEvent event = new ResourceEvent((Element) child);
-                    eventList.add(event);
+                for (Element child : events.getChildren()) {
+                    eventList.add(new ResourceEvent(child));
                 }
             }
         }

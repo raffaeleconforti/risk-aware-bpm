@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,13 +18,19 @@
 
 package org.yawlfoundation.yawl.resourcing.datastore.orgdata;
 
+import org.yawlfoundation.yawl.resourcing.datastore.eventlog.EventLogger;
 import org.yawlfoundation.yawl.resourcing.jsf.comparator.ParticipantNameComparator;
 import org.yawlfoundation.yawl.resourcing.resource.*;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanCategory;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanResource;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanSubCategory;
 import org.yawlfoundation.yawl.util.XNode;
 
 import java.util.*;
 
 /**
+ * Handles the loading, mapping and runtime management of resources from data source.
+ *
  * @author Michael Adams
  * @date 4/11/2009 (orginally extracted from ResourceManager class)
  */
@@ -32,17 +38,18 @@ import java.util.*;
 public class ResourceDataSet {
 
     public enum ResUnit { Participant, Role, Capability, OrgGroup,
-                          Position, NonHumanResource }
+                          Position, NonHumanResource, NonHumanCategory }
 
     public enum Identifier { FullName, ReverseFullName, LastName, Userid }
 
-    // Data maps for each of the six resource entities
-    private HashMap<String, Participant> participantMap ;
-    private HashMap<String, Role> roleMap ;
-    private HashMap<String, Capability> capabilityMap;
-    private HashMap<String, Position> positionMap;
-    private HashMap<String, OrgGroup> orgGroupMap;
-    private HashMap<String, NonHumanResource> nonHumanMap;
+    // Data maps [id, object] for each of the seven resource entities
+    private Map<String, Participant> participantMap ;
+    private Map<String, Role> roleMap ;
+    private Map<String, Capability> capabilityMap;
+    private Map<String, Position> positionMap;
+    private Map<String, OrgGroup> orgGroupMap;
+    private Map<String, NonHumanResource> nonHumanMap;
+    private Map<String, NonHumanCategory> nonHumanCategoryMap;
 
     // if true, overrides read-only setting of external data sources (set from web.xml)
     private boolean _allowExternalOrgDataMods = true;
@@ -51,30 +58,38 @@ public class ResourceDataSet {
     private boolean _externalUserAuthentication = false;
 
     // maps the data source for each org data entity
-    private Map<ResUnit, DataSource> sources = new Hashtable<ResUnit, DataSource>();
+    private Map<ResUnit, DataSource> _sources = new Hashtable<ResUnit, DataSource>();
 
-    NonHumanResourceCategories nonHumanCategories;
+    // stores a timestamp of each entity's last change
+    private Map<ResUnit, Long> _changeStamp = new Hashtable<ResUnit, Long>();
+
 
     public ResourceDataSet(DataSource source) {
-        initSourcesTable(source);            
+        initUnitMaps(source);
         participantMap = new HashMap<String, Participant>();
         roleMap = new HashMap<String, Role>();
         capabilityMap = new HashMap<String, Capability>();
         positionMap = new HashMap<String, Position>();
         orgGroupMap = new HashMap<String, OrgGroup>();
         nonHumanMap = new HashMap<String, NonHumanResource>();
-
-        nonHumanCategories = new NonHumanResourceCategories(true);
+        nonHumanCategoryMap = new HashMap<String, NonHumanCategory>();
     }
 
     /*************************************************************************/
 
     // PRIVATE METHODS //
 
-    private void initSourcesTable(DataSource source) {
+    private void initUnitMaps(DataSource source) {
+        long now = System.currentTimeMillis();
         for (ResUnit unit : ResUnit.values()) {
-            sources.put(unit, source);
+            _sources.put(unit, source);
+            _changeStamp.put(unit, now);
         }
+    }
+
+
+    private void setChangeStamp(ResUnit unit) {
+        _changeStamp.put(unit, System.currentTimeMillis());        
     }
 
 
@@ -96,7 +111,7 @@ public class ResourceDataSet {
     }
 
 
-    private ArrayList<Participant> sortFullParticipantListByName() {
+    private List<Participant> sortFullParticipantListByName() {
         ArrayList<Participant> pList = new ArrayList<Participant>(participantMap.values());
         Collections.sort(pList, new ParticipantNameComparator());
         return pList ;
@@ -126,6 +141,8 @@ public class ResourceDataSet {
         _allowExternalOrgDataMods = allow;
     }
 
+    public boolean isExternalOrgDataModsAllowed() { return _allowExternalOrgDataMods; }
+
     public boolean isDataEditable(ResUnit resource) {
         return _allowExternalOrgDataMods || hasDefaultDataSource(resource) ;
     }
@@ -147,11 +164,11 @@ public class ResourceDataSet {
 
 
     public void setDataSource(ResUnit resource, DataSource source) {
-        sources.put(resource, source);
+        _sources.put(resource, source);
     }
 
     public DataSource getDataSource(ResUnit resource) {
-        return sources.get(resource);
+        return _sources.get(resource);
     }
 
     // HibernateImpl is the default Resource Service Data Source
@@ -163,37 +180,56 @@ public class ResourceDataSet {
         return ResUnit.valueOf(name);
     }
 
+
+    public long getChangeStamp(ResUnit unit) {
+        return _changeStamp.get(unit);
+    }
+
+    public long getLastChangeStamp() {
+        long lastChange = 0;
+        for (Long stamp : _changeStamp.values()) {
+            if (stamp > lastChange) lastChange = stamp;
+        }
+        return lastChange;
+    }
+
     /************************************/
 
-    public void setParticipants(HashMap<String, Participant> participants, DataSource source) {
+    public void setParticipants(Map<String, Participant> participants, DataSource source) {
         participantMap = participants;
         setDataSource(ResUnit.Participant, source);
     }
 
-    public void setRoles(HashMap<String, Role> roles, DataSource source) {
+    public void setRoles(Map<String, Role> roles, DataSource source) {
         roleMap = roles;
         setDataSource(ResUnit.Role, source);
     }
 
-    public void setCapabilities(HashMap<String, Capability> capabilities, DataSource source) {
+    public void setCapabilities(Map<String, Capability> capabilities, DataSource source) {
         capabilityMap = capabilities;
         setDataSource(ResUnit.Capability, source);
     }
 
-    public void setPositions(HashMap<String, Position> positions, DataSource source) {
+    public void setPositions(Map<String, Position> positions, DataSource source) {
         positionMap = positions;
         setDataSource(ResUnit.Position, source);
     }
 
-    public void setOrgGroups(HashMap<String, OrgGroup> groups, DataSource source) {
+    public void setOrgGroups(Map<String, OrgGroup> groups, DataSource source) {
         orgGroupMap = groups;
         setDataSource(ResUnit.OrgGroup, source);
     }
 
-    public void setNonHumanResources(HashMap<String, NonHumanResource> resources,
+    public void setNonHumanResources(Map<String, NonHumanResource> resources,
                                      DataSource source) {
         nonHumanMap = resources;
         setDataSource(ResUnit.NonHumanResource, source);
+    }
+
+    public void setNonHumanCategories(Map<String, NonHumanCategory> resources,
+                                      DataSource source) {
+        nonHumanCategoryMap = resources;
+        setDataSource(ResUnit.NonHumanCategory, source);
     }
 
 
@@ -215,58 +251,82 @@ public class ResourceDataSet {
         if (getNonHumanResources().isEmpty())
             setNonHumanResources(defaultSource.loadNonHumanResources(), defaultSource);
 
+        if (getNonHumanCategories().isEmpty())
+            setNonHumanCategories(defaultSource.loadNonHumanCategories(), defaultSource);
     }
 
     /************************************/
 
     public void putParticipant(Participant p) {
         participantMap.put(p.getID(), p);
+        setChangeStamp(ResUnit.Participant);
     }
 
     public void putCapability(Capability c) {
         capabilityMap.put(c.getID(), c);
+        setChangeStamp(ResUnit.Capability);
     }
 
     public void putRole(Role r) {
         roleMap.put(r.getID(), r);
+        setChangeStamp(ResUnit.Role);
     }
 
     public void putPosition(Position p) {
         positionMap.put(p.getID(), p);
+        setChangeStamp(ResUnit.Position);
     }
 
     public void putOrgGroup(OrgGroup o) {
-        orgGroupMap.put(o.getID(), o) ;
+        orgGroupMap.put(o.getID(), o);
+        setChangeStamp(ResUnit.OrgGroup);
     }
 
     public void putNonHumanResource(NonHumanResource r) {
-        nonHumanMap.put(r.getID(), r) ;
+        nonHumanMap.put(r.getID(), r);
+        setChangeStamp(ResUnit.NonHumanResource);
+    }
+
+    public void putNonHumanCategory(NonHumanCategory r) {
+        nonHumanCategoryMap.put(r.getID(), r);
+        setChangeStamp(ResUnit.NonHumanCategory);
     }
 
     /************************************/
 
     public void delParticipant(Participant p) {
-        participantMap.remove(p.getID()) ;
+        participantMap.remove(p.getID());
+        setChangeStamp(ResUnit.Participant);
     }
 
     public void delRole(Role r) {
         roleMap.remove(r.getID());
+        setChangeStamp(ResUnit.Role);
     }
 
     public void delCapability(Capability c) {
         capabilityMap.remove(c.getID());
+        setChangeStamp(ResUnit.Capability);
     }
 
     public void delPosition(Position p) {
         positionMap.remove(p.getID());
+        setChangeStamp(ResUnit.Position);
     }
 
     public void delOrgGroup(OrgGroup o) {
         orgGroupMap.remove(o.getID());
+        setChangeStamp(ResUnit.OrgGroup);
     }
 
     public void delNonHumanResource(NonHumanResource r) {
         nonHumanMap.remove(r.getID());
+        setChangeStamp(ResUnit.NonHumanResource);
+    }
+
+    public void delNonHumanCategory(NonHumanCategory r) {
+        nonHumanCategoryMap.remove(r.getID());
+        setChangeStamp(ResUnit.NonHumanCategory);
     }
 
     /************************************/
@@ -323,17 +383,22 @@ public class ResourceDataSet {
 
     public String addNonHumanResource(NonHumanResource r) {
         if (isDataEditable(ResUnit.NonHumanResource)) {
-            String validationMsg = nonHumanCategories.isValidCategoryPair(
-                    r.getCategory(), r.getSubCategory());
-            if (validationMsg.equals("<success/>")) {
-                String newID = getDataSource(ResUnit.NonHumanResource).insert(r) ; // persist it
-                if (! hasDefaultDataSource(ResUnit.NonHumanResource)) r.setID(newID);
-                putNonHumanResource(r) ;                 // ...and add it to the data set
-                return newID;
-            }
-            else return validationMsg;
+            String newID = getDataSource(ResUnit.NonHumanResource).insert(r) ; // persist it
+            if (! hasDefaultDataSource(ResUnit.NonHumanResource)) r.setID(newID);
+            putNonHumanResource(r) ;                 // ...and add it to the data set
+            return newID;
         }
         else return fail("External NonHumanResource dataset is read-only");
+    }
+
+    public String addNonHumanCategory(NonHumanCategory c) {
+        if (isDataEditable(ResUnit.NonHumanCategory)) {
+            String newID = getDataSource(ResUnit.NonHumanCategory).insert(c) ;
+            if (! hasDefaultDataSource(ResUnit.NonHumanCategory)) c.setID(newID);
+            putNonHumanCategory(c) ;
+            return newID;
+        }
+        else return fail("External NonHumanCategory dataset is read-only");
     }
 
     /************************************/
@@ -382,7 +447,20 @@ public class ResourceDataSet {
         }
     }
 
+    public void importNonHumanCategory(NonHumanCategory r) {
+        if (isDataEditable(ResUnit.NonHumanCategory)) {
+            getDataSource(ResUnit.NonHumanCategory).importObj(r) ;
+            putNonHumanCategory(r) ;
+        }
+    }
+
     /************************************/
+
+    public void updateResource(AbstractResource r) {
+        if (r instanceof Participant) updateParticipant((Participant) r);
+        else updateNonHumanResource((NonHumanResource) r);
+    }
+
 
     public boolean updateParticipant(Participant p) {
         boolean editable = isDataEditable(ResUnit.Participant);
@@ -432,6 +510,14 @@ public class ResourceDataSet {
         if (isDataEditable(ResUnit.NonHumanResource)) {
             getDataSource(ResUnit.NonHumanResource).update(r) ;            // persist it
             putNonHumanResource(r) ;                      // ... and update the data set
+        }
+    }
+
+    public void updateNonHumanCategory(NonHumanCategory r) {
+        if (isDataEditable(ResUnit.NonHumanCategory)) {
+            getDataSource(ResUnit.NonHumanCategory).update(r) ;    // persist it
+            removeOrphanedSubCategories();
+            putNonHumanCategory(r) ;              // ... and update the data set
         }
     }
 
@@ -509,8 +595,18 @@ public class ResourceDataSet {
 
     public synchronized void removeNonHumanResource(NonHumanResource r) {
         if (isDataEditable(ResUnit.NonHumanResource)) {
-            delNonHumanResource(r);
-            getDataSource(ResUnit.NonHumanResource).delete(r);
+            r.detachSubCategory();
+            if (getDataSource(ResUnit.NonHumanResource).delete(r)) {
+                delNonHumanResource(r);
+            }    
+        }
+    }
+
+    public synchronized void removeNonHumanCategory(NonHumanCategory r) {
+        if (isDataEditable(ResUnit.NonHumanCategory)) {
+            if (getDataSource(ResUnit.NonHumanCategory).delete(r)) {
+                delNonHumanCategory(r);
+            }    
         }
     }
 
@@ -569,80 +665,119 @@ public class ResourceDataSet {
         return false;
     }
 
+    public boolean removeNonHumanCategory(String rid) {
+        if (rid != null) {
+            NonHumanCategory category = getNonHumanCategory(rid);
+            if (category != null) {
+                removeNonHumanCategory(category);
+                return true;
+            }
+        }
+        return false;
+    }
 
 
     /************************************/
 
+    public AbstractResource getResource(String id) {
+        AbstractResource resource = getParticipant(id);
+        if (resource == null) {
+            resource = getNonHumanResource(id);   // may also be null - means unknown id
+        }
+        return resource;
+    }
+
     public Participant getParticipant(String pid) {
-       return participantMap.get(pid) ;
+        return (pid != null) ? participantMap.get(pid) : null ;
     }
 
     public Role getRole(String rid) {
-        return roleMap.get(rid);
+        return (rid != null) ? roleMap.get(rid) : null;
     }
 
     public Capability getCapability(String cid) {
-        return capabilityMap.get(cid);
+        return (cid != null) ? capabilityMap.get(cid) : null;
     }
 
     public Position getPosition(String pid) {
-        return positionMap.get(pid);
+        return (pid != null) ? positionMap.get(pid) : null;
     }
 
     public OrgGroup getOrgGroup(String oid) {
-        return orgGroupMap.get(oid);
+        return (oid != null) ? orgGroupMap.get(oid) : null;
     }
 
     public NonHumanResource getNonHumanResource(String rid) {
-        return nonHumanMap.get(rid);
+        return (rid != null) ? nonHumanMap.get(rid) : null;
     }
 
-    public HashSet<Participant> getParticipants() {
+    public NonHumanCategory getNonHumanCategory(String cid) {
+        return (cid != null) ? nonHumanCategoryMap.get(cid) : null;
+    }
+
+    public Set<Participant> getParticipants() {
         return new HashSet<Participant>(participantMap.values()) ;
     }
 
-    public HashSet<Role> getRoles() {
+    public Set<Role> getRoles() {
         return new HashSet<Role>(roleMap.values()) ;
     }
 
-    public HashSet<Position> getPositions() {
+    public Set<Position> getPositions() {
         return new HashSet<Position>(positionMap.values()) ;
     }
 
-    public HashSet<Capability> getCapabilities() {
+    public Set<Capability> getCapabilities() {
         return new HashSet<Capability>(capabilityMap.values()) ;
     }
 
-    public HashSet<OrgGroup> getOrgGroups() {
+    public Set<OrgGroup> getOrgGroups() {
         return new HashSet<OrgGroup>(orgGroupMap.values()) ;
     }
 
-    public HashSet<NonHumanResource> getNonHumanResources() {
+    public Set<NonHumanResource> getNonHumanResources() {
         return new HashSet<NonHumanResource>(nonHumanMap.values()) ;
     }
 
-    public HashMap<String, Participant> getParticipantMap() {
+    public Set<NonHumanCategory> getNonHumanCategories() {
+        return new HashSet<NonHumanCategory>(nonHumanCategoryMap.values()) ;
+    }
+
+    public Set<NonHumanSubCategory> getNonHumanSubCategories() {
+        Set<NonHumanSubCategory> set = new HashSet<NonHumanSubCategory>();
+        for (NonHumanCategory c : nonHumanCategoryMap.values()) {
+            set.addAll(c.getSubCategories());
+        }
+        return set;
+    }
+
+
+    public Map<String, Participant> getParticipantMap() {
         return participantMap ;
     }
 
-    public HashMap<String, Role> getRoleMap() {
+    public Map<String, Role> getRoleMap() {
         return roleMap ;
     }
 
-    public HashMap<String, Position> getPositionMap() {
+    public Map<String, Position> getPositionMap() {
         return positionMap ;
     }
 
-    public HashMap<String, Capability> getCapabilityMap() {
+    public Map<String, Capability> getCapabilityMap() {
         return capabilityMap ;
     }
 
-    public HashMap<String, OrgGroup> getOrgGroupMap() {
+    public Map<String, OrgGroup> getOrgGroupMap() {
         return orgGroupMap ;
     }
 
-    public HashMap<String, NonHumanResource> getNonHumanResourceMap() {
+    public Map<String, NonHumanResource> getNonHumanResourceMap() {
         return nonHumanMap ;
+    }
+
+    public Map<String, NonHumanCategory> getNonHumanCategoryMap() {
+        return nonHumanCategoryMap ;
     }
 
     public Map<String, String> getParticipantIdentifiers() {
@@ -715,6 +850,38 @@ public class ResourceDataSet {
         return idMap;
     }
 
+    public Map<String, String> getNonHumanCategoryIdentifiers() {
+        Map<String, String> idMap = new Hashtable<String, String>();
+        for (NonHumanCategory r : getNonHumanCategories()) {
+            idMap.put(r.getID(), r.getName());
+        }
+        return idMap;
+    }
+
+    public String getNonHumanSubCategoriesAsXML(String categoryID) {
+        XNode node = new XNode("nonHumanSubCategories");
+        NonHumanCategory nhCategory = getNonHumanCategory(categoryID);
+        if (nhCategory != null) {
+            node.addAttribute("category", categoryID);
+            for (String subcategory : nhCategory.getSubCategoryNames()) {
+                node.addChild("subcategory", subcategory);
+            }
+        }    
+        return node.toString();
+    }
+
+    public String getNonHumanCategorySet() {
+        XNode node = new XNode("nonHumanCategorySet");
+        for (NonHumanCategory category : nonHumanCategoryMap.values()) {
+            XNode categoryNode = node.addChild("category");
+            categoryNode.addAttribute("name", category.getName());
+            for (String subcategory : category.getSubCategoryNames()) {
+                categoryNode.addChild("subcategory", subcategory);
+            }
+        }
+        return node.toString();
+    }
+
     public int getParticipantCount() {
         return participantMap.size();
     }
@@ -763,6 +930,31 @@ public class ResourceDataSet {
         return null ;                    // no match
     }
 
+    public NonHumanCategory getNonHumanCategoryByName(String name) {
+        for (NonHumanCategory r : nonHumanCategoryMap.values()) {
+            if (r.getName().equalsIgnoreCase(name))
+                return r ;
+        }
+        return null ;                    // no match
+    }
+
+    public Set<NonHumanResource> getNonHumanResources(NonHumanCategory category,
+                                                      String subcategory) {
+        Set<NonHumanResource> resources = new HashSet<NonHumanResource>();
+        if (category != null) {
+            resources = category.getSubCategoryResources(subcategory);
+        }
+        return resources ;
+    }
+
+    public Set<NonHumanResource> getNonHumanResources(String id, String subcategory) {
+        return getNonHumanResources(getNonHumanCategory(id), subcategory);
+    }
+
+    public Set<NonHumanResource> getNonHumanResourcesByName(String category, String subcategory) {
+        return getNonHumanResources(getNonHumanCategoryByName(category), subcategory);
+    }
+
     public boolean isKnownRoleName(String name) {
         return getRoleByName(name) != null;
     }
@@ -781,6 +973,10 @@ public class ResourceDataSet {
 
     public boolean isKnownNonHumanResourceName(String name) {
         return getNonHumanResourceByName(name) != null;
+    }
+
+    public boolean isKnownNonHumanCategoryName(String name) {
+        return getNonHumanCategoryByName(name) != null;
     }
 
     public boolean isKnownParticipant(Participant p) {
@@ -811,13 +1007,25 @@ public class ResourceDataSet {
         return orgGroupMap.containsKey(oid);
     }
 
+    public boolean isKnownNonHumanResource(NonHumanResource r) {
+        return isKnownNonHumanResource(r.getID());
+    }
+
     public boolean isKnownNonHumanResource(String rid) {
         return nonHumanMap.containsKey(rid);
     }
 
+    public boolean isKnownNonHumanCategory(NonHumanCategory c) {
+        return isKnownNonHumanCategory(c.getID());
+    }
+
+    public boolean isKnownNonHumanCategory(String rid) {
+        return nonHumanCategoryMap.containsKey(rid);
+    }
+
     // @return a csv listing of the full name of each participant
     public String getParticipantNames() {
-        ArrayList<Participant> pList = sortFullParticipantListByName();
+        List<Participant> pList = sortFullParticipantListByName();
         StringBuilder csvList = new StringBuilder() ;
         for  (Participant p : pList) {
             if (csvList.length() > 0) csvList.append(",");
@@ -845,6 +1053,14 @@ public class ResourceDataSet {
         return node.toString();
     }
 
+    public String getNonHumanCategoryNames() {
+        XNode node = new XNode("nonHumanCategoryNames") ;
+        for (NonHumanCategory r : nonHumanCategoryMap.values()) {
+            node.addChild("name", r.getName());
+        }
+        return node.toString();
+    }
+
     public Set<Role> getParticipantRoles(String pid) {
         Participant p = participantMap.get(pid);
         return (p != null) ? p.getRoles() : null ;
@@ -866,6 +1082,33 @@ public class ResourceDataSet {
     public Set<Participant> getRoleParticipants(String rid) {
         Role r = roleMap.get(rid);
         return (r != null) ? castToParticipantSet(r.getResources()) : null ;
+    }
+
+    public Set<Participant> getOrgGroupParticipants(String oid) {
+        OrgGroup o = orgGroupMap.get(oid);
+        return (o != null) ? getOrgGroupMembers(o) : null ;
+    }
+
+
+    public Set<AbstractResource> getRoleParticipantsWithCapability(String rid, String cid) {
+        Set<AbstractResource> resourceSet = new HashSet<AbstractResource>();
+        Role role = getRole(rid);
+        if (role != null) {
+
+            // filter role members by capability
+            if (cid != null) {
+                Capability cap = getCapability(cid);
+                if (cap != null) {
+                    for (AbstractResource member : role.getResources()) {
+                        if (((Participant) member).getCapabilities().contains(cap)) {
+                           resourceSet.add(member);
+                        }
+                    }
+                }
+            }
+            else resourceSet = role.getResources();         // no cid means don't filter
+        }
+        return resourceSet;
     }
 
 
@@ -924,6 +1167,88 @@ public class ResourceDataSet {
         return result;
     }
 
+    
+    public Set<Participant> resolveParticipants(String anyID) {
+        Set<Participant> pSet = new HashSet<Participant>();
+        if (isKnownParticipant(anyID)) {
+            pSet.add(getParticipant(anyID));
+        }
+        else if (isKnownRole(anyID)) {
+            pSet.addAll(getRoleParticipants(anyID));
+        }
+        else if (isKnownCapability(anyID)) {
+            pSet.addAll(getCapabilityParticipants(anyID));
+        }
+        else if (isKnownPosition(anyID)) {
+            pSet.addAll(getPositionParticipants(anyID));
+        }
+        else if (isKnownOrgGroup(anyID)) {
+            pSet.addAll(getOrgGroupParticipants(anyID));
+        }
+        else {
+            pSet.addAll(resolveParticipantsFromResourceName(anyID));
+        }
+        return pSet;
+    }
+
+
+    public Set<Participant> resolveParticipantsFromResourceName(String anyName) {
+        Set<Participant> pSet = new HashSet<Participant>();
+        Participant p = getParticipantFromUserID(anyName);
+        if (p != null) {
+            pSet.add(p);
+            return pSet;
+        }
+        Role r = getRoleByName(anyName);
+        if (r != null) {
+            pSet.addAll(getRoleParticipants(r.getID()));
+            return pSet;
+        }
+        Position pos = getPositionByLabel(anyName);
+        if (pos != null) {
+            pSet.addAll(getPositionParticipants(pos.getID()));
+            return pSet;
+        }
+        OrgGroup o = getOrgGroupByLabel(anyName);
+        if (o != null) {
+            pSet.addAll(getOrgGroupParticipants(o.getID()));
+            return pSet;
+        }
+        Capability c = getCapabilityByLabel(anyName);
+        if (c != null) {
+            pSet.addAll(getCapabilityParticipants(c.getID()));
+        }
+        return pSet;
+    }
+
+
+    public Participant getParticipantFromUserID(String userID) {
+        for (Participant p : getParticipants()) {
+            if (p.getUserID().equals(userID)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+
+    public Set<String> resolveParticipantIds(String anyID) {
+        Set<String> idSet = new HashSet<String>();
+        for (Participant p : resolveParticipants(anyID)) {
+            idSet.add(p.getID());
+        }
+        return idSet;
+    }
+    
+    
+    public String resolveParticipantIdsAsXML(String anyID) {
+        XNode node = new XNode("participantids");
+        for (Participant p : resolveParticipants(anyID)) {
+            node.addChild("id", p.getID());
+        }
+        return node.toString();
+    }
+
 
     /**
      * Gets the complete set of Participants that ultimately report to the
@@ -959,6 +1284,43 @@ public class ResourceDataSet {
     }
 
 
+    /**
+     * Gets the immediate supervisor of a participant. If the participant holds multiple
+     * positions, and therefore has multiple supervisors, one is returned as a
+     * random selection.
+     * @param pid the id of the participant to get the supervisor of
+     * @return the Participant who is the supervisor of the pid passed, or null if there
+     * is no supervisor.
+     */
+    public Participant getImmediateSupervisor(String pid) {
+        return getImmediateSupervisor(getParticipant(pid));
+    }
+
+
+    /**
+     * Gets the immediate supervisor of a participant. If the participant holds multiple
+     * positions, and therefore has multiple supervisors, one is returned as a
+     * random selection.
+     * @param p the participant to get the supervisor of
+     * @return the Participant who is the supervisor of the pid passed, or null if there
+     * is no supervisor.
+     */
+    public Participant getImmediateSupervisor(Participant p) {
+        if (p != null) {
+            for (Position position : p.getPositions()) {
+                Position superPosition = position.getReportsTo();
+                if (superPosition != null) {
+                    Set<AbstractResource> resources = superPosition.getResources();
+                    if (! resources.isEmpty()) {
+                        return (Participant) resources.iterator().next();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+
     public Set<Participant> getParticipantsInDescendantRoles(Role owner) {
         Set<Participant> result = new HashSet<Participant>();
         Set<Role> roleSet = getRoles();
@@ -972,7 +1334,7 @@ public class ResourceDataSet {
 
 
     public String getParticipantsAsXML() {
-        ArrayList<Participant> pList = sortFullParticipantListByName();
+        List<Participant> pList = sortFullParticipantListByName();
 
         StringBuilder xml = new StringBuilder("<participants>") ;
         for (Participant p : pList) xml.append(p.toXML()) ;
@@ -1025,9 +1387,28 @@ public class ResourceDataSet {
     public String getNonHumanResourcesAsXML() {
         Set<NonHumanResource> rList = new TreeSet<NonHumanResource>(nonHumanMap.values());
 
-        StringBuilder xml = new StringBuilder("<resources>") ;
+        StringBuilder xml = new StringBuilder("<nonhumanresources>") ;
         for (NonHumanResource r : rList) xml.append(r.toXML()) ;
-        xml.append("</resources>");
+        xml.append("</nonhumanresources>");
+        return xml.toString() ;
+    }
+
+
+    public String getNonHumanSubCategoriesAsXML() {
+        StringBuilder xml = new StringBuilder("<nonhumansubcategories>") ;
+        for (NonHumanSubCategory n : getNonHumanSubCategories()) xml.append(n.toXML()) ;
+        xml.append("</nonhumansubcategories>");
+        return xml.toString() ;
+    }
+
+
+    public String getNonHumanCategoriesAsXML() {
+        Set<NonHumanCategory> rList = new TreeSet<NonHumanCategory>(
+                nonHumanCategoryMap.values());
+
+        StringBuilder xml = new StringBuilder("<nonhumancategories>") ;
+        for (NonHumanCategory r : rList) xml.append(r.toXML()) ;
+        xml.append("</nonhumancategories>");
         return xml.toString() ;
     }
 
@@ -1146,84 +1527,6 @@ public class ResourceDataSet {
         }
         return result;
     }
-
-
-    public Set<String> getNonHumanResourceCategories() {
-        return nonHumanCategories.getCategories();
-    }
-
-    public String getNonHumanResourceCategoriesAsXML() {
-        XNode node = new XNode("nonHumanResourceCategories");
-        for (String category : getNonHumanResourceCategories()) {
-            node.addChild("category", category);
-        }
-        return node.toString();
-    }
-
-
-    public Set<String> getNonHumanResourceSubCategories(String category) {
-        return nonHumanCategories.getSubCategories(category);
-    }
-
-    public String getNonHumanResourceSubCategoriesAsXML(String category) {
-        XNode node = new XNode("nonHumanResourceSubCategories");
-        node.addAttribute("category", category);
-        for (String subcategory : getNonHumanResourceSubCategories(category)) {
-            node.addChild("subcategory", subcategory);
-        }
-        return node.toString();
-    }
-
-
-    public Map<String, Set<String>> getNonHumanResourceCategoryMap() {
-        Map<String, Set<String>> categoryMap = new TreeMap<String, Set<String>>();
-        for (String category : getNonHumanResourceCategories()) {
-            categoryMap.put(category, getNonHumanResourceSubCategories(category));
-        }
-        return categoryMap;
-    }
-
-    public String getNonHumanResourceCategorySet() {
-        XNode node = new XNode("nonHumanResourceCategorySet");
-        Map<String, Set<String>> categoryMap = getNonHumanResourceCategoryMap();
-        for (String category : categoryMap.keySet()) {
-            XNode categoryNode = node.addChild("category");
-            categoryNode.addAttribute("name", category);
-            for (String subcategory : categoryMap.get(category)) {
-                categoryNode.addChild("subcategory", subcategory);
-            }
-        }
-        return node.toString();
-    }
-
-
-    public long addNonHumanResourceCategory(String category) {
-        return nonHumanCategories.addCategory(category);
-    }
-
-    public boolean addNonHumanResourceSubCategory(String category, String subcategory) {
-        return nonHumanCategories.addSubCategory(category, subcategory);
-    }
-
-    public boolean addNonHumanResourceSubCategory(long key, String subcategory) {
-        return nonHumanCategories.addSubCategory(key, subcategory);
-    }
-
-    public boolean removeNonHumanResourceCategory(String category) {
-        return nonHumanCategories.removeCategory(category);
-    }
-
-    public boolean removeNonHumanResourceCategory(long key) {
-        return nonHumanCategories.removeCategory(key);
-    }
-
-    public boolean removeNonHumanResourceSubCategory(String category, String subcategory) {
-        return nonHumanCategories.removeSubCategory(category, subcategory);
-    }
-
-    public boolean removeNonHumanResourceSubCategory(long key, String subcategory) {
-        return nonHumanCategories.removeSubCategory(key, subcategory);
-    }
     
 
     /***************************************/
@@ -1306,6 +1609,27 @@ public class ResourceDataSet {
             chainStr.append(" --> ").append(chain.get(i));
         }
         return String.format(templateMsg, type, refType, type, refName, chainStr.toString());
+    }
+
+
+    private void removeOrphanedSubCategories() {
+        
+    }
+
+    /********************************/
+
+    public boolean logResourceBusy(String caseID, String id, boolean isBusy) {
+        AbstractResource resource = getResource(id);
+        if (resource != null) {
+            EventLogger.log(null, caseID, id,
+                    (isBusy ? EventLogger.event.busy : EventLogger.event.released));
+        }
+        return (resource != null);
+    }
+
+
+    public void freeResource(String caseID, String id) {
+        logResourceBusy(caseID, id, false);
     }
     
 }

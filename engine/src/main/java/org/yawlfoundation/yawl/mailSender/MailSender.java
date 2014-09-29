@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -150,11 +150,8 @@ public class MailSender extends InterfaceBWebsideController {
          // set the message body of email 
          final Multipart mimemultipart = new MimeMultipart();
          mimemultipart.addBodyPart(MessageContent);
-         if(filename == null);
-         else
-         {
-             MimeBodyPart mimebodypart1 = null;
-             mimebodypart1 = new MimeBodyPart();
+         if(filename != null) {
+             MimeBodyPart mimebodypart1 = new MimeBodyPart();
              FileDataSource filedatasource = new FileDataSource(System.getenv("CATALINA_HOME") + "/webapps/mailSender/files/" + filename);
              mimebodypart1.setDataHandler(new DataHandler(filedatasource));
              mimebodypart1.setFileName(filename);

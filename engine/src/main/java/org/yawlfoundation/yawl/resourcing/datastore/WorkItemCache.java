@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,10 +19,15 @@
 package org.yawlfoundation.yawl.resourcing.datastore;
 
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.resourcing.QueueSet;
+import org.yawlfoundation.yawl.resourcing.ResourceAdministrator;
+import org.yawlfoundation.yawl.resourcing.WorkQueue;
 import org.yawlfoundation.yawl.resourcing.datastore.persistence.Persister;
 
-import java.io.Serializable;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.*;
 
 
 /**
@@ -32,45 +37,56 @@ import java.util.*;
  *  v0.1, 15/09/2007
  */
 
-public class WorkItemCache extends HashMap<String, WorkItemRecord> implements Serializable {
+public class WorkItemCache extends ConcurrentHashMap<String, WorkItemRecord> {
 
     private Persister _persister;
-    private WorkItemCache _me ;
-    private boolean _persistOn = false ;
+    private Cleanser _cleanser;
+    private boolean _persistOn = false;
 
-    public WorkItemCache() {
+    private static WorkItemCache INSTANCE = new WorkItemCache();
+
+
+    private WorkItemCache() {
         super();
-        _me = this ;
-    }
-
-    public WorkItemCache(boolean persist) {
-        this() ;
-        _persistOn = persist ;
-        if (_persistOn) _persister = Persister.getInstance();
     }
 
 
-    public WorkItemCache getInstance() {
-        if (_me == null) _me = new WorkItemCache() ;
-        return _me ;
+    public static WorkItemCache getInstance() {
+        return INSTANCE;
+    }
+
+    public static WorkItemCache getInstance(boolean persist) {
+        INSTANCE.setPersist(persist);
+        return INSTANCE;
     }
 
     public void setPersist(boolean persist) {
-        _persistOn = persist ;
-        if (_persistOn) _persister = Persister.getInstance();
-        else _persister = null ;
+        _persistOn = persist;
+        if (persist) {
+            _persister = Persister.getInstance();
+            _cleanser = new Cleanser();                    // start scheduled cleanse
+        }
     }
 
     public boolean isPersistOn() { return _persistOn ; }
 
 
     public WorkItemRecord add(WorkItemRecord wir) {
-        return this.put(wir.getID(), wir) ;
+        return (wir != null) ? this.put(wir.getID(), wir) : null;
     }
 
     public WorkItemRecord remove(WorkItemRecord wir) {
         return this.remove(wir.getID());
     }
+
+    public WorkItemRecord replace(WorkItemRecord oldWir, WorkItemRecord newWir) {
+        if (oldWir != null) {
+            this.remove(oldWir.getID());
+            copyDocumentation(oldWir, newWir);
+        }
+        return add(newWir);
+    }
+    
 
     public void removeCase(String caseID) {
         Set<WorkItemRecord> clonedValues = new HashSet<WorkItemRecord>(this.values());
@@ -91,6 +107,15 @@ public class WorkItemCache extends HashMap<String, WorkItemRecord> implements Se
         return this.put(wir.getID(), wir);
     }
 
+    public WorkItemRecord updateStatus(WorkItemRecord wir, String status) {
+        wir.setStatus(status);
+        return this.put(wir.getID(), wir);
+    }
+
+    public void stopCleanserThread() {
+        if (_cleanser != null) _cleanser.cancel();
+    }
+
     public void restore() {
         if (_persistOn) {
             List wirList = _persister.select("WorkItemRecord") ;
@@ -103,8 +128,18 @@ public class WorkItemCache extends HashMap<String, WorkItemRecord> implements Se
                     super.put(wir.getID(), wir);
                 }
             }
+            _persister.commit();
         }
     }
+
+
+    private void copyDocumentation(WorkItemRecord oldWir, WorkItemRecord newWir) {
+        if ((newWir != null) && oldWir.isDocumentationChanged()) {
+            newWir.setDocumentation(oldWir.getDocumentation());
+            newWir.setDocumentationChanged(true);
+        }
+    }
+
 
 
     // OVERRIDES //
@@ -125,6 +160,53 @@ public class WorkItemCache extends HashMap<String, WorkItemRecord> implements Se
            return super.remove(id);
         }
         else return null ;
+    }
+
+
+    /*****************************************************************************/
+
+    // removes unreferenced items from the cache on a regular basis
+    class Cleanser {
+
+        final ScheduledExecutorService _scheduler;
+        ScheduledFuture<?> _cleanseTask;
+
+        final static int INTERVAL = 5;                           // run every 5 minutes
+
+        Cleanser() {
+            _scheduler = Executors.newScheduledThreadPool(1);
+            _cleanseTask = _scheduler.scheduleAtFixedRate(new CleanseRunnable(),
+                    INTERVAL, INTERVAL, TimeUnit.MINUTES);
+        }
+
+        public void cancel() {
+            if (_cleanseTask != null) _cleanseTask.cancel(true);
+        }
+
+        class CleanseRunnable implements Runnable {
+            public void run() {
+                Set<String> referencedIDs = getReferencedIDs();
+                for (String id : new HashSet<String>(INSTANCE.keySet())) {
+                    if (! referencedIDs.contains(id)) {
+                        remove(id);
+                    }
+                }
+            }
+
+            Set<String> getReferencedIDs() {
+                Set<String> idSet = new HashSet<String>();
+                ResourceAdministrator ra = ResourceAdministrator.getInstance();
+                QueueSet qSet = ra.getWorkQueues();
+                for (WorkItemRecord wir : qSet.getQueuedWorkItems(WorkQueue.UNOFFERED)) {
+                     idSet.add(wir.getID());
+                }
+                for (WorkItemRecord wir : qSet.getQueuedWorkItems(WorkQueue.WORKLISTED)) {
+                     idSet.add(wir.getID());
+                }
+                return idSet;
+            }
+        }
+
     }
 
 }

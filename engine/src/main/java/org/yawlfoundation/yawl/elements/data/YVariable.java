@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,25 +18,28 @@
 
 package org.yawlfoundation.yawl.elements.data;
 
-import org.jdom.Element;
+import org.jdom2.Element;
+import org.yawlfoundation.yawl.authentication.YExternalClient;
+import org.yawlfoundation.yawl.elements.YAttributeMap;
 import org.yawlfoundation.yawl.elements.YDecomposition;
-import org.yawlfoundation.yawl.elements.YSpecification;
 import org.yawlfoundation.yawl.elements.YVerifiable;
+import org.yawlfoundation.yawl.engine.YEngine;
+import org.yawlfoundation.yawl.exceptions.YDataValidationException;
 import org.yawlfoundation.yawl.logging.YLogPredicate;
-import org.yawlfoundation.yawl.schema.XMLToolsForYAWL;
+import org.yawlfoundation.yawl.schema.XSDType;
+import org.yawlfoundation.yawl.schema.YSchemaVersion;
+import org.yawlfoundation.yawl.schema.internal.YInternalType;
+import org.yawlfoundation.yawl.util.DynamicValue;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
-import java.util.List;
-import java.util.Vector;
+import java.util.Map;
 
 /**
- *
  * @author Lachlan Aldred
- * Date: 24/09/2003
- * Time: 16:10:14
- *
+ *         Date: 24/09/2003
+ *         Time: 16:10:14
  */
 public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> {
     protected YDecomposition _parentDecomposition;
@@ -47,25 +50,18 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     protected String _defaultValue;
     protected String _namespaceURI;
     protected boolean _isUntyped = false;
+    protected boolean _isEmptyTyped = false;
     protected int _ordering;
     private String _documentation;
     private boolean _mandatory;
     private YLogPredicate _logPredicate;
-
-    public boolean isMandatory()
-    {
-        return _mandatory;
-    }
-
-    public void setMandatory(boolean _mandatory)
-    {
-        this._mandatory = _mandatory;
-    }
+    private YAttributeMap _attributes = new YAttributeMap();
 
     public YVariable() {}
 
     /**
      * old method
+     *
      * @param dec
      * @param dataType
      * @param name
@@ -73,7 +69,8 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
      * @param namespaceURI
      * @deprecated see new constructor and setter methods
      */
-    public YVariable(YDecomposition dec, String dataType, String name, String initialValue, String namespaceURI) {
+    public YVariable(YDecomposition dec, String dataType, String name,
+                     String initialValue, String namespaceURI) {
         this._parentDecomposition = dec;
         this._dataTypeName = dataType;
         this._name = name;
@@ -83,7 +80,8 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
 
 
     /**
-     * Beta 3 constructer for variables
+     * Beta 3 constructor for variables
+     *
      * @param dec parent decomposition
      */
     public YVariable(YDecomposition dec) {
@@ -93,8 +91,9 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
 
     /**
      * sets three related attributes.
-     * @param dataType (mandatory) the datatype
-     * @param name (mandatory) name of the var
+     *
+     * @param dataType  (mandatory) the datatype
+     * @param name      (mandatory) name of the var
      * @param namespace (null optional) the URI of the namespace for the type
      */
     public void setDataTypeAndName(String dataType, String name, String namespace) {
@@ -106,6 +105,7 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
 
     /**
      * links the variable to a xs:any schema element type.
+     *
      * @param isUntyped
      */
     public void setUntyped(boolean isUntyped) {
@@ -114,6 +114,7 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
 
     /**
      * Sets the name on the variabel.
+     *
      * @param name
      */
     public void setName(String name) {
@@ -123,6 +124,7 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
 
     /**
      * links the variable to a schema element declaration
+     *
      * @param elementName
      */
     public void setElementName(String elementName) {
@@ -138,12 +140,10 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     }
 
     public String getDataTypeNameUnprefixed() {
-        if (_dataTypeName.indexOf(":") < 0) {
-            return _dataTypeName;
-        }
-        else {
-            return _dataTypeName.substring(_dataTypeName.indexOf(":") + 1) ;
-        }
+        return _dataTypeName.contains(":") ?
+                _dataTypeName.substring(_dataTypeName.indexOf(":") + 1) :
+                _dataTypeName;
+
     }
 
     public String getDataTypePrefix() {
@@ -151,8 +151,10 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     }
 
     /**
-     * Returns the namespace of the data type.  Expect either null if the type is a custom type
-     * or "http://www.w3.org/2001/XMLSchema" if the variable uses a "built in" Schema primitive type.
+     * Returns the namespace of the data type.  Expect either null if the type is
+     * a custom type or "http://www.w3.org/2001/XMLSchema" if the variable uses a
+     * "built in" Schema primitive type.
+     *
      * @return null or "http://www.w3.org/2001/XMLSchema"
      */
     public String getDataTypeNameSpace() {
@@ -163,6 +165,13 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
         return (_namespaceURI == null);
     }
 
+    public boolean isMandatory() {
+        return _mandatory;
+    }
+
+    public void setMandatory(boolean mandatory) {
+        _mandatory = mandatory;
+    }
 
     public String getName() {
         return _name;
@@ -205,7 +214,7 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     }
 
     public int getOrdering() { return _ordering; }
-    
+
 
     public int compareTo(YVariable other) {
         return this.getOrdering() - other.getOrdering();
@@ -220,15 +229,21 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
         return xml.toString();
     }
 
+
+    private boolean isSchemaVersionAtLeast2_1() {
+        return (_parentDecomposition != null) &&
+                _parentDecomposition.getSpecification().getSchemaVersion()
+                        .isVersionAtLeast((YSchemaVersion.TwoPointOne));
+    }
+
     protected String toXMLGuts() {
         StringBuilder xml = new StringBuilder();
 
-        // only 2.1 specs get an index element
-        if ((_parentDecomposition != null) &&
-           (_parentDecomposition.getSpecification().getSchemaVersion().equals(YSpecification.Version2_1))) {
+        // only 2.1 or later specs get an index element
+        if (isSchemaVersionAtLeast2_1()) {
             xml.append(StringUtil.wrap(String.valueOf(_ordering), "index"));
         }
-        
+
         if (null != _documentation) {
             xml.append(StringUtil.wrap(_documentation, "documentation"));
         }
@@ -237,16 +252,14 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
                 xml.append(StringUtil.wrap(_name, "name"));
                 if (_isUntyped) {
                     xml.append("<isUntyped/>");
-                }
-                else {
+                } else {
                     xml.append(StringUtil.wrap(_dataTypeName, "type"));
                     if (null != _namespaceURI) {
                         xml.append(StringUtil.wrap(_namespaceURI, "namespace"));
                     }
                 }
             }
-        }
-        else if (null != _elementName) {
+        } else if (null != _elementName) {
             xml.append(StringUtil.wrap(_elementName, "element"));
         }
         if (_initialValue != null) {
@@ -273,72 +286,9 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     }
 
 
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
-
-        //check that the intital value is well formed
-        if (_initialValue != null && _initialValue.contains("<")) {
-            Element test = JDOMUtil.stringToElement("<dummy>" + _initialValue + "</dummy>") ;
-            if (test == null) {
-                messages.add(new YVerificationMessage(
-                        this,
-                        "Problem with InitialValue [" + _initialValue + "] of " + this,
-                        YVerificationMessage.ERROR_STATUS));
-            }
-        }
-
-        XMLToolsForYAWL xty = new XMLToolsForYAWL(); //todo MLF: convert to new schema handling
-
-        //check schema contains type with typename.
-        if (null != _name) {
-            boolean isSchemForSchemType =
-                    xty.getSchema4SchemaNameSpace().equals(_namespaceURI);
-            if (true == _isUntyped) {
-                if (null != _dataTypeName) {
-                //todo [in future - if we ever disallow untyped elements]
-                //todo we may want to catch this and _report it.
-                }
-            } else if (!xty.isValidType(_dataTypeName, isSchemForSchemType)) {
-                messages.add(new YVerificationMessage(
-                        this,
-                        "The type library (Schema) in specification contains no " +
-                        "type definition with name [" + _dataTypeName + "].  " +
-                        "Therefore the decomposition " + _parentDecomposition +
-                        " cannot create this variable.",
-                        YVerificationMessage.ERROR_STATUS));
-            }
-        } else if (null != _elementName) {
-            boolean schemaContainsElement =
-                    xty.getPrimarySchemaElementNames().contains(_elementName);
-            if (!schemaContainsElement) {
-                messages.add(new YVerificationMessage(
-                        this,
-                        "The type library (Schema) in specification contains no " +
-                        "element definition with name [" + _elementName + "].  " +
-                        "\n    Therefore the decomposition " + _parentDecomposition +
-                        " cannot create this variable.",
-                        YVerificationMessage.ERROR_STATUS));
-            }
-        } else if (null != _name) {
-            if (null != _elementName) {
-                messages.add(new YVerificationMessage(
-                        this,
-                        "name xor element name must be set, not both",
-                        YVerificationMessage.ERROR_STATUS));
-            }
-        } else {
-            messages.add(new YVerificationMessage(
-                    this,
-                    "name or element name must be set",
-                    YVerificationMessage.ERROR_STATUS));
-        }
-        //todo check initial value is of data-type
-        return messages;
-    }
-
-
     /**
      * sets the initial value of the variable
+     *
      * @param initialValue
      */
     public void setInitialValue(String initialValue) {
@@ -354,19 +304,25 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     public void setDocumentation(String documentation) {
         this._documentation = documentation;
     }
-    
-    public String getElementName(){
-    	return _elementName;
+
+    public String getElementName() {
+        return _elementName;
     }
-    
-    public boolean isUntyped(){
-    	return _isUntyped;
+
+    public boolean isUntyped() {
+        return _isUntyped;
     }
+
+
+    public boolean isEmptyTyped() { return _isEmptyTyped; }
+
+    public void setEmptyTyped(boolean empty) { _isEmptyTyped = empty; }
 
 
     /**
      * Returns whether or not the parameter uses an element declaration in the
      * schema library of the specification.
+     *
      * @return true if it does use element declaration
      */
     public boolean usesElementDeclaration() {
@@ -376,10 +332,185 @@ public class YVariable implements Cloneable, YVerifiable, Comparable<YVariable> 
     /**
      * Returns whether or not the parameter uses a type declaration in the
      * schema library of the specification.
+     *
      * @return true if it does use a type declaration
      */
     public boolean usesTypeDeclaration() {
         return _dataTypeName != null;
+    }
+
+    public boolean isRequired() {
+        return (!isOptional()) && (isMandatory() || _attributes.getBoolean("mandatory"));
+    }
+
+    public boolean isOptional() {
+        return _attributes.getBoolean("optional");
+    }
+
+    public void setOptional(boolean option) {
+        if (option) {                                 // only set attribute if true
+            addAttribute("optional", String.valueOf(option));
+        }
+        else {
+            getAttributes().remove("optional");      // no attribute means not optional
+        }
+    }
+
+
+    /**
+     * Determine whether this variable requires a value to be mapped to it
+     *
+     * @return true if the variable won't validate with an empty data value
+     */
+    public boolean requiresInputValue() {
+        if (XSDType.isBuiltInType(_dataTypeName) || YInternalType.isType(_dataTypeName)) {
+            return true;
+        }
+
+        // build an empty data element and try to validate it
+        Element emptyValue = new Element("data");
+        emptyValue.addContent(new Element(getPreferredName()));
+        try {
+            checkDataTypeValue(emptyValue);
+            return false;                     // passed, so no value is required
+        } catch (YDataValidationException ydve) {
+            return true;                     // failed, so needs to have a value assigned
+        }
+    }
+
+
+    /**
+     * Return table of attributes associated with this variable.<P>
+     * Table is keyed by attribute 'name' and contains the string representation of the
+     * XML elements attribute.<P>
+     *
+     * @return the Map of attributes for this parameter
+     */
+    public YAttributeMap getAttributes() {
+        return _attributes;
+    }
+
+    public void addAttribute(String key, String value) {
+        if ((key == null) || (value == null)) return;
+        _attributes.put(key, value);
+    }
+
+    public void addAttribute(String name, DynamicValue value) {
+        _attributes.put(name, value);
+    }
+
+
+    public void setAttributes(Map<String, String> attributes) {
+        _attributes.set(attributes);
+    }
+
+    public boolean hasAttributes() {
+        return !_attributes.isEmpty();
+    }
+
+
+    /**
+     * ***************************************************************************
+     */
+
+    public void verify(YVerificationHandler handler) {
+
+        //check the initial & default values (if any)
+        checkValue(_initialValue, "initial", handler);
+        checkValue(_defaultValue, "default", handler);
+
+        if ((null != _name) && (null != _elementName)) {
+            handler.error(this,
+                    "Name xor element name for this variable must be set, not both.");
+        }
+
+        //check schema contains type with typename.
+        else if (null != _name) {
+            if (!(_isUntyped || isValidTypeNameForSchema(_dataTypeName))) {
+                handler.error(this,
+                        "The type library (Schema) in specification contains no " +
+                                "type definition with name [" + _dataTypeName + "].  " +
+                                "Therefore the decomposition " + _parentDecomposition +
+                                " cannot create this variable.");
+            }
+        } else if (null != _elementName) {
+            if (!isValidTypeNameForSchema(_elementName)) {
+                handler.error(this,
+                        "The type library (Schema) in specification contains no " +
+                                "element definition with name [" + _elementName + "].  " +
+                                "\n    Therefore the decomposition " + _parentDecomposition +
+                                " cannot create this variable.");
+            }
+        } else {
+            handler.error(this, "A Name or element name for this variable must be set.");
+        }
+
+        // check doc store service is available for YDocument vars
+        if (_dataTypeName.endsWith("YDocumentType")) {
+            try {
+                if (YEngine.isRunning()) {
+                    YEngine engine = YEngine.getInstance();
+                    YExternalClient service = engine.getExternalClient("documentStore");
+                    if (service == null) {
+                        handler.warn(this,
+                                "Variable [" + getPreferredName() + "] in decomposition [" +
+                                        _parentDecomposition + "] is of type 'YDocument', " +
+                                        "but the required 'DocumentStore' client service is not " +
+                                        "registered with the YAWL engine. Please ensure the " +
+                                        "service is registered prior to executing the specification.");
+                    }
+                }
+            } catch (NoClassDefFoundError e) {
+                // may occur if called in standalone mode (eg. from the editor), caused by
+                // the call to a static YEngine which attempts to create a
+                // YPersistenceManager object - ok to ignore the verify check in these instances
+            }
+        }
+    }
+
+
+    private boolean isValidTypeNameForSchema(String dataTypeName) {
+        if (XSDType.isBuiltInType(_dataTypeName) || YInternalType.isType(_dataTypeName)) {
+            return true;
+        }
+        for (String name : _parentDecomposition.getSpecification().getDataValidator().getPrimaryTypeNames()) {
+            if (dataTypeName.equals(name)) return true;
+        }
+        return false;
+    }
+
+
+    private void checkValue(String value, String label,
+                            YVerificationHandler handler) {
+        if (!StringUtil.isNullOrEmpty(value)) {
+            Element testElem;
+
+            // check if well-formed
+            String data = StringUtil.wrap(StringUtil.wrap(value, getPreferredName()), "data");
+            testElem = JDOMUtil.stringToElement(data);
+            if (testElem == null) {
+                handler.error(this,
+                        "The " + label + " value [" + value + "] of variable [" +
+                                getPreferredName() + "] in decomposition [" +
+                                _parentDecomposition + "] is not well formed.");
+            }
+
+            // check if correct for data type
+            try {
+                checkDataTypeValue(testElem);
+            } catch (YDataValidationException ydve) {
+                handler.error(this,
+                        "The " + label + " value [" + value + "] of variable [" +
+                                getPreferredName() + "] in decomposition [" +
+                                _parentDecomposition + "] is not valid for its data type.");
+            }
+        }
+    }
+
+
+    private void checkDataTypeValue(Element value) throws YDataValidationException {
+        _parentDecomposition.getSpecification().getDataValidator().validate(
+                this, value, "");
     }
 
 }

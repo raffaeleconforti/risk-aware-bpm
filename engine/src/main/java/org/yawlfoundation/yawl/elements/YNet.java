@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,10 +18,10 @@
 
 package org.yawlfoundation.yawl.elements;
 
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.elements.data.YVariable;
 import org.yawlfoundation.yawl.elements.data.external.AbstractExternalDBGateway;
@@ -29,12 +29,9 @@ import org.yawlfoundation.yawl.elements.data.external.ExternalDBGatewayFactory;
 import org.yawlfoundation.yawl.elements.e2wfoj.E2WFOJNet;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.elements.state.YMarking;
-import org.yawlfoundation.yawl.elements.state.YOrJoinUtils;
-import org.yawlfoundation.yawl.elements.state.YSetOfMarkings;
 import org.yawlfoundation.yawl.engine.YPersistenceManager;
 import org.yawlfoundation.yawl.exceptions.YDataStateException;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
-import org.yawlfoundation.yawl.exceptions.YSchemaBuildingException;
 import org.yawlfoundation.yawl.util.*;
 
 import java.util.*;
@@ -76,7 +73,7 @@ public final class YNet extends YDecomposition {
     /** This method removes a net element together with preSet, postSet, reset,
      * cancelledBy sets.
      */
-    public void removeNetElement(YExternalNetElement netElement) {
+    public boolean removeNetElement(YExternalNetElement netElement) {
 
         for (YExternalNetElement preset : netElement.getPresetElements()) {
             YFlow flow = new YFlow(preset, netElement);
@@ -107,12 +104,20 @@ public final class YNet extends YDecomposition {
             }
         }
 
-        _netElements.remove(netElement.getID());
+        return _netElements.remove(netElement.getID()) != null;
     }
 
 
     public void addNetElement(YExternalNetElement netElement) {
         _netElements.put(netElement.getID(), netElement);
+    }
+
+    // only have to update the map when an element's id changes
+    public void refreshNetElementIdentifier(String oldIdentifier) {
+        YExternalNetElement element = _netElements.remove(oldIdentifier);
+        if (element != null) {
+            _netElements.put(element.getID(), element);
+        }
     }
 
 
@@ -170,44 +175,37 @@ public final class YNet extends YDecomposition {
 
     /**
      * Used to verify that the net conforms to syntax of YAWL.
-     * @return a List of error messages.
      */
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>(super.verify());
+    public void verify(YVerificationHandler handler) {
+        super.verify(handler);
 
         if (_inputCondition == null) {
-            messages.add(new YVerificationMessage(this, this + " must contain input condition.",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " must contain input condition.");
         }
         if (_outputCondition == null) {
-            messages.add(new YVerificationMessage(this, this + " must contain output condition.",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " must contain output condition.");
         }
 
         for (YExternalNetElement element : _netElements.values()) {
-            if (element instanceof YInputCondition && ! _inputCondition.equals(element)) {
-                messages.add(new YVerificationMessage(this, "Only one inputCondition allowed, " +
-                        "and it must be _inputCondition.", YVerificationMessage.ERROR_STATUS));
+            if (element instanceof YInputCondition && ! element.equals(_inputCondition)) {
+                handler.error(this, "Only one Input Condition allowed per net.");
             }
-            if (element instanceof YOutputCondition && !_outputCondition.equals(element)) {
-                messages.add(new YVerificationMessage(this, "Only one outputCondition allowed, " +
-                        "and it must be _outputCondition.", YVerificationMessage.ERROR_STATUS));
+            if (element instanceof YOutputCondition && ! element.equals(_outputCondition)) {
+                handler.error(this, "Only one Output Condition allowed per net.");
             }
-            messages.addAll(element.verify());
+            element.verify(handler);
         }
         for (YVariable var : _localVariables.values()) {
-            messages.addAll(var.verify());
+            var.verify(handler);
         }
         //check that all elements in the net are on a directed path from 'i' to 'o'.
-        messages.addAll(verifyDirectedPath());
+        verifyDirectedPath(handler);
         
-        messages.addAll(new YNetLocalVarVerifier(this).verify());
-        return messages;
+        new YNetLocalVarVerifier(this).verify(handler);
     }
 
 
-    private List<YVerificationMessage> verifyDirectedPath() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
+    private void verifyDirectedPath(YVerificationHandler handler) {
 
         /* Function isValid(YConditionInterface i, YConditionInterface o, Tasks T, Conditions C): Boolean
         BEGIN:
@@ -259,21 +257,18 @@ public final class YNet extends YDecomposition {
             elementsNotInPath = new HashSet<YExternalNetElement>(allElements);
             elementsNotInPath.removeAll(visitedFw);
             for (YExternalNetElement element : elementsNotInPath) {
-                messages.add(new YVerificationMessage(this, element +
-                        " is not on a forward directed path from i to o.",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, element +
+                        " is not on a forward directed path from i to o.");
             }
         }
         if (visitedBk.size() != numElements) {
             elementsNotInPath = new HashSet<YExternalNetElement>(allElements);
             elementsNotInPath.removeAll(visitedBk);
             for (YExternalNetElement element : elementsNotInPath) {
-                messages.add(new YVerificationMessage(this, element +
-                        " is not on a backward directed path from i to o.",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, element +
+                        " is not on a backward directed path from i to o.");
             }
         }
-        return messages;
     }
 
 
@@ -386,52 +381,6 @@ public final class YNet extends YDecomposition {
     }
 
 
-    /**
-     * Not used since Moe added a new OR algorithm to the system.
-     * @param orJoin the orjoin
-     * @param actualMarking
-     * @param currentlyConsideredMarking
-     * @param markingsAlreadyConsidered
-     * @return whether or not the orjoin is enabled.
-     */
-    protected boolean determineEnabledness(YTask orJoin, YMarking actualMarking,
-                                         YMarking currentlyConsideredMarking,
-                                         YSetOfMarkings markingsAlreadyConsidered) {
-        Set tasks = YOrJoinUtils.reduceToEnabled(currentlyConsideredMarking, orJoin);
-        while (tasks.size() > 0) {
-            YTask task = YOrJoinUtils.pickOptimalEnabledTask(
-                    tasks, orJoin, currentlyConsideredMarking, markingsAlreadyConsidered);
-            tasks.remove(task);
-            YSetOfMarkings markingSet = currentlyConsideredMarking.reachableInOneStep(task, orJoin);
-            while (markingSet.size() > 0) {
-                YMarking aMarking = markingSet.removeAMarking();
-                if (aMarking.isBiggerEnablingMarkingThan(actualMarking, orJoin)) {
-                    return false;
-                } else if (aMarking.deadLock(orJoin)) {
-                    continue;
-                }
-                boolean skip = false;
-                for (Iterator markingsIterator = markingsAlreadyConsidered.getMarkings().iterator();
-                     markingsIterator.hasNext() && !skip;) {
-                    YMarking consideredMarking = (YMarking) markingsIterator.next();
-                    if (aMarking.strictlyGreaterThanOrEqualWithSupports(consideredMarking)) {
-                        skip = true;
-                    }
-                    if (aMarking.strictlyLessThanWithSupports(consideredMarking)) {
-                        skip = true;
-                    }
-                }
-                if (skip) {
-                    continue;
-                }
-                markingsAlreadyConsidered.addMarking(aMarking);
-                return determineEnabledness(orJoin, actualMarking, aMarking, markingsAlreadyConsidered);
-            }
-        }
-        return true;
-    }
-
-
     public void setLocalVariable(YVariable variable) {
         if (null != variable.getName()) {
             _localVariables.put(variable.getName(), variable);
@@ -446,36 +395,28 @@ public final class YNet extends YDecomposition {
     }
 
 
+    public YVariable removeLocalVariable(String name) {
+        return _localVariables.remove(name);
+    }
+
+
+    public YVariable getLocalOrInputVariable(String name) {
+        return _localVariables.containsKey(name) ? _localVariables.get(name) :
+               getInputParameters().get(name);
+    }
+
+
     public String toXML() {
         StringBuilder xml = new StringBuilder();
         xml.append(super.toXML());
-        List<YVariable> variables = new ArrayList<YVariable>(_localVariables.values());
-
-        Order order = new Order() {
-            public boolean lessThan(Object a, Object b) {
-                YVariable var1 = (YVariable) a;
-                YVariable var2 = (YVariable) b;
-                String var1Nm = var1.getPreferredName();
-                String var2Nm = var2.getPreferredName();
-
-                if (var1Nm != null && var2Nm != null) {
-                    return var1Nm.compareTo(var2Nm) < 0;
-                }
-                else return var1Nm == null;
-            }
-        };
-        Object[] sortedVars = Sorter.sort(order, variables.toArray());
-        if (null != sortedVars) {
-            for (int i = 0; i < sortedVars.length; i++) {
-                YVariable variable = (YVariable) sortedVars[i];
-                xml.append(variable.toXML());
-            }
+        for (YVariable variable : getLocalVarsSorted()) {
+            xml.append(variable.toXML());
         }
         xml.append("<processControlElements>");
         xml.append(_inputCondition.toXML());
 
-        Set visitedFw = new HashSet();
-        Set visitingFw = new HashSet();
+        Set<YExternalNetElement> visitedFw = new HashSet<YExternalNetElement>();
+        Set<YExternalNetElement> visitingFw = new HashSet<YExternalNetElement>();
         visitingFw.add(_inputCondition);
         do {
             visitedFw.addAll(visitingFw);
@@ -483,7 +424,9 @@ public final class YNet extends YDecomposition {
             visitingFw.removeAll(visitedFw);
             xml.append(produceXMLStringForSet(visitingFw));
         } while (visitingFw.size() > 0);
-        Collection remainingElements = new ArrayList(_netElements.values());
+
+        Set<YExternalNetElement> remainingElements =
+                new HashSet<YExternalNetElement>(_netElements.values());
         remainingElements.removeAll(visitedFw);
         xml.append(produceXMLStringForSet(remainingElements));
         xml.append(_outputCondition.toXML());
@@ -495,23 +438,40 @@ public final class YNet extends YDecomposition {
     }
 
 
-    private String produceXMLStringForSet(Collection elementCollection) {
+    private String produceXMLStringForSet(Set<YExternalNetElement> elements) {
+        List<YExternalNetElement> elementList = new ArrayList<YExternalNetElement>(elements);
+        Collections.sort(elementList, new Comparator<YExternalNetElement>() {
+            public int compare(YExternalNetElement e1, YExternalNetElement e2) {
+                if ((e1 == null) || (e1.getID() == null)) return -1;
+                if ((e2 == null) || (e2.getID() == null)) return 1;
+                return e1.getID().compareTo(e2.getID());
+            }
+        });
         StringBuilder xml = new StringBuilder();
-        for (Iterator iterator = elementCollection.iterator(); iterator.hasNext();) {
-            YExternalNetElement element = (YExternalNetElement) iterator.next();
+        for (YExternalNetElement element : elementList) {
             if (element instanceof YTask) {
                 xml.append(element.toXML());
-            } else {
+            }
+            else {
                 YCondition condition = (YCondition) element;
-                if (condition instanceof YInputCondition ||
-                        condition instanceof YOutputCondition || condition.isImplicit()) {
-                    //do nothing
-                } else {
+                if (! (condition instanceof YInputCondition ||
+                        condition instanceof YOutputCondition || condition.isImplicit())) {
                     xml.append(condition.toXML());
                 }
             }
         }
         return xml.toString();
+    }
+
+
+    private List<YVariable> getLocalVarsSorted() {
+        List<YVariable> variables = new ArrayList<YVariable>(_localVariables.values());
+        Collections.sort(variables, new Comparator<YVariable>() {
+            public int compare(YVariable var1, YVariable var2) {
+                return var1.getOrdering() - var2.getOrdering();
+            }
+        });
+        return variables;
     }
 
 
@@ -534,7 +494,7 @@ public final class YNet extends YDecomposition {
 
 
     public void setIncomingData(YPersistenceManager pmgr, Element incomingData)
-            throws YSchemaBuildingException, YDataStateException, YPersistenceException {
+            throws YDataStateException, YPersistenceException {
         for (YParameter parameter : getInputParameters().values()) {
             Element actualParam = incomingData.getChild(parameter.getName());
             if (parameter.isMandatory() && actualParam == null) {
@@ -555,13 +515,11 @@ public final class YNet extends YDecomposition {
         getSpecification().getDataValidator().validate(
                                    getInputParameters().values(), incomingData, getID());
 
-        List actualParams = incomingData.getChildren();
-        while (actualParams.size() > 0) {
-            Element element = (Element) actualParams.get(0);
-            element.detach();
+        for (Element element : incomingData.getChildren()) {
             if (getInputParameters().containsKey(element.getName())) {
-                addData(pmgr, element);
-            } else {
+                addData(pmgr, element.clone());
+            }
+            else {
                 throw new IllegalArgumentException("Element " + element +
                         " is not a valid input parameter of " + this);
             }

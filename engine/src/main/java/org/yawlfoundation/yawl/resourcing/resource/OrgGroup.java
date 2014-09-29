@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing.resource;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
@@ -70,6 +70,8 @@ public class OrgGroup extends AbstractResourceAttribute implements Comparable {
     }
 
 
+    public void setLabel(String label) { setGroupName(label); }
+
     public String getGroupName() {
         return _groupName;
     }
@@ -77,6 +79,9 @@ public class OrgGroup extends AbstractResourceAttribute implements Comparable {
     public void setGroupName(String groupName) {
         _groupName = groupName;
     }
+
+    public String getName() { return getGroupName(); }
+
 
     public GroupType getGroupType() {
         return _groupType;
@@ -118,7 +123,7 @@ public class OrgGroup extends AbstractResourceAttribute implements Comparable {
 
     public boolean setBelongsTo(String ownerID) {
         if (ownerID != null) {
-            OrgGroup ownerGroup = _resMgr.getOrgDataSet().getOrgGroup(ownerID);
+            OrgGroup ownerGroup = getOrgDataSet().getOrgGroup(ownerID);
             if (ownerGroup != null) {
                 setBelongsTo(ownerGroup);
                 return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -163,6 +163,94 @@ public class YLogGatewayClient extends Interface_Client {
     public String getCompleteCaseLogsForSpecification(long specKey, String handle)
             throws IOException {
         return performGet("getCompleteCaseLogsForSpecification", "key", specKey, handle);
+    }
+
+
+    /**
+     * Gets a set of summary statistics for executed instances of the specification
+     * data passed
+     * @param identifier the unique identifier of the specification
+     * @param version the specification's version number
+     * @param uri the specification's uri
+     * @param from the start of the range of timestamps to include
+     * @param to the end of the range of timestamps to include
+     * @param handle an active sessionhandle
+     * @return the resultant String response (log data or error message)
+     * @throws java.io.IOException if there's a problem connecting to the engine
+     */
+    public String getSpecificationStatistics(String identifier, String version,
+                                       String uri, long from, long to, String handle)
+            throws IOException {
+        Map<String, String> params = prepareParamMap("getSpecificationStatistics", handle);
+        params.put("identifier", identifier);
+        params.put("version", version);
+        params.put("uri", uri);
+        params.put("from", String.valueOf(from));
+        params.put("to", String.valueOf(to));
+        return executeGet(_logURI, params);
+    }
+
+
+    /**
+     * Gets a set of summary statistics for executed instances of the specification
+     * data passed
+     * @param identifier the unique identifier of the specification
+     * @param version the specification's version number
+     * @param uri the specification's uri
+     * @param handle an active sessionhandle
+     * @return the resultant String response (log data or error message)
+     * @throws java.io.IOException if there's a problem connecting to the engine
+     */
+    public String getSpecificationStatistics(String identifier, String version,
+                                       String uri, String handle) throws IOException {
+        return getSpecificationStatistics(identifier, version, uri, -1, -1, handle);
+    }
+
+
+
+    /**
+      * Gets a set of summary statistics for executed instances of the specification
+      * data passed
+      * @param specID the unique identifier of the specification
+      * @param handle an active sessionhandle
+      * @return the resultant String response (log data or error message)
+      * @throws java.io.IOException if there's a problem connecting to the engine
+      */
+    public String getSpecificationStatistics(YSpecificationID specID, String handle)
+            throws IOException {
+        return getSpecificationStatistics(specID.getIdentifier(),
+                specID.getVersionAsString(), specID.getUri(), -1, -1, handle);
+    }
+    
+
+    /**
+      * Gets a set of summary statistics for executed instances of the specification
+      * data passed
+      * @param specID the unique identifier of the specification
+      * @param from the start of the range of timestamps to include
+      * @param to the end of the range of timestamps to include
+      * @param handle an active sessionhandle
+      * @return the resultant String response (log data or error message)
+      * @throws java.io.IOException if there's a problem connecting to the engine
+      */
+    public String getSpecificationStatistics(YSpecificationID specID, long from, long to,
+                                             String handle) throws IOException {
+        return getSpecificationStatistics(specID.getIdentifier(),
+                specID.getVersionAsString(), specID.getUri(), from, to, handle);
+    }
+
+
+    /**
+     * Gets a set of summary statistics for executed instances of the specification
+     * key passed
+     * @param specKey the primary key identifier of the specification in its log table
+     * @param handle an active sessionhandle
+     * @return the resultant String response (log data or error message)
+     * @throws java.io.IOException if there's a problem connecting to the engine
+     */
+    public String getSpecificationStatistics(long specKey, String handle)
+            throws IOException {
+        return performGet("getSpecificationStatistics", "key", specKey, handle);
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,17 +18,17 @@
 
 package org.yawlfoundation.yawl.elements;
 
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
-import org.yawlfoundation.yawl.engine.YCaseData;
+import org.yawlfoundation.yawl.engine.YNetData;
 import org.yawlfoundation.yawl.engine.YPersistenceManager;
-import org.yawlfoundation.yawl.engine.time.YTimerVariable;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 import org.yawlfoundation.yawl.logging.YLogPredicate;
+import org.yawlfoundation.yawl.util.DynamicValue;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 import java.util.*;
 
@@ -52,10 +52,9 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
     private Map<String, YParameter> _enablementParameters;  // only used to generate editor xml
     private Set<String> _outputExpressions;
     protected Document _data;
-    private YCaseData _casedata = null;
+    private YNetData _casedata = null;
     private YAttributeMap _attributes;
     private YLogPredicate _logPredicate;
-    private Map<YTask, YTimerVariable> _timerVariables;
 
     // if true, this decomposition requires resourcing decisions made at runtime
     protected boolean _manualInteraction = true;
@@ -71,7 +70,6 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
         _inputParameters = new HashMap<String, YParameter>();
         _outputParameters = new HashMap<String, YParameter>();
         _enablementParameters = new HashMap<String, YParameter>();
-        _timerVariables = new Hashtable<YTask, YTimerVariable>();
         _outputExpressions = new HashSet<String>();
         _data = new Document();
         _attributes = new YAttributeMap();
@@ -84,7 +82,7 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
 
     // PERSISTENCE METHODS //
 
-    public void initializeDataStore(YPersistenceManager pmgr, YCaseData casedata)
+    public void initializeDataStore(YPersistenceManager pmgr, YNetData casedata)
                                                         throws YPersistenceException {
         _casedata = casedata;
         _casedata.setData(JDOMUtil.documentToString(_data));
@@ -93,7 +91,7 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
     }
 
     
-    public void restoreData(YCaseData casedata) {
+    public void restoreData(YNetData casedata) {
         _casedata = casedata;
         _data = getNetDataDocument(casedata.getData());
     }
@@ -109,6 +107,8 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
 
     public String getID() { return _id; }
 
+    public void setID(String id) { _id = id; }
+
 
     public YAttributeMap getAttributes() { return _attributes; }
 
@@ -122,6 +122,9 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
         _attributes.put(name, value);
     }
 
+    public void setAttribute(String name, DynamicValue value) {
+        _attributes.put(name, value);
+    }
 
     public String getDocumentation() { return _documentation; }
 
@@ -151,6 +154,13 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
         else throw new RuntimeException("Can't set an output param as an input param.");
     }
 
+    public YParameter removeInputParameter(YParameter parameter) {
+        return _inputParameters.remove(parameter.getPreferredName());
+    }
+
+    public YParameter removeInputParameter(String name) {
+        return _inputParameters.remove(name);
+    }
 
     public void addOutputParameter(YParameter parameter) {
         if (parameter.isInput()) {
@@ -164,6 +174,14 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
                 _outputParameters.put(paramName, parameter);
             }
         }
+    }
+
+    public YParameter removeOutputParameter(YParameter parameter) {
+        return _outputParameters.remove(parameter.getPreferredName());
+    }
+
+    public YParameter removeOutputParameter(String name) {
+        return _outputParameters.remove(name);
     }
 
 
@@ -189,6 +207,7 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
         _manualInteraction = interaction ;
     }
 
+
     // when external interactions are specified as manual, tasks that decompose to
     // this will require resourcing decisions to be specified at design time
     public boolean requiresResourcingDecisions() { return _manualInteraction ; }
@@ -207,9 +226,9 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
         // just do the decomposition facts (not the surrounding element) - to keep life simple
         StringBuilder xml = new StringBuilder();
         if (_name != null)
-            xml.append(StringUtil.wrap(_name, "name"));
+            xml.append(StringUtil.wrapEscaped(_name, "name"));
         if (_documentation != null)
-            xml.append(StringUtil.wrap(_documentation, "documentation"));
+            xml.append(StringUtil.wrapEscaped(_documentation, "documentation"));
 
         xml.append(paramMapToXML(_inputParameters));
 
@@ -239,19 +258,15 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
     }
 
 
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
+    public void verify(YVerificationHandler handler) {
         if (_id == null)
-            messages.add(new YVerificationMessage(this, this + " cannot have null id.",
-                             YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " cannot have null id.");
 
         for (YParameter param : _inputParameters.values())
-            messages.addAll(param.verify());
+            param.verify(handler);
 
         for (YParameter param : _outputParameters.values())
-            messages.addAll(param.verify());
-
-        return messages;
+            param.verify(handler);
     }
 
 
@@ -268,7 +283,7 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
 
 
     /**
-     * Gets those params that bypass the decomposition org.yawlfoundation.yawl.risk.state space.
+     * Gets those params that bypass the decomposition state space.
      * @return a map of them.
      */
     public Map<String, YParameter> getStateSpaceBypassParams() {
@@ -328,7 +343,7 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
 
         for (YParameter parameter : outputParamsList) {
             Element child = root.getChild(parameter.getPreferredName());
-            outputDoc.getRootElement().addContent((Element) child.clone());
+            outputDoc.getRootElement().addContent(child.clone());
         }
         return outputDoc;
     }
@@ -352,13 +367,13 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
 
     protected void addData(YPersistenceManager pmgr, Element element)
                                                      throws YPersistenceException {
-        assignData(pmgr, (Element) element.clone());
+        assignData(pmgr, element.clone());
     }
 
 
     public void initialise(YPersistenceManager pmgr) throws YPersistenceException {
         for (YParameter inputParam : _inputParameters.values()) {
-            Element initialValueXML = null;
+            Element initialValueXML;
             String initialValue = inputParam.getInitialValue();
             if (initialValue != null) {
                 initialValue = StringUtil.wrap(initialValue, inputParam.getName()) ;
@@ -372,7 +387,7 @@ public abstract class YDecomposition implements Cloneable, YVerifiable {
 
 
     public String getRootDataElementName() {
-        return _specification.usesSimpleRootData() ? "data" : _id;
+        return _specification.getSchemaVersion().usesSimpleRootData() ? "data" : _id;
     }
 
 }

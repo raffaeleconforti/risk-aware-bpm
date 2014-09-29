@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,11 +18,15 @@
 
 package org.yawlfoundation.yawl.resourcing.rsInterface;
 
+import org.yawlfoundation.yawl.authentication.ISessionCache;
+import org.yawlfoundation.yawl.authentication.YSession;
+import org.yawlfoundation.yawl.logging.table.YAuditEvent;
 import org.yawlfoundation.yawl.resourcing.datastore.eventlog.EventLogger;
 
 import java.util.Collection;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * An extended HashMap to handle connections from external entities (such as the YAWL
@@ -34,14 +38,17 @@ import java.util.Map;
  */
 
 
-public class ConnectionCache extends Hashtable<String, ServiceConnection> {
+public class ConnectionCache extends ConcurrentHashMap<String, ServiceConnection>
+                             implements ISessionCache {
 
     private static ConnectionCache _me ;
-    private Hashtable<String,String> _userdb ;
+    private Map<String,String> _userdb ;
+    private ServiceConnectionTimer _timer;
 
     private ConnectionCache() {
         super();
         initUserDB() ;
+        _timer = new ServiceConnectionTimer(this);
         _me = this ;
     }
 
@@ -84,9 +91,7 @@ public class ConnectionCache extends Hashtable<String, ServiceConnection> {
         String result ;
         if (validUser(userid))  {
             if (validPassword(userid, password)) {
-                ServiceConnection con = new ServiceConnection(userid, timeOutSeconds) ;
-                result = con.getHandle();
-                this.put(result, con);
+                result = storeSession(new ServiceConnection(userid, timeOutSeconds));
                 EventLogger.audit(userid, EventLogger.audit.gwlogon);
             }
             else {
@@ -104,14 +109,19 @@ public class ConnectionCache extends Hashtable<String, ServiceConnection> {
 
 
     public void disconnect(String handle) {
-        ServiceConnection con = this.remove(handle);
-        if (con != null) EventLogger.audit(con.getUserID(), EventLogger.audit.gwlogoff);
+        removeConnection(handle, EventLogger.audit.gwlogoff);
     }
 
 
     public void expire(String handle) {
-        ServiceConnection con = this.remove(handle);
-        if (con != null) EventLogger.audit(con.getUserID(), EventLogger.audit.gwexpired);
+        removeConnection(handle, EventLogger.audit.gwexpired);
+    }
+
+    public ServiceConnection getSession(String handle) {
+        if (handle != null) {
+             return this.get(handle);
+         }
+         return null;
     }
 
 
@@ -120,7 +130,7 @@ public class ConnectionCache extends Hashtable<String, ServiceConnection> {
         if (handle != null) {
             ServiceConnection con = this.get(handle) ;
             if (con != null) {
-                con.resetActivityTimer();
+                _timer.reset(con);
                 result = true ;
             }
         }
@@ -130,13 +140,19 @@ public class ConnectionCache extends Hashtable<String, ServiceConnection> {
 
     public void shutdown() {
         for (ServiceConnection con : this.values()) {
-            EventLogger.audit(con.getUserID(), EventLogger.audit.shutdown);            
+            EventLogger.audit(con.getUserID(), EventLogger.audit.shutdown);
         }
+        _timer.shutdown();
     }
 
 
     public boolean hasUser(String userid) {
-        return _userdb.containsKey(userid);
+        return (userid != null) && _userdb.containsKey(userid);
+    }
+
+
+    public boolean hasUsers() {
+        return ! _userdb.isEmpty();
     }
 
     
@@ -155,19 +171,28 @@ public class ConnectionCache extends Hashtable<String, ServiceConnection> {
         return false;
     }
 
+
+    private void removeConnection(String handle, EventLogger.audit auditType) {
+        ServiceConnection con = this.remove(handle);
+        if (con != null) {
+            _timer.expire(con);
+            EventLogger.audit(con.getUserID(), auditType);
+        }
+    }
+
     
     private boolean validPassword(String userid, String password) {
-        return _userdb.get(userid).equals(password);
+        return (userid != null) && _userdb.get(userid).equals(password);
     }
 
 
     private boolean validUser(String userid) {
-        return _userdb.containsKey(userid) ;
+        return (userid != null) && _userdb.containsKey(userid) ;
 
     }
 
     private void initUserDB() {
-        _userdb = new Hashtable<String,String>();
+        _userdb = new HashMap<String, String>();
     }
 
 
@@ -175,7 +200,12 @@ public class ConnectionCache extends Hashtable<String, ServiceConnection> {
         return String.format("<failure>%s</failure>", msg) ;
     }
 
-
+    private String storeSession(ServiceConnection session) {
+        String handle = session.getHandle();
+        this.put(handle, session);
+        _timer.add(session);
+        return handle;
+    }
 
 }
 

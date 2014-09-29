@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -21,6 +21,8 @@ package org.yawlfoundation.yawl.engine;
 import org.apache.log4j.Logger;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Provides for the persistence of the last allocated case id, and the generation
  * of new case ids.
@@ -32,13 +34,15 @@ import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 public class YCaseNbrStore {
 
     private int pkey = 1001 ;                             // primary key for persistence
-    private int caseNbr = 0 ;                             // initial default
+    private AtomicInteger caseNbr;
     private boolean persisted = false ;                   // has this been persisted yet?
     private boolean persisting = false ;                  // is persistence on?
     private static YCaseNbrStore _instance ;
     private static final Logger log = Logger.getLogger(YCaseNbrStore.class) ;
 
-    protected YCaseNbrStore() {}
+    protected YCaseNbrStore() {
+        caseNbr = new AtomicInteger();
+    }
 
     /** @return an instance of ths class */
     public static YCaseNbrStore getInstance() {
@@ -50,9 +54,9 @@ public class YCaseNbrStore {
 
     // Getters & Setters //
 
-    public int getCaseNbr() { return caseNbr; }
+    public int getCaseNbr() { return caseNbr.get(); }
 
-    public void setCaseNbr(int nbr) { caseNbr = nbr; }
+    public void setCaseNbr(int nbr) { caseNbr.set(nbr); }
 
 
     public int getPkey() { return pkey; }
@@ -69,22 +73,24 @@ public class YCaseNbrStore {
 
     public void setPersisting(boolean persist) { persisting = persist; }
 
+    public String toString() { return caseNbr.toString(); }
+
 
     /** @return the next available case number (as a String) */
-    public String getNextCaseNbr() {
-        String result = String.valueOf(++caseNbr);
-        if (persisting) persistThis() ;
-        return result;
+    public String getNextCaseNbr(YPersistenceManager pmgr) {
+        caseNbr.incrementAndGet();
+        if (persisting) persistThis(pmgr) ;
+        return caseNbr.toString();
     }
 
 
     /** persist the current case number */
-    private void persistThis() {
+    private void persistThis(YPersistenceManager pmgr) {
         try {
             if (persisted)
-                YEngine.getInstance().updateObject(this);
+                updateThis(pmgr);
             else {
-                YEngine.getInstance().storeObject(this);
+                storeThis(pmgr);
                 persisted = true ;
             }
         }
@@ -92,4 +98,19 @@ public class YCaseNbrStore {
             log.error("Could not persist case number.", ype) ;
         }
     }
+
+    private void updateThis(YPersistenceManager pmgr) throws YPersistenceException {
+        if (pmgr != null) {
+            pmgr.updateObject(this);
+        }
+        else YEngine.getInstance().updateObject(this);
+    }
+
+    private void storeThis(YPersistenceManager pmgr) throws YPersistenceException {
+        if (pmgr != null) {
+            pmgr.storeObject(this);
+        }
+        else YEngine.getInstance().storeObject(this);
+    }
+
 }

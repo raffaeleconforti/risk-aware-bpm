@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,15 +18,15 @@
 
 package org.yawlfoundation.yawl.wsif;
 
+import org.yawlfoundation.yawl.engine.interfce.AuthenticationConfig;
 import org.apache.wsif.*;
 import org.apache.wsif.providers.ProviderUtils;
 import org.apache.wsif.providers.soap.apachesoap.WSIFDynamicProvider_ApacheSOAP;
 import org.apache.wsif.util.WSIFPluggableProviders;
 import org.apache.wsif.util.WSIFUtils;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-import org.yawlfoundation.yawl.engine.interfce.AuthenticationConfig;
+import org.jdom2.Element;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 
 import javax.wsdl.*;
 import javax.xml.namespace.QName;
@@ -49,9 +49,8 @@ public class WSIFInvoker {
         System.out.println("port name = " + portName);
         System.out.println("operation name = " + operationName);
 
-        List argsV = new ArrayList();
-        for (int i = 0; i < inputDataDoc.getChildren().size(); i++) {
-            Element element = (Element) inputDataDoc.getChildren().get(i);
+        List<String> argsV = new ArrayList<String>();
+        for (Element element : inputDataDoc.getChildren()) {
             argsV.add(element.getText());
         }
         String[] args = new String[argsV.size()];
@@ -71,8 +70,8 @@ public class WSIFInvoker {
                                        String[] args, int argShift,
                                        AuthenticationConfig authconfig) {
 
-        for (int i = 0; i < args.length; i++) {
-            System.out.println("argValue: " + args[i]);
+        for (String arg : args) {
+            System.out.println("argValue: " + arg);
         }
 
         HashMap map = new HashMap();

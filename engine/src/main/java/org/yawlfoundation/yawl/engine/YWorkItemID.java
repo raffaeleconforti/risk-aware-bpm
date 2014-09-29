@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -26,9 +26,7 @@ import java.util.Arrays;
 /**
  * 
  * @author Lachlan Aldred
- * Date: 23/05/2003
- * Time: 14:32:32
- * 
+ * @date 23/05/2003
  */
 public class YWorkItemID {
     private static final char[] _uniqifier = UniqueIDGenerator.newAlphas();
@@ -82,6 +80,25 @@ public class YWorkItemID {
 
         return bigInt2.compareTo(bigInt1);
     }
+
+
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other instanceof YWorkItemID) {
+            YWorkItemID otherID = (YWorkItemID) other;
+            return this.getCaseID().equals(otherID.getCaseID()) &&
+                   this.getTaskID().equals(otherID.getTaskID()) &&
+                    (((this.getUniqueID() == null) && (otherID.getUniqueID() == null)) ||
+                    this.getUniqueID().equals(otherID.getUniqueID()));
+        }
+        return false;
+    }
+
+    public int hashCode() {
+        int uCode = (getUniqueID() != null) ? getUniqueID().hashCode() : 31;
+        return getCaseID().hashCode() + getTaskID().hashCode() + uCode;
+    }
+    
 }
 
 /*********************************************************************************/

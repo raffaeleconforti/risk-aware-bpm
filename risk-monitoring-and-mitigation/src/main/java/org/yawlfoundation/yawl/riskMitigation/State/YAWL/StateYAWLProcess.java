@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.risk.state.State;
 import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
 import org.yawlfoundation.yawl.risk.state.YAWL.Elements.Net;

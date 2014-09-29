@@ -15,8 +15,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.risk.state.YAWL.Elements.Place;
 import org.yawlfoundation.yawl.risk.state.YAWL.Elements.Task;
 import org.yawlfoundation.yawl.risk.state.YAWL.Importers.ModelReader;

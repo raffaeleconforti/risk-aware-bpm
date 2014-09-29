@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -25,8 +25,12 @@ package org.yawlfoundation.yawl.engine.time;
 public interface YTimedObject {
 
     // do something when the timer for the implementing object expires
-    public void handleTimerExpiry() ;
+    void handleTimerExpiry() ;
 
     // do whatever necessary when a timer is cancelled before expiry
-    public void cancel();
+    void cancel();
+    
+    // return a unique identifier for the timed object
+    String getOwnerID();
+    
 }

@@ -120,7 +120,7 @@ public class ReductionRuleTester{
 	                 { msg += " Original net:"+clone.getNetElements().size()+
 	                         " Reduced net:"+reducedNet.getNetElements().size();
 	                  isReducible = true;        
-	                  newSpecification.setDecomposition((YDecomposition) reducedNet);       
+	                  newSpecification.addDecomposition((YDecomposition) reducedNet);
 	                 }
 	               }//end if - null
 	          }//endfor

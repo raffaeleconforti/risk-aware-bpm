@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,12 +18,12 @@
 
 package org.yawlfoundation.yawl.worklet.support;
 
-import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.util.JDOMUtil;
 
-import java.util.*;
-
-import org.jdom.Element;
+import java.util.Date;
+import java.util.Map;
 
 
 /**
@@ -31,15 +31,15 @@ import org.jdom.Element;
  *  conditional expressions in rules.
  *
  * To successfully add a function:
- *  1. Add the function to the 'function definitions' section
- *  2. Ensure the function is declared 'private static'
+ *  1. Add the function (method body) to the 'function definitions' section
+ *  2. Ensure the function (method) is declared 'private static'
  *  3. Add the function's name added to the list of '_functionNames'.
  *  4. Add a mapping for the function to the 'execute' method, following the examples
  *  5. Ensure the function returns a String value.
  *
  * Once the function is added, it can be used in any rule's conditional expression
  *
- * Currently only a STUB with a couple of examples
+ * Currently hosts the cost service function and a couple of other examples
  *
  *  @author Michael Adams
  *  v0.8 04-097/2006
@@ -48,33 +48,41 @@ public class RdrConditionFunctions {
 
     // HEADER //
 
-//    private static Logger _log =
-//               Logger.getLogger("RdrConditionFunctions");
-
-
     // add the name of each defined function here
-    public static final String[] _functionNames = { "max",
+    public static final String[] _functionNames = { "cost",
+                                                    "max",
                                                     "min",
                                                     "isNotCompleted",
+                                                    "hasTimerExpired",
                                                     "today"} ;
 
-    public static boolean isRegisteredFunction(String s) {
-        for (int i=0; i < _functionNames.length; i++)
-           if (s.equalsIgnoreCase(_functionNames[i])) return true ;
-
+    public static boolean isRegisteredFunction(String name) {
+        for (String functionName : _functionNames) {
+            if (name.equalsIgnoreCase(functionName)) return true;
+        }
         return false;                               // not a function name
     }
 
     /*****************************************************************************/
 
-
-    // EXECUTE METHOD //
-
-    // Note: all args are passed as Strings
-    public static String execute(String name, HashMap args) {
-        if (name.equalsIgnoreCase("isNotCompleted")) {
-            String taskInfo = (String) args.get("this");
+    /**
+     * Executes the named function, using the supplied arguments
+     * @param name the name of the function to execute
+     * @param args a map of String key-value pairs. Note that every map will contain
+     *             a key called 'this' that has as its value an xml String of the
+     *             workitem being evaluated
+     * @return the function's result
+     */
+    public static String execute(String name, Map<String, String> args) {
+        String taskInfo = args.get("this");
+        if (name.equalsIgnoreCase("cost")) {
+            return "10";
+        }
+        else if (name.equalsIgnoreCase("isNotCompleted")) {
             return isNotCompleted(taskInfo);
+        }
+        else if (name.equalsIgnoreCase("hasTimerExpired")) {
+            return hasTimerExpired(taskInfo);
         }
         else if (name.equalsIgnoreCase("max")) {
             int x = getArgAsInt(args, "x");
@@ -116,6 +124,12 @@ public class RdrConditionFunctions {
     }
 
 
+    private static String hasTimerExpired(String itemInfo) {
+        Element eItem = JDOMUtil.stringToElement(itemInfo);
+        return String.valueOf((eItem.getChildText("timerexpiry") != null));
+    }
+
+
     private static String today() {
         Date now = new Date() ;
         return now.toString();
@@ -134,9 +148,9 @@ public class RdrConditionFunctions {
 
 
     /** extract the specified argument and returns its integer value */
-    private static int getArgAsInt(HashMap args, String var) {
-        String valStr = (String) args.get(var);
-        return Integer.parseInt(valStr);
+    private static int getArgAsInt(Map<String, String> args, String var) {
+        String valStr = args.get(var);
+        return valStr != null ? Integer.parseInt(valStr) : -1;
     }
 
 }

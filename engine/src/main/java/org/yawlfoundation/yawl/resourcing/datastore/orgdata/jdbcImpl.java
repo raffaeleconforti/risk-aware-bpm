@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,8 +19,8 @@
 package org.yawlfoundation.yawl.resourcing.datastore.orgdata;
 
 import org.apache.log4j.Logger;
-import org.yawlfoundation.yawl.exceptions.YAuthenticationException;
 import org.yawlfoundation.yawl.resourcing.resource.*;
+import org.yawlfoundation.yawl.exceptions.YAuthenticationException;
 
 import java.sql.*;
 import java.util.*;
@@ -973,12 +973,13 @@ public class jdbcImpl extends DataSource {
      * deletes the object from the database
      * @param obj the object to delete
      */
-    public void delete(Object obj) {
+    public boolean delete(Object obj) {
         if (obj instanceof OrgGroup) deleteOrgGroup((OrgGroup) obj) ;
         else if (obj instanceof Capability) deleteCapability((Capability) obj) ;
         else if (obj instanceof Position) deletePosition((Position) obj) ;
         else if (obj instanceof Role) deleteRole((Role) obj);
         else if (obj instanceof Participant) deleteParticipant((Participant) obj);
+        return true;
     }
 
     

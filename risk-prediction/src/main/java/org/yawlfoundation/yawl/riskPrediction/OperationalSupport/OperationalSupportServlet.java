@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.riskPrediction.OperationalSupport;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.sensors.databaseInterface.InterfaceManager;
 import org.yawlfoundation.yawl.sensors.databaseInterface.YAWL.YAWL_Role;

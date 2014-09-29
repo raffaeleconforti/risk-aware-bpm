@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -54,5 +54,14 @@ public class YAuditEvent {
     public long get_timeStamp() { return _timeStamp; }
 
     public void set_timeStamp(long timeStamp) {_timeStamp = timeStamp; }
+
+    public boolean equals(Object other) {
+        return (other instanceof YAuditEvent) &&
+                (this.get_id() == ((YAuditEvent) other).get_id());
+    }
+
+    public int hashCode() {
+        return (int) (31 * get_id()) % Integer.MAX_VALUE;
+    }    
 
 }

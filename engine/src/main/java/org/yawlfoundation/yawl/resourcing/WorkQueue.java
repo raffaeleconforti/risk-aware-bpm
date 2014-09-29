@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.datastore.WorkItemCache;
@@ -27,10 +27,11 @@ import org.yawlfoundation.yawl.resourcing.datastore.persistence.Persister;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Convenience class that encapsulates the various work queues for a Participant and/or
@@ -40,7 +41,7 @@ import java.util.Set;
  *  v0.1, 03/08/2007
  */
 
-public class WorkQueue implements Serializable {
+public class WorkQueue {
 
     // different queue types
     public final static int UNDEFINED = -1 ;
@@ -53,13 +54,12 @@ public class WorkQueue implements Serializable {
 
     
     // the workitems assigned to this queue: <item's id, item>
-    private HashMap<String, WorkItemRecord> _workitems =
-            new HashMap<String, WorkItemRecord>();
+    private Map<String, WorkItemRecord> _workitems =
+            new ConcurrentHashMap<String, WorkItemRecord>();
 
     private long _id ;                                       // hibernate primary key
     private String _ownerID ;                                // who owns this queue?
     private int _queueType ;
-    private Set<String> _itemIDs ;                           // for persistence
     private boolean _persisting ;
 
 
@@ -121,7 +121,7 @@ public class WorkQueue implements Serializable {
     }
 
 
-    private void logEvent(HashMap<String, WorkItemRecord> map) {
+    private void logEvent(Map<String, WorkItemRecord> map) {
         if (_queueType < WORKLISTED)
             for (WorkItemRecord wir : map.values()) logEvent(wir) ;        
     }
@@ -161,7 +161,7 @@ public class WorkQueue implements Serializable {
      * Adds all members of the Map passed to the queue
      * @param queueMap the Map of [item id, YWorkItem] to add
      */
-    public void addQueue(HashMap<String, WorkItemRecord> queueMap) {
+    public void addQueue(Map<String, WorkItemRecord> queueMap) {
         _workitems.putAll(queueMap);
         persistThis() ;
         logEvent(queueMap) ;
@@ -212,7 +212,7 @@ public class WorkQueue implements Serializable {
      * Retrieves a HashMap of all workitems in the queue
      * @return all members of the queue as a HashMap of [item id, YWorkItem]
      */
-    public HashMap<String, WorkItemRecord> getQueueAsMap() { return _workitems; }
+    public Map<String, WorkItemRecord> getQueueAsMap() { return _workitems; }
 
 
     /**
@@ -220,7 +220,7 @@ public class WorkQueue implements Serializable {
      * @param item the workitem to remove
      */
     public void remove(WorkItemRecord item) {
-        if (_workitems.containsKey(item.getID())) {
+        if (item != null && _workitems.containsKey(item.getID())) {
             _workitems.remove(item.getID());
             persistThis();
         }    
@@ -254,14 +254,16 @@ public class WorkQueue implements Serializable {
         for (String itemID : clonedQueue) {
             if (cache.get(itemID) == null) _workitems.remove(itemID);
         }
+        if (_workitems.size() != clonedQueue.size()) persistThis();
     }
 
     
     public void removeCase(String caseID) {
         Set<WorkItemRecord> clonedQueue = new HashSet<WorkItemRecord>(_workitems.values());
         for (WorkItemRecord wir : clonedQueue) {
-            if (wir.getRootCaseID().equals(caseID)) remove(wir);           
+            if (wir.getRootCaseID().equals(caseID)) _workitems.remove(wir.getID());
         }
+        if (_workitems.size() != clonedQueue.size()) persistThis();
     }
 
 
@@ -272,14 +274,6 @@ public class WorkQueue implements Serializable {
     /** returns the number of workitems in this queue */
     public int getQueueSize() { return _workitems.size() ; }
 
-    /** rebuilds the queue's workitem list after restart of service */
-    public void restore(WorkItemCache cache) {
-        for (String id : _itemIDs) {
-            WorkItemRecord wir = cache.get(id) ;
-            if (wir != null)
-                _workitems.put(id, wir) ;
-        }
-    }
 
     /** returns the apropriate String identifier for the queue type passed */
     public static String getQueueName(int qType) {
@@ -331,8 +325,8 @@ public class WorkQueue implements Serializable {
             _ownerID = element.getChildText("ownerid");
             Element items = element.getChild("workitems");
             if (items != null) {
-                for (Object o : items.getChildren()) {
-                    WorkItemRecord wir = Marshaller.unmarshalWorkItem((Element) o) ;
+                for (Element e : items.getChildren()) {
+                    WorkItemRecord wir = Marshaller.unmarshalWorkItem(e) ;
                     _workitems.put(wir.getID(), wir);
                 }
             }
@@ -352,12 +346,5 @@ public class WorkQueue implements Serializable {
     private long get_id() { return _id; }
 
     private void set_id(long id) {_id = id; }
-
-    private Set get_itemIDs() {
-        _itemIDs = _workitems.keySet();
-        return _itemIDs ;
-    }
-
-    private void set_itemIDs(Set itemSet) { _itemIDs = itemSet ; }
 
 }

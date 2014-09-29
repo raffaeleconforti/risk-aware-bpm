@@ -4,10 +4,9 @@
           xmlns:h="http://java.sun.com/jsf/html"
           xmlns:jsp="http://java.sun.com/JSP/Page"
           xmlns:ui="http://www.sun.com/web/ui">
-    <jsp:directive.page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8"/>
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -24,11 +23,12 @@
   ~ License along with YAWL. If not, see <http://www.gnu.org/licenses/>.
   -->
 
+    <jsp:directive.page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8"/>
     <f:view>
         <ui:page binding="#{Login.page}" id="page1">
             <ui:html binding="#{Login.html}" id="html1">
                 <ui:head binding="#{Login.head}" id="head1"
-                         title="Welcome to YAWL 2.1: Please Login">
+                         title="Welcome to YAWL #{ApplicationBean.yawlVersion}: Please Login">
                     <ui:link binding="#{Login.link}" id="link1"
                              url="/resources/stylesheet.css"/>
                     <ui:link binding="#{ApplicationBean.favIcon}" id="lnkFavIcon"
@@ -54,25 +54,25 @@
                                 <ui:label binding="#{Login.lblUserName}"
                                           for="txtUserName"
                                           id="lblUserName"
-                                          style="top: 25px"
+                                          style="top: 18px"
                                           styleClass="loginLabel"
                                           text="User Name:"/>
 
                                 <ui:textField binding="#{Login.txtUserName}"
                                               id="txtUserName"
-                                              style="top: 22px"
+                                              style="top: 15px"
                                               styleClass="loginField"/>
 
                                 <ui:label binding="#{Login.lblPassword}"
                                           for="txtPassword"
-                                          style="top: 55px"
+                                          style="top: 48px"
                                           styleClass="loginLabel"
                                           id="lblPassword"
                                           text="Password:"/>
 
                                 <ui:passwordField binding="#{Login.txtPassword}"
                                                   id="txtPassword"
-                                                  style="top: 52px"
+                                                  style="top: 45px"
                                                   styleClass="loginField"/>
 
                                 <ui:button action="#{Login.btnLogin_action}"

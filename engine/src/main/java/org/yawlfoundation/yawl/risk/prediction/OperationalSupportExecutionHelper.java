@@ -12,8 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.jdom.Element;
-import org.jdom.JDOMException;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
@@ -26,7 +26,9 @@ import org.yawlfoundation.yawl.util.JDOMUtil;
 
 public class OperationalSupportExecutionHelper extends InterfaceBWebsideController implements Serializable{
 
-	private static OperationalSupportExecutionHelper _me = null;
+    private static final String DEFAULT_ENGINE_USERNAME = "admin";
+    private static final String DEFAULT_ENGINE_PASSWORD = "YAWL";
+    private static OperationalSupportExecutionHelper _me = null;
 	private String riskPredictionURI = null;
 	private String _engineHandle = null; 
 	
@@ -136,7 +138,6 @@ public class OperationalSupportExecutionHelper extends InterfaceBWebsideControll
      * Sends data to the specified url via a HTTP POST, and returns the reply
      * @param urlStr the url to connect to
      * @param paramsMap a map of attribute=value pairs representing the data to send
-     * @param post true if this was originally a POST request, false if a GET request
      * @return the response from the url
      * @throws IOException when there's some kind of communication problem
      */

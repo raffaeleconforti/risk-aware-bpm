@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -59,13 +59,14 @@ public interface InterfaceX_Service {
 
      void handleCheckWorkItemConstraintEvent(WorkItemRecord wir, String data, boolean precheck);
 
-     void handleWorkItemAbortException(WorkItemRecord wir);
+     String handleWorkItemAbortException(WorkItemRecord wir, String caseData);
 
      void handleTimeoutEvent(WorkItemRecord wir, String taskList);
 
-     void handleResourceUnavailableException(WorkItemRecord wir);
+     void handleResourceUnavailableException(String resourceID, WorkItemRecord wir,
+                                             String caseData, boolean primary);
 
-     void handleConstraintViolationException(WorkItemRecord wir);
+     String handleConstraintViolationException(WorkItemRecord wir, String caseData);
 
      void handleCaseCancellationEvent(String caseID);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -21,14 +21,15 @@ package org.yawlfoundation.yawl.digitalSignature;
 import org.apache.commons.codec.binary.Base64;
 import org.bouncycastle.cms.*;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.DOMOutputter;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.output.DOMOutputter;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.engine.interfce.interfaceB.InterfaceBWebsideController;
+import org.yawlfoundation.yawl.util.JDOMUtil;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -65,13 +66,8 @@ public class DigitalSignature extends InterfaceBWebsideController
     private static String _Password = null;
     private static String _Pathway = System.getenv("CATALINA_HOME") + "/webapps/digitalSignature/files/";
     private static String _Name = null;
-
-    private static final String _engineUser = "digitalSignatureService";
-    private static final String _enginePassword = "yDigitalSignature";
-
     private static String _sessionHandle = null;
-    
-    private static org.jdom.Document Doc = null;
+    private static org.jdom2.Document Doc = null;
     
     //Function used by the Custom Service.
     public void handleEnabledWorkItemEvent(WorkItemRecord enabledWorkItem)
@@ -80,7 +76,7 @@ public class DigitalSignature extends InterfaceBWebsideController
          {             
 	    	  if(!checkConnection(_sessionHandle))
 	          {
-	               _sessionHandle = connect(_engineUser, _enginePassword);
+	               _sessionHandle = connect(engineLogonName, engineLogonPassword);
 	          }
 	          if (successful(_sessionHandle)) 
 	          {
@@ -101,9 +97,9 @@ public class DigitalSignature extends InterfaceBWebsideController
 	                    for (int i = 0; i < executingChildren.size(); i++) 
 	                    {
 	                    	WorkItemRecord itemRecord = (WorkItemRecord) executingChildren.get(i);
-	                        Element element = (Element) itemRecord.getDataList();
+	                        Element element = itemRecord.getDataList();
 	                    	
-	                        String answer = "false";
+	                        String answer;
 	                        
 	                        //Get the signed document
 	                        String Document = element.getChild(_Signature).getText();
@@ -205,13 +201,12 @@ public class DigitalSignature extends InterfaceBWebsideController
     	 
     	 //convert the document content to a valid xml document for YAWL
     	 org.w3c.dom.Document XMLNode = ConvertStringToDocument(content);
-    	 org.jdom.input.DOMBuilder builder = new org.jdom.input.DOMBuilder();
+    	 org.jdom2.input.DOMBuilder builder = new org.jdom2.input.DOMBuilder();
          Doc = builder.build(XMLNode);
          
          //Check the document
          System.out.println("xml to Sign:");
-       	 XMLOutputter sortie = new XMLOutputter(Format.getPrettyFormat());
-         sortie.output(Doc, System.out);
+         System.out.println(JDOMUtil.documentToString(Doc));
     
         
 

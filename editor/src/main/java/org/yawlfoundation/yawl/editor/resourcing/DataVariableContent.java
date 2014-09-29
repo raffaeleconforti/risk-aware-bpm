@@ -59,7 +59,7 @@ public class DataVariableContent implements Serializable, Cloneable {
   
   public static boolean isValidForResourceContainment(DataVariable variable) {
     return variable.isInputVariable() &&
-           (XSDType.getInstance().getOrdinal(variable.getDataType()) == XSDType.STRING);
+           (XSDType.getOrdinal(variable.getDataType()) == XSDType.STRING);
   }
   
   public String getContentTypeAsString() {

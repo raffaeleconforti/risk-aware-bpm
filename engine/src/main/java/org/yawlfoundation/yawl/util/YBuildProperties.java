@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -54,6 +54,10 @@ public class YBuildProperties {
 
     public String getBuildDate() {
         return _buildProps.getProperty("BuildDate");
+    }
+
+    public String getFullVersion() {
+        return getVersion() + " (b." + getBuildNumber() + ")";
     }
 
 

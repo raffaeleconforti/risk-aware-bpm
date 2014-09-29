@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -25,7 +25,7 @@ import org.yawlfoundation.yawl.schema.XSDType;
 import org.yawlfoundation.yawl.util.StringUtil;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.elements.data.YParameter;
-import org.jdom.Element;
+import org.jdom2.Element;
 
 /**
  * Author: Michael Adams
@@ -57,7 +57,7 @@ public class ParameterInstance implements YInstance {
         if (hasOutputUsage()) setOutputPredicate(task.getDataBindingForOutputParam(name));
         defaultValue = param.getDefaultValue();
         if (data != null) {
-            originalValue = (XSDType.getInstance().isBuiltInType(dataType)) ?
+            originalValue = (XSDType.isBuiltInType(dataType)) ?
                              data.getText() : JDOMUtil.elementToString(data) ;
             value = originalValue;
         }

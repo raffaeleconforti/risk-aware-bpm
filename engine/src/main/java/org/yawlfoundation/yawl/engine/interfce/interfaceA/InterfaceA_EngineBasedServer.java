@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -87,7 +87,7 @@ public class InterfaceA_EngineBasedServer extends HttpServlet {
         if (_engine.enginePersistenceFailure())
         {
             logger.fatal("************************************************************");
-            logger.fatal("A failure has occured whilst persisting workflow org.yawlfoundation.yawl.risk.state to the");
+            logger.fatal("A failure has occured whilst persisting workflow state to the");
             logger.fatal("database. Check the satus of the database connection defined");
             logger.fatal("for the YAWL service, and restart the YAWL web application.");
             logger.fatal("Further information may be found within the Tomcat log files.");
@@ -118,6 +118,9 @@ public class InterfaceA_EngineBasedServer extends HttpServlet {
                 else if ("checkConnection".equals(action)) {
                     msg.append(_engine.checkConnectionForAdmin(sessionHandle));
                 }
+                else if ("disconnect".equals(action)) {
+                    msg.append(_engine.disconnect(sessionHandle));
+                }
                 else if ("upload".equals(action)) {
                     String specXML = request.getParameter("specXML");
                     msg.append(_engine.loadSpecification(specXML, sessionHandle));
@@ -125,7 +128,7 @@ public class InterfaceA_EngineBasedServer extends HttpServlet {
                 else if ("getAccounts".equals(action)) {
                     msg.append(_engine.getAccounts(sessionHandle));
                 }
-                else if ("getAccount".equals(action)) {
+                else if ("getClientAccount".equals(action)) {
                     msg.append(_engine.getClientAccount(userID, sessionHandle));
                 }
                 else if ("getList".equals(action)) {
@@ -165,7 +168,6 @@ public class InterfaceA_EngineBasedServer extends HttpServlet {
                 else if ("getExternalDBGateways".equals(action)) {
                     msg.append(_engine.getExternalDBGateways(sessionHandle));
                 }
-
                 else if ("unload".equals(action)) {
                     String specIdentifier = request.getParameter("specidentifier");
                     String version = request.getParameter("specversion");
@@ -173,6 +175,23 @@ public class InterfaceA_EngineBasedServer extends HttpServlet {
                     YSpecificationID specID =
                             new YSpecificationID(specIdentifier, version, uri);
                     msg.append(_engine.unloadSpecification(specID, sessionHandle));
+                }
+                else if ("setHibernateStatisticsEnabled".equals(action)) {
+                    String enabled = request.getParameter("enabled");
+                    if (enabled != null) {
+                        _engine.setHibernateStatisticsEnabled(enabled.equalsIgnoreCase("true"),
+                                sessionHandle);
+                        msg.append("<success/>");
+                    }
+                    else {
+                        msg.append("<failure>Invalid parameter value 'enabled'</failure>");
+                    }
+                }
+                else if ("isHibernateStatisticsEnabled".equals(action)) {
+                    msg.append(_engine.isHibernateStatisticsEnabled(sessionHandle));
+                }
+                else if ("getHibernateStatistics".equals(action)) {
+                    msg.append(_engine.getHibernateStatistics(sessionHandle));
                 }
             }
         }

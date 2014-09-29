@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -22,13 +22,17 @@ import com.sun.rave.web.ui.appbase.AbstractPageBean;
 import com.sun.rave.web.ui.component.*;
 import com.sun.rave.web.ui.model.Option;
 import com.sun.rave.web.ui.model.UploadedFile;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.YSpecVersion;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.SpecificationData;
+import org.yawlfoundation.yawl.resourcing.DynamicForm;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
+import org.yawlfoundation.yawl.resourcing.client.DocStoreClient;
+import org.yawlfoundation.yawl.resourcing.datastore.eventlog.LogMiner;
 import org.yawlfoundation.yawl.resourcing.jsf.dynform.DynFormFactory;
 import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.util.StringUtil;
 import org.yawlfoundation.yawl.util.XNode;
 import org.yawlfoundation.yawl.util.XNodeParser;
 
@@ -38,11 +42,15 @@ import javax.faces.component.html.HtmlDataTable;
 import javax.faces.component.html.HtmlOutputText;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ValueChangeEvent;
+import javax.servlet.http.HttpServletResponse;
+import javax.xml.datatype.Duration;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
 
 /**
@@ -198,6 +206,13 @@ public class caseMgt extends AbstractPageBean {
     public void setStaticText3(StaticText st) { staticText3 = st; }
 
 
+    private StaticText stDelayedHeader = new StaticText();
+
+    public StaticText getStDelayedHeader() { return stDelayedHeader; }
+
+    public void setStDelayedHeader(StaticText st) { stDelayedHeader = st; }
+
+
     private Button btnUnload = new Button();
 
     public Button getBtnUnload() { return btnUnload; }
@@ -231,6 +246,13 @@ public class caseMgt extends AbstractPageBean {
     public PanelLayout getLayoutPanel3() { return layoutPanel3; }
 
     public void setLayoutPanel3(PanelLayout pl) { layoutPanel3 = pl; }
+
+
+    private PanelLayout pnlDelayed = new PanelLayout();
+
+    public PanelLayout getPnlDelayed() { return pnlDelayed; }
+
+    public void setPnlDelayed(PanelLayout pl) { pnlDelayed = pl; }
 
 
     private HtmlDataTable dataTable1 = new HtmlDataTable();
@@ -339,6 +361,76 @@ public class caseMgt extends AbstractPageBean {
     public void setPnlGroup(PanelGroup group) { pnlGroup = group; }
 
 
+    private RadioButton rbTime ;
+
+    public RadioButton getRbTime() { return rbTime; }
+
+    public void setRbTime(RadioButton rb) {rbTime = rb; }
+
+
+    private RadioButton rbDate ;
+
+    public RadioButton getRbDate() { return rbDate; }
+
+    public void setRbDate(RadioButton rb) {rbDate = rb; }
+
+
+    private RadioButton rbDuration ;
+
+    public RadioButton getRbDuration() { return rbDuration; }
+
+    public void setRbDuration(RadioButton rb) {rbDuration = rb; }
+    
+    
+    public Label lblDelayValue;
+
+    public Label getLblDelayValue() { return lblDelayValue; }
+
+    public void setLblDelayValue(Label lbl) { lblDelayValue = lbl; }
+    
+    
+    public String lblValueText = "Seconds: ";
+
+    public String getLblValueText() { return lblValueText; }
+
+    public void setLblValueText(String text) { lblValueText = text; }
+
+
+    public TextField txtDelayValue;
+
+    public TextField getTxtDelayValue() { return txtDelayValue; }
+
+    public void setTxtDelayValue(TextField lbl) { txtDelayValue = lbl; }
+
+
+    public Label lblDelayValueError;
+
+    public Label getLblDelayValueError() { return lblDelayValueError; }
+
+    public void setLblDelayValueError(Label lbl) { lblDelayValueError = lbl; }
+
+
+    private Button btnDelayOK = new Button();
+
+    public Button getBtnDelayOK() { return btnDelayOK; }
+
+    public void setBtnDelayOK(Button b) { btnDelayOK = b; }
+
+
+    private Button btnDelayCancel = new Button();
+
+    public Button getBtnDelayCancel() { return btnDelayCancel; }
+
+    public void setBtnDelayCancel(Button b) { btnDelayCancel = b; }
+
+
+    private Button btnLaunchDelayed = new Button();
+
+    public Button getBtnLaunchDelayed() { return btnLaunchDelayed; }
+
+    public void setBtnLaunchDelayed(Button b) { btnLaunchDelayed = b; }
+
+
     // the next 3 buttons are available only when the exception service is enabled
 
     private Button btnRaiseException = new Button();
@@ -369,18 +461,25 @@ public class caseMgt extends AbstractPageBean {
     public void setBtnGetInfo(Button b) { btnGetInfo = b; }
 
 
+    private Button btnDownloadLog = new Button();
+
+    public Button getBtnDownloadLog() { return btnDownloadLog; }
+
+    public void setBtnDownloadLog(Button b) { btnDownloadLog = b; }
+
+
     /*******************************************************************************/
 
-    private ResourceManager _rm = getApplicationBean().getResourceManager() ;
-    private SessionBean _sb = getSessionBean();
-    private MessagePanel msgPanel = _sb.getMessagePanel();
+    private final ResourceManager _rm = getApplicationBean().getResourceManager() ;
+    private final SessionBean _sb = getSessionBean();
+    private final MessagePanel msgPanel = _sb.getMessagePanel();
 
     public void fileUpload1_processValueChange(ValueChangeEvent event) { }
 
 
     /** @return a reference to the session scoped factory bean. */
-    private DynFormFactory getDynFormFactory() {
-        return (DynFormFactory) getBean("DynFormFactory");
+    private DynamicForm getDynFormFactory() {
+        return (DynamicForm) getBean("DynFormFactory");
     }
 
     
@@ -390,11 +489,15 @@ public class caseMgt extends AbstractPageBean {
     public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.caseMgt);
-        _sb.showMessagePanel();
+        showMessagePanel();
 
         // take postback action on case launch
         if (_sb.isCaseLaunch()) {
             beginCase(_sb.getLoadedSpecListChoice());
+        }
+
+        if (_sb.isDelayedLaunchPanelVisible()) {
+            lblValueText = getDelayedLabel();
         }
         updateRunningCaseList();
         _sb.refreshLoadedSpecs();
@@ -413,6 +516,13 @@ public class caseMgt extends AbstractPageBean {
         if (index >= 0) fileName = fileName.substring(index + 1);
         return fileName ;
     }
+    
+    
+    private String getDelayedLabel() {
+        if (_sb.isDelayTimeRBSelected()) return "Seconds:";
+        if (_sb.isDelayDateRBSelected()) return "Datetime:";
+        return "Duration:";
+    }
 
 
     public String btnRefresh_action() {
@@ -425,6 +535,32 @@ public class caseMgt extends AbstractPageBean {
         return null ;
     }
 
+
+    public String btnDownloadLog_action() {
+        downloadLog();
+        return null ;
+    }
+
+
+    public String btnDelayOK_action() {
+        if (validateDelayValue()) {
+            _sb.setDelayedLaunchPanelVisible(false);
+            return btnLaunch_action();
+        }
+        return null ;
+    }
+
+
+    public String btnDelayCancel_action() {
+        _sb.setDelayedLaunchPanelVisible(false);
+        return null ;
+    }
+
+
+    public String btnLaunchDelayed_action() {
+        if (hasSpecSelected()) _sb.setDelayedLaunchPanelVisible(true);
+        return null ;
+    }
 
     private void redirectTo(String url) {
         try {
@@ -439,7 +575,7 @@ public class caseMgt extends AbstractPageBean {
     public String btnRejectWorklet_action() {
         String caseID = getSelectedCaseID() ;
         if (caseID != null) {
-            String ixURI = _rm.getExceptionServiceURI();
+            String ixURI = _rm.getClients().getExceptionServiceURI();
             if (ixURI != null) {
                 redirectTo(ixURI + "/rejectWorklet?caseID=" + caseID);
             }
@@ -452,7 +588,7 @@ public class caseMgt extends AbstractPageBean {
     public String btnRaiseException_action() {
         String caseID = getSelectedCaseID() ;
         if (caseID != null) {
-            String ixURI = _rm.getExceptionServiceURI();
+            String ixURI = _rm.getClients().getExceptionServiceURI();
             if (ixURI != null) {
                 redirectTo(ixURI + "/caseException?caseID=" + caseID);
             }
@@ -463,7 +599,7 @@ public class caseMgt extends AbstractPageBean {
     }
 
     public String btnWorkletAdmin_action() {
-        String ixURI = _rm.getExceptionServiceURI();
+        String ixURI = _rm.getClients().getExceptionServiceURI();
         if (ixURI != null) {
             redirectTo(ixURI + "/wsAdminTasks?sH=" + _sb.getSessionhandle());
         }
@@ -480,7 +616,10 @@ public class caseMgt extends AbstractPageBean {
 
         if (uploadedFile != null) {
             String uploadedFileName = stripPath(uploadedFile.getOriginalName());
-            if (validExtension(uploadedFileName)) {
+            if (uploadedFileName.length() == 0) {
+                msgPanel.error("Please choose a file to upload.");
+            }
+            else if (validExtension(uploadedFileName)) {
                 String fileAsString ;
 
                 // try getting the uploaded spec in the correct encoding
@@ -514,13 +653,9 @@ public class caseMgt extends AbstractPageBean {
         if (BOF != -1 && EOF != -1) {
             fileContents = fileContents.substring(BOF, EOF + 19) ;         // trim file
             if (hasUniqueDescriptors(fileContents)) {
-                String result = _rm.uploadSpecification(fileContents, fileName);
+                String result = _rm.getClients().uploadSpecification(fileContents, fileName);
                 if (! _rm.successful(result)) processErrorMsg(result);
                 _sb.refreshLoadedSpecs();
-            }
-            else {
-                msgPanel.error("A specification with the same URI, version and " +
-                    "description as those in the file '" + fileName + "' is already loaded.");    
             }
         }
         else msgPanel.error("The file '" + fileName + "' does not appear to be a " +
@@ -533,9 +668,9 @@ public class caseMgt extends AbstractPageBean {
     public String btnLaunch_action() {
 
         // get selected spec
-        String refPage = null ;
-        try {
-            Integer selectedRowIndex = new Integer((String) hdnRowIndex.getValue());
+        String refPage = null;
+        int selectedRowIndex = getSelectedSpecIndex();
+        if (selectedRowIndex > -1) {
             SpecificationData spec = _sb.getLoadedSpec(selectedRowIndex);
 
             // make sure the latest spec version is selected
@@ -552,11 +687,24 @@ public class caseMgt extends AbstractPageBean {
                                "'. Please select the latest version.");
             }
         }
+
+        return refPage;
+    }
+    
+    
+    private int getSelectedSpecIndex() {
+        try {
+            return new Integer((String) hdnRowIndex.getValue());
+        }
         catch (NumberFormatException nfe) {
             msgPanel.error("No specification selected to launch.") ;
         }
+        return -1;
+    }
 
-        return refPage;
+
+    private boolean hasSpecSelected() {
+        return getSelectedSpecIndex() > -1;
     }
 
 
@@ -591,6 +739,7 @@ public class caseMgt extends AbstractPageBean {
     private String cancelCase(String caseID) {
         try {
             _sb.setRunningCaseListChoice(null) ;
+            getApplicationBean().removeWorkItemParamsForCase(caseID);            
             return _rm.cancelCase(caseID, _sb.getSessionhandle());
         }
         catch (IOException ioe) {
@@ -646,9 +795,10 @@ public class caseMgt extends AbstractPageBean {
                 _sb.setDynFormType(ApplicationBean.DynFormType.netlevel);
                 _sb.setLoadedSpecListChoice(specData);
 
-                DynFormFactory df = (DynFormFactory) getBean("DynFormFactory");
-                df.setHeaderText("Starting an Instance of: " + specData.getID());
-                if (df.initDynForm("YAWL 2.0 Case Management - Launch Case")) {
+                String header = "Starting an Instance of: " + specData.getID();
+                String title = "YAWL " + _sb.getYawlVersion() + " Case Management - Launch Case";
+                if (getDynFormFactory().makeForm(title, header, _sb.getCaseSchema(),
+                        specData.getInputParams())) {
                     return "showDynForm" ;
                 }
                 else {
@@ -670,17 +820,38 @@ public class caseMgt extends AbstractPageBean {
     // starts a new case (either directly from startCase() or via a postback action)
     private void beginCase(YSpecificationID specID) {
         String caseData = null ;
-        String result ;
+        String result = "Unknown Error" ;
+        List<Long> docCompIDs = null;
         if (_sb.isCaseLaunch()) {
             caseData = getDynFormFactory().getDataList();
+            docCompIDs = ((DynFormFactory)getDynFormFactory()).getDocComponentIDs();
             _sb.setCaseLaunch(false);
         }
         try {
-            result = _rm.launchCase(specID, caseData, _sb.getSessionhandle());
-            if (_rm.successful(result))
+            if (_sb.hasDelayValueSet()) {
+                if (_sb.getDelaySeconds() > -1) {
+                    result = _rm.launchCase(specID, caseData, _sb.getSessionhandle(),
+                            _sb.getDelaySeconds() * 1000);    // secs -> msecs
+                }
+                else if (_sb.getDelayDuration() != null) {
+                    result = _rm.launchCase(specID, caseData, _sb.getSessionhandle(),
+                            _sb.getDelayDuration());
+                }
+                else if (_sb.getDelayDate() != null) {
+                    result = _rm.launchCase(specID, caseData, _sb.getSessionhandle(),
+                            _sb.getDelayDate());
+                }
+                _sb.resetDelayValues();
+            }
+            else result = _rm.launchCase(specID, caseData, _sb.getSessionhandle());
+            if (_rm.successful(result)) {
                 updateRunningCaseList();
-            else
+                handleCaseLevelDocComponents(docCompIDs, result);
+            }
+            else {
                 msgPanel.error("Unsuccessful case start:" + msgPanel.format(result)) ;
+                handleCaseLevelDocComponents(docCompIDs, null);
+            }
         }
         catch (IOException ioe) {
             msgPanel.error("IOException when attempting to launch case.") ;
@@ -690,19 +861,17 @@ public class caseMgt extends AbstractPageBean {
 
     // refreshes list of running cases
     private void updateRunningCaseList() {
-        Set<SpecificationData> specDataSet = _rm.getSpecList() ;
-        if (specDataSet != null) {
-            ArrayList<String> caseList = new ArrayList<String>();
-            for (SpecificationData specData : specDataSet) {
-                List<String> caseIDs = _rm.getRunningCasesAsList(specData.getID());
-                if (caseIDs != null) {
-                    for (String caseID : caseIDs) {
-                        String line = String.format("%s: %s (%s)", caseID,
-                                                    specData.getID().getUri(),
-                                                    specData.getSpecVersion());
-                        caseList.add(line) ;
-                    }    
-                }
+        XNode node = _rm.getClients().getAllRunningCases();
+        ArrayList<String> caseList = new ArrayList<String>();
+        if (node != null) {
+            for (XNode specNode : node.getChildren()) {
+                 for (XNode caseID : specNode.getChildren()) {
+                     String line = String.format("%s: %s (%s)", caseID.getText(),
+                                                 specNode.getAttributeValue("uri"),
+                                                 specNode.getAttributeValue("version"));
+                     caseList.add(line) ;
+
+                 }
             }
 
             // sort the list using a treeset
@@ -713,6 +882,28 @@ public class caseMgt extends AbstractPageBean {
             int i = 0 ;
             for (String caseStr : caseTree) options[i++] = new Option(caseStr) ;
             _sb.setRunningCaseListOptions(options);
+        }
+    }
+
+
+    private void handleCaseLevelDocComponents(List<Long> docIDs, String caseID) {
+        if (docIDs != null) {
+            DocStoreClient client = _rm.getClients().getDocStoreClient();
+            if (client != null) {
+                try {
+                    for (long docID : docIDs) {
+                        if (docID > -1) {   // -1 means no doc was uploaded by component
+                            if (caseID != null) {
+                                client.addCaseID(docID, caseID, client.getHandle());
+                            }
+                            else client.removeDocument(docID, client.getHandle());
+                        }
+                    }
+                }
+                catch (IOException ioe) {
+                    // no more to do
+                }
+            }
         }
     }
 
@@ -756,32 +947,125 @@ public class caseMgt extends AbstractPageBean {
     }
 
 
+    private void downloadLog() {
+        try {
+            Integer selectedRowIndex = new Integer((String) hdnRowIndex.getValue());
+            SpecificationData spec = _sb.getLoadedSpec(selectedRowIndex);
+
+            if (spec != null) {
+                String log = LogMiner.getInstance().getMergedXESLog(spec.getID(), true);
+                if (log != null) {
+                    String filename = String.format("%s%s.xes", spec.getSpecURI(),
+                            spec.getSpecVersion());
+                    FacesContext context = FacesContext.getCurrentInstance();
+                    HttpServletResponse response =
+                            ( HttpServletResponse ) context.getExternalContext().getResponse();
+                    response.setContentType("text/xml");
+                    response.setCharacterEncoding("UTF-8");
+                    response.setHeader("Content-Disposition",
+                            "attachment;filename=\"" + filename + "\"");
+                    OutputStream os = response.getOutputStream();
+                    OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
+                    osw.write(log);
+                    osw.flush();
+                    osw.close();
+                    FacesContext.getCurrentInstance().responseComplete();
+               //     msgPanel.success("Data successfully exported to file '" + filename + "'.");
+                }
+                else msgPanel.error("Unable to create export file: malformed xml.");
+            }
+        }
+        catch (IOException ioe) {
+            msgPanel.error("Unable to create export file. Please see the log for details.");
+        }
+        catch (NumberFormatException nfe) {
+            msgPanel.error("Please select a specification to download the log for.") ;
+        }
+    }
+
+
     private void activateButtons() {
         List<SpecificationData> list = _sb.getLoadedSpecs();
         boolean noSpecsSelected = (list == null) || list.isEmpty() ;
         btnUnload.setDisabled(noSpecsSelected);
         btnLaunch.setDisabled(noSpecsSelected);
+        btnLaunchDelayed.setDisabled(noSpecsSelected);
+        btnGetInfo.setDisabled(noSpecsSelected);
+        btnDownloadLog.setDisabled(noSpecsSelected);
     }
 
 
     private boolean hasUniqueDescriptors(String specxml) {
-        if ((specxml == null) || (specxml.length() == 0)) return false;
-        XNode specNode = new XNodeParser().parse(specxml);
-        String schemaVersion = specNode.getAttributeValue("version");
-        XNode specification = specNode.getChild("specification");
-        String uri = specification.getAttributeValue("uri");
-        String version;
-        String description;
-        if ((schemaVersion != null) && schemaVersion.startsWith("2.")) {
-            XNode metadata = specification.getChild("metaData");
-            version = metadata.getChildText("version");
-            description = metadata.getChildText("description");
+        if ((specxml == null) || (specxml.length() == 0)) {
+            msgPanel.error("Invalid specification file: null or empty contents.");
+            return false;
         }
-        else {
-            version = "0.1";
-            description = specification.getChildText("documentation");
-        }    
-        return ! _sb.isLoadedSpec(uri, version, description);
+        YSpecificationID specID = getDescriptors(specxml);
+        if (specID != null) {
+            if (! specID.isValid()) {
+                msgPanel.error("Invalid specification: missing identifier or incorrect version.");
+                return false;
+            }
+            List<SpecificationData> loadedSpecs = _sb.getLoadedSpecs();
+            if (loadedSpecs != null) {
+                for (SpecificationData spec : loadedSpecs) {
+                    if (spec.getID().equals(specID)) {
+                        if (specID.getUri().equals(spec.getSpecURI())) {
+                            msgPanel.error("This specification is already loaded.");
+                        }
+                        else {
+                            msgPanel.error("A specification with the same id and " +
+                                    "version (but different name) is already loaded.");                            
+                        }
+                        return false;
+                    }
+                    else if (specID.isPreviousVersionOf(spec.getID())) {
+                        if (specID.getUri().equals(spec.getSpecURI())) {
+                            msgPanel.error("A later version of this specification is " +
+                                    "already loaded.");
+                        }
+                        else {
+                            msgPanel.error("A later version of a specification with the " +
+                                    "same id (but different name) is already loaded.");                            
+                        }
+                        return false;
+                    }
+                    else if (specID.getUri().equals(spec.getSpecURI()) &&
+                             (! specID.hasMatchingIdentifier(spec.getID()))) {
+                        msgPanel.error("A specification with the same name, but a different " +
+                                "id, is already loaded. Please change the name and try again.");
+                        return false;
+                    }
+                }
+            }
+            return true;                                // no loaded or matching specs
+        }
+        return false;                            // null specID means problem with spec
+    }
+
+
+    private YSpecificationID getDescriptors(String specxml) {
+        YSpecificationID descriptors = null;
+        XNode specNode = new XNodeParser().parse(specxml);
+        if (specNode != null) {
+            String schemaVersion = specNode.getAttributeValue("version");
+            XNode specification = specNode.getChild("specification");
+            if (specification != null) {
+                String uri = specification.getAttributeValue("uri");
+                String version = "0.1";
+                String uid = null;
+                if ((schemaVersion != null) && schemaVersion.startsWith("2.")) {
+                    XNode metadata = specification.getChild("metaData");
+                    version = metadata.getChildText("version");
+                    uid = metadata.getChildText("identifier");
+                }
+                descriptors = new YSpecificationID(uid, version, uri);
+            }
+            else msgPanel.error("Malformed specification: 'specification' node not found.");
+        }
+        else msgPanel.error("Malformed specification: unable to parse.");
+        
+        return descriptors;
     }
 
 
@@ -790,10 +1074,9 @@ public class caseMgt extends AbstractPageBean {
         if (root != null) {
             Element reason = root.getChild("reason");
             if (reason != null) {
-                List children = reason.getChildren();
-                if (children != null) {
-                    for (Object child : children) {
-                        Element e = (Element) child;
+                Element messages = reason.getChild("verificationMessages");
+                if (messages != null) {
+                    for (Element e : messages.getChildren()) {
                         if (e.getName().equals("warning")) {
                             msgPanel.warn(JDOMUtil.elementToStringDump(e));
                         }
@@ -808,6 +1091,41 @@ public class caseMgt extends AbstractPageBean {
                 }
             }
         }
+    }
+
+
+    private boolean validateDelayValue() {
+        _sb.setDelayValueError("");
+        String value = (String) txtDelayValue.getText();
+        if (rbTime.isChecked()) {
+            long delaySeconds = StringUtil.strToLong(value, -1);
+            if (delaySeconds < 0) {
+                _sb.setDelayValueError("Invalid seconds value");
+            }
+            else _sb.setDelaySeconds(delaySeconds);
+        }
+        if (rbDuration.isChecked()) {
+            Duration delayDuration = StringUtil.strToDuration(value);
+            if (delayDuration == null) {
+                _sb.setDelayValueError("Invalid Duration value");
+            }
+            else _sb.setDelayDuration(delayDuration);
+        }
+        if (rbDate.isChecked()) {
+            long seconds = StringUtil.xmlDateToLong(value);
+            if (seconds < 0) {
+               _sb.setDelayValueError("Invalid Datetime value (yyyy-MM-ddThh:mm:ss)");
+            }
+            else _sb.setDelayDate(new Date(seconds));
+        }
+        return _sb.getDelayValueError().length() == 0;
+    }
+
+
+    private void showMessagePanel() {
+        body1.setFocus(msgPanel.hasMessage() ? "form1:pfMsgPanel:btnOK001" :
+                "form1:lbxRunningCases");        
+        _sb.showMessagePanel();
     }
 }
 

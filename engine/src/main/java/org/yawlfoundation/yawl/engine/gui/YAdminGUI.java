@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -41,6 +41,7 @@ import org.yawlfoundation.yawl.swingWorklist.YWorklistModel;
 import org.yawlfoundation.yawl.swingWorklist.YWorklistTableModel;
 import org.yawlfoundation.yawl.unmarshal.YMarshal;
 import org.yawlfoundation.yawl.util.StringUtil;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 import org.yawlfoundation.yawl.util.YVerificationMessage;
 
 import javax.swing.*;
@@ -64,17 +65,6 @@ import java.util.prefs.Preferences;
 public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
         ActionListener,
         ItemListener {
-    private JButton _loadWorkFlowButton;
-    private JButton _unloadWorkFlowButton;
-//    private JCheckBox _ignoreErrorsCheckBox;
-//    private JCheckBox _oldFormatCheckBox;
-    private JButton _startCaseButton;
-    private JButton _exportToXMLButton;
-    private JButton _cancelCaseButton;
-    private JButton _inspectStateButton;
-    private JButton _suspendCaseButton;
-    private JButton _resumeCaseButton;
-    private JButton _dumpButton;
     private String _loadWorkflowCommand = "Load Workflow";
     private String _unloadWorkflowCommand = "Unload Workflow";
     private String _exportToXMLCommand = "Export to XML";
@@ -87,21 +77,17 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
     private String _resumeCaseCommand = "Resume";
     private String _dumpCommand = "Dump";
     private JTable _loadedSpecificationsTable;
-    private JButton _createWorklistButton;
-    private JButton _reannounceButton;
     private YWorklistTableModel _loadedSpecificationsTableModel;
     private JTable _activeWorklistsTable;
     private YWorklistTableModel _activeWorklistsTableModel;
     private static boolean _quickyLoad = false;
-    private boolean journalising = false;
 
-    //engine org.yawlfoundation.yawl.risk.state attributes
+    //engine state attributes
     private YWorklistTableModel _activeCasesTableModel;
     private JTable _activeCasesTable;
     private JFileChooser _fileChooser;
     public static Color _apiColour = new Color(192, 192, 170);
     private boolean _ignoreErrors = /*true*/false;
-    private static boolean _networked;
     private boolean _oldFormat = true;
     private JFrame _frame;
     private TabbedEngineGUI _tabbedGUI;
@@ -138,57 +124,55 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
      * @see java.awt.Component#setVisible
      * @see javax.swing.JComponent#getDefaultLocale
      */
-    public YAdminGUI(YSplash splash, JFrame frame, TabbedEngineGUI tabbedGUI, boolean journalise, boolean generateUIMetaData) {
+    public YAdminGUI(YSplash splash, JFrame frame, TabbedEngineGUI tabbedGUI, boolean journalising, boolean generateUIMetaData) {
         this();
 
         logger.debug("Initialising");
-
-        this.journalising = journalise;
 
         _tabbedGUI = tabbedGUI;
         _frame = frame;
         setBackground(_apiColour);
         setLayout(new BorderLayout(20, 20));
 
-        _loadWorkFlowButton = new JButton(_loadWorkflowCommand);
+        JButton _loadWorkFlowButton = new JButton(_loadWorkflowCommand);
         _loadWorkFlowButton.setBackground(new Color(150, 150, 255));
         _loadWorkFlowButton.addActionListener(this);
-        _unloadWorkFlowButton = new JButton(_unloadWorkflowCommand);
+        JButton _unloadWorkFlowButton = new JButton(_unloadWorkflowCommand);
         _unloadWorkFlowButton.setBackground(new Color(150, 150, 255));
         _unloadWorkFlowButton.addActionListener(this);
 
-        _startCaseButton = new JButton(_startCaseCommand);
+        JButton _startCaseButton = new JButton(_startCaseCommand);
         _startCaseButton.setBackground(new Color(150, 150, 255));
         _startCaseButton.addActionListener(this);
         _startCaseButton.setIcon(null);
 
-        _exportToXMLButton = new JButton(_exportToXMLCommand);
+        JButton _exportToXMLButton = new JButton(_exportToXMLCommand);
         _exportToXMLButton.setBackground(new Color(150, 150, 255));
         _exportToXMLButton.addActionListener(this);
 
-        _createWorklistButton = new JButton(_createWorklistCommand);
+        JButton _createWorklistButton = new JButton(_createWorklistCommand);
         _createWorklistButton.setBackground(new Color(150, 150, 255));
         _createWorklistButton.addActionListener(this);
 
-        _reannounceButton = new JButton(_reannounceEnabledWorkItems);
+        JButton _reannounceButton = new JButton(_reannounceEnabledWorkItems);
         _reannounceButton.setBackground(new Color(150, 150, 255));
         _reannounceButton.addActionListener(this);
 
-        _cancelCaseButton = new JButton(_cancelCaseCommand);
+        JButton _cancelCaseButton = new JButton(_cancelCaseCommand);
         _cancelCaseButton.setBackground(new Color(150, 150, 255));
         _cancelCaseButton.addActionListener(this);
-        _inspectStateButton = new JButton(_inspectStateCommand);
+        JButton _inspectStateButton = new JButton(_inspectStateCommand);
         _inspectStateButton.setBackground(new Color(150, 150, 255));
         _inspectStateButton.addActionListener(this);
 
-        _suspendCaseButton = new JButton(_suspendCaseCommand);
+        JButton _suspendCaseButton = new JButton(_suspendCaseCommand);
         _suspendCaseButton.setBackground(new Color(150, 150, 255));
         _suspendCaseButton.addActionListener(this);
-        _resumeCaseButton = new JButton(_resumeCaseCommand);
+        JButton _resumeCaseButton = new JButton(_resumeCaseCommand);
         _resumeCaseButton.setBackground(new Color(150, 150, 255));
         _resumeCaseButton.addActionListener(this);
 
-        _dumpButton = new JButton(_dumpCommand);
+        JButton _dumpButton = new JButton(_dumpCommand);
         _dumpButton.setBackground(new Color(150, 150, 255));
         _dumpButton.addActionListener(this);
 
@@ -333,7 +317,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
         //AJH: Load up the loaded specs into UI
         {
             try {
-                Set specs = _engineManagement.getLoadedSpecifications();
+                Set specs = _engineManagement.getLoadedSpecificationIDs();
                 Iterator iter = specs.iterator();
                 while (iter.hasNext()) {
                     YSpecification spec = _engineManagement.getSpecification((YSpecificationID) iter.next());
@@ -405,7 +389,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
      */
     public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
-        if (command == _createWorklistCommand) {
+        if (command.equals(_createWorklistCommand)) {
             /**
              * Create a new worklist entry
              */
@@ -419,7 +403,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
             }
 
 
-        } else if (command == _loadWorkflowCommand) {
+        } else if (command.equals(_loadWorkflowCommand)) {
             /**
              * Load a new process specification
              */
@@ -429,7 +413,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
                 attemptToLoadSpecificationFile(selectedFile);
 
             }
-        } else if (command == _unloadWorkflowCommand) {
+        } else if (command.equals(_unloadWorkflowCommand)) {
             /**
              * Unload a process specification
              */
@@ -447,13 +431,13 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
                     logError("Failure to unload specifcation", ex);
                 }
             }
-        } else if (command == _startCaseCommand) {
+        } else if (command.equals(_startCaseCommand)) {
             /**
              * Start a new case
              */
             int selectedRow = _loadedSpecificationsTable.getSelectedRow();
             startCase(selectedRow);
-        } else if (command == _cancelCaseCommand) {
+        } else if (command.equals(_cancelCaseCommand)) {
             /**
              * Cancel a case
              */
@@ -470,9 +454,9 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
             } catch (YAWLException e2) {
                 logError("Failure to cancel case", e2);
             }
-        } else if (command == _inspectStateCommand) {
+        } else if (command.equals(_inspectStateCommand)) {
             /**
-             * Report the org.yawlfoundation.yawl.risk.state of a case
+             * Report the state of a case
              */
             try {
                 int selectedRow = _activeCasesTable.getSelectedRow();
@@ -485,9 +469,9 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
                     }
                 }
             } catch (YPersistenceException ex) {
-                logError("Failure whilst obtaining org.yawlfoundation.yawl.risk.state of case", ex);
+                logError("Failure whilst obtaining state of case", ex);
             }
-        } else if (command == _suspendCaseCommand) {
+        } else if (command.equals(_suspendCaseCommand)) {
             /**
              * Suspend a case
              */
@@ -503,7 +487,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
             } catch (YAWLException e2) {
                 logError("Failure to suspend case", e2);
             }
-        } else if (command == _resumeCaseCommand) {
+        } else if (command.equals(_resumeCaseCommand)) {
             /**
              * Resume a case
              */
@@ -519,11 +503,11 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
             } catch (YAWLException e2) {
                 logError("Failure to resume case", e2);
             }
-        } else if (command == _exportToXMLCommand) {
+        } else if (command.equals(_exportToXMLCommand)) {
             int selectedRow = _loadedSpecificationsTable.getSelectedRow();
             saveXML(selectedRow);
         }
-        else if (command == _reannounceEnabledWorkItems) {
+        else if (command.equals(_reannounceEnabledWorkItems)) {
             try
             {
                 _engineManagement.getAnnouncer().reannounceEnabledWorkItems();
@@ -533,7 +517,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
                 JOptionPane.showMessageDialog(this, e2.getMessage(), "Error re-announcing workitems", JOptionPane.ERROR_MESSAGE);
             }
         }
-        else if (command == _dumpCommand)
+        else if (command.equals(_dumpCommand))
         {
             try
             {
@@ -557,32 +541,29 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
                     _fileChooser.getCurrentDirectory().getAbsolutePath()
             );
         }
-        List errorMessages = new ArrayList();
+        List<YVerificationMessage> errorMessages = new ArrayList<YVerificationMessage>();
         List<YSpecificationID> newSpecIDs = null;
+        YVerificationHandler verificationHandler = new YVerificationHandler();
         try {
             String specStr = StringUtil.fileToString(selectedFile);
-            newSpecIDs = _engineManagement.addSpecifications(specStr, _ignoreErrors, errorMessages);
+            newSpecIDs = _engineManagement.addSpecifications(specStr, _ignoreErrors,
+                    verificationHandler);
         } catch (Exception e) {
             logError("Failure to load specification", e);
             return;
         }
 
-        if (newSpecIDs.size() == 0 || errorMessages.size() > 0) {
+        if (newSpecIDs.size() == 0 || verificationHandler.hasErrors()) {
             StringBuilder errorMessageStr = new StringBuilder();
-
-            Iterator iterator = errorMessages.iterator();
-            while (iterator.hasNext()) {
-                YVerificationMessage message = (YVerificationMessage) iterator.next();
-                errorMessageStr.append(
-                        "\r\n" + message.getStatus() +
-                        ": " + message.getMessage());
+            for (YVerificationMessage message : verificationHandler.getMessages()) {
+                errorMessageStr.append("\r\n").append(message.getMessage());
             }
             JOptionPane.showMessageDialog(this,
                     "The workflow you loaded contains: " + errorMessageStr,
                     "Error Loading Workflow",
                     JOptionPane.ERROR_MESSAGE);
         }
-        if (YVerificationMessage.containsNoErrors(errorMessages)) {
+        if (verificationHandler.hasErrors()) {
             for (YSpecificationID specID : newSpecIDs)
             {
                 spec = _engineManagement.getSpecification(specID);
@@ -804,7 +785,7 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
 
     private class YInspectStateDialog extends JDialog {
         public YInspectStateDialog(JFrame parent, String textToDisplay) {
-            super(parent, "Inspect org.yawlfoundation.yawl.risk.state", false);
+            super(parent, "Inspect State", false);
             Container c = this.getContentPane();
             JTextPane statePane = new JTextPane();
             statePane.setText(textToDisplay);
@@ -824,9 +805,8 @@ public class YAdminGUI extends JPanel implements InterfaceBClientObserver,
             logger.debug(args[i]);
             if (args[i].equalsIgnoreCase("quickyLoad")) {
                 _quickyLoad = true;
-            } else if (args[i].equalsIgnoreCase("networked")) {
-                _networked = true;
             }
+
             // If we have a -p flag, assuming a journalising engine
             if (args[i].equalsIgnoreCase("-p")) {
                 journalise = true;

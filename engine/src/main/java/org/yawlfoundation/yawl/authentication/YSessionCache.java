@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -22,7 +22,8 @@ import org.yawlfoundation.yawl.elements.YAWLServiceReference;
 import org.yawlfoundation.yawl.engine.YEngine;
 import org.yawlfoundation.yawl.logging.table.YAuditEvent;
 
-import java.util.Hashtable;
+import java.util.Timer;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * An extended Hashtable that manages connections to the engine from custom services
@@ -35,23 +36,19 @@ import java.util.Hashtable;
  */
 
 
-public class YSessionCache extends Hashtable<String, YSession> {
+public class YSessionCache extends ConcurrentHashMap<String, YSession>
+                           implements ISessionCache {
 
-    private static YSessionCache _me ;
+    private YSessionTimer _timer;
 
-    private YSessionCache() {
+    public YSessionCache() {
         super();
+        _timer = new YSessionTimer(this);
     }
 
     /******************************************************************************/
 
     // PUBLIC METHODS //
-
-    public static YSessionCache getInstance() {
-        if (_me == null) _me = new YSessionCache() ;
-        return _me ;
-    }
-
 
     /**
      * Creates and stores a new session between the the Engine and a custom service
@@ -86,7 +83,8 @@ public class YSessionCache extends Hashtable<String, YSession> {
             YAWLServiceReference service = getService(name);
             if (service != null) {
                 if (validateCredentials(service, password)) {
-                    result = storeSession(new YServiceSession(service, timeOutSeconds));
+                    result = storeSession(
+                            new YServiceSession(service, timeOutSeconds));
                 }
                 else result = badPassword(name);
             }
@@ -107,7 +105,7 @@ public class YSessionCache extends Hashtable<String, YSession> {
         if (handle != null) {
             YSession session = this.get(handle) ;
             if (session != null) {
-                session.refresh();
+                _timer.reset(session);
                 result = true ;
             }
         }
@@ -142,7 +140,7 @@ public class YSessionCache extends Hashtable<String, YSession> {
 
 
     /**
-     * Gets the session associated with a sesion handle.
+     * Gets the session associated with a session handle.
      * @param handle a session handle.
      * @return the session object associated with the handle, or null if the handle is
      * invalid or inactive.
@@ -161,8 +159,7 @@ public class YSessionCache extends Hashtable<String, YSession> {
      * @param handle the session handle of the session to remove.
      */
     public void expire(String handle) {
-        YSession session = this.remove(handle);
-        if (session != null) audit(session.getClient().getUserName(), YAuditEvent.Action.expired);
+        removeSession(handle, YAuditEvent.Action.expired);
     }
 
 
@@ -188,8 +185,7 @@ public class YSessionCache extends Hashtable<String, YSession> {
      * from the Engine. Also writes the disconnection to the session audit log.
      */
     public void disconnect(String handle) {
-        YSession session = this.remove(handle);
-        if (session != null) audit(session.getClient().getUserName(), YAuditEvent.Action.logoff);
+        removeSession(handle, YAuditEvent.Action.logoff);
     }
 
 
@@ -201,6 +197,7 @@ public class YSessionCache extends Hashtable<String, YSession> {
         for (YSession session : this.values()) {
             audit(session.getClient().getUserName(), YAuditEvent.Action.shutdown);
         }
+        _timer.shutdown();
     }
 
 
@@ -233,8 +230,19 @@ public class YSessionCache extends Hashtable<String, YSession> {
     private String storeSession(YSession session) {
         String handle = session.getHandle();
         this.put(handle, session);
+        _timer.add(session);
         audit(session.getClient().getUserName(), YAuditEvent.Action.logon);
         return handle;        
+    }
+
+
+    private YSession removeSession(String handle, YAuditEvent.Action action) {
+        YSession session = this.remove(handle);
+        if (session != null) {
+            _timer.expire(session);
+            audit(session.getClient().getUserName(), action);
+        }
+        return session;
     }
 
 

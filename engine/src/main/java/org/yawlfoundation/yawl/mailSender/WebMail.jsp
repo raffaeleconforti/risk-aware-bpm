@@ -1,9 +1,9 @@
-<%@ page import="org.jdom.Element" %>
+<%@ page import="org.jdom2.Element" %>
 <%@ page import="org.yawlfoundation.yawl.engine.interfce.Marshaller" %>
 <%@ page import="org.yawlfoundation.yawl.engine.interfce.WorkItemRecord" %>
 
 <%--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~

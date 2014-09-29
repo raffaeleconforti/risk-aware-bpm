@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,17 +19,21 @@
 package org.yawlfoundation.yawl.engine.interfce.interfaceB;
 
 import org.apache.log4j.Logger;
+import org.yawlfoundation.yawl.elements.data.external.ExternalDBGatewayFactory;
 import org.yawlfoundation.yawl.engine.ObserverGateway;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.EngineGateway;
 import org.yawlfoundation.yawl.engine.interfce.EngineGatewayImpl;
 import org.yawlfoundation.yawl.engine.interfce.ServletUtils;
+import org.yawlfoundation.yawl.engine.interfce.YHttpServlet;
+import org.yawlfoundation.yawl.exceptions.YAWLException;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
+import org.yawlfoundation.yawl.resourcing.util.PluginFactory;
+import org.yawlfoundation.yawl.util.StringUtil;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.UnavailableException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -38,6 +42,10 @@ import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.rmi.RemoteException;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.Date;
 import java.util.Enumeration;
 
 
@@ -51,12 +59,13 @@ import java.util.Enumeration;
  * @author Michael Adams (refactored for v2.0, 06/2008; 12/2008)
  *
  */
-public class InterfaceB_EngineBasedServer extends HttpServlet {
+public class InterfaceB_EngineBasedServer extends YHttpServlet {
+
     private EngineGateway _engine;
-    private static final Logger logger = Logger.getLogger(InterfaceB_EngineBasedServer.class);
 
 
     public void init() throws ServletException {
+        int maxWaitSeconds = 5;                             // a default
 
         try {
             ServletContext context = getServletContext();
@@ -66,9 +75,20 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
             if (_engine == null) {
                 String persistOn = context.getInitParameter("EnablePersistence");
                 boolean persist = (persistOn != null) && persistOn.equalsIgnoreCase("true");
-                _engine = new EngineGatewayImpl(persist);
+                String enableHbnStatsStr =
+                        context.getInitParameter("EnableHibernateStatisticsGathering");
+                boolean enableHbnStats = ((enableHbnStatsStr != null) &&
+                        enableHbnStatsStr.equalsIgnoreCase("true"));
+                _engine = new EngineGatewayImpl(persist, enableHbnStats);
                 _engine.setActualFilePath(context.getRealPath("/"));
                 context.setAttribute("engine", _engine);
+            }
+
+            // set flag to disable logging (only if false) - enabled with persistence by
+            // default
+            String logStr = context.getInitParameter("EnableLogging");
+            if ((logStr != null) && logStr.equalsIgnoreCase("false")) {
+                _engine.disableLogging();
             }
 
             // add the reference to the default worklist
@@ -80,10 +100,19 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                 _engine.setAllowAdminID(true);
             }
 
+            // set the path to external db gateway plugin classes (if any)
+            String pluginPath = context.getInitParameter("ExternalPluginsPath");
+            ExternalDBGatewayFactory.setExternalPaths(pluginPath);
+
+            // override the max time that initialisation events wait for between
+            // final engine init and server start completion
+            int maxWait = StringUtil.strToInt(
+                    context.getInitParameter("InitialisationAnnouncementTimeout"), -1);
+            if (maxWait >= 0) maxWaitSeconds = maxWait;
+
             // read the current version properties
             _engine.initBuildProperties(context.getResourceAsStream(
                                "/WEB-INF/classes/version.properties"));
-
 
             // init any 3rd party observer gateways
             String gatewayStr = context.getInitParameter("ObserverGateway");
@@ -96,11 +125,18 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
             }
         }
         catch (YPersistenceException e) {
-            logger.fatal("Failure to initialise runtime (persistence failure)", e);
+            _log.fatal("Failure to initialise runtime (persistence failure)", e);
             throw new UnavailableException("Persistence failure");
         }
 
-        if (_engine != null) _engine.notifyServletInitialisationComplete();
+        if (_engine != null) {
+            _engine.notifyServletInitialisationComplete(maxWaitSeconds);
+        }
+        else {
+            _log.fatal("Failed to initialise Engine (unspecified failure). Please " +
+                    "consult the logs for details");
+            throw new UnavailableException("Unspecified engine failure");
+        }
     }
 
 
@@ -124,26 +160,31 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
             if (gateway != null)
                 _engine.registerObserverGateway(gateway);
             else
-                logger.warn("Error registering external ObserverGateway '" +
+                _log.warn("Error registering external ObserverGateway '" +
                             gatewayClassName + "'."); 
         }
         catch (ClassNotFoundException e) {
-            logger.warn("Unable to locate external ObserverGateway '" +
-                        gatewayClassName + "'.", e);
+            _log.warn("Unable to locate external ObserverGateway '" +
+                    gatewayClassName + "'.", e);
         }
         catch (InstantiationException ie) {
-            logger.warn("Unable to instantiate external ObserverGateway '" +
-                        gatewayClassName +
-                       "'. Perhaps it is missing a no-argument constructor.", ie);
+            _log.warn("Unable to instantiate external ObserverGateway '" +
+                    gatewayClassName +
+                    "'. Perhaps it is missing a no-argument constructor.", ie);
+        }
+        catch (YAWLException ye) {
+            _log.warn("Failed to register external ObserverGateway '" +
+                    gatewayClassName + "'.", ye);
         }
         catch (Exception e) {
-            logger.warn("Unable to instantiate external ObserverGateway '" +
-                        gatewayClassName + "'.", e);
+            _log.warn("Unable to instantiate external ObserverGateway '" +
+                    gatewayClassName + "'.", e);
         }
     }
 
     public void destroy() {
         _engine.shutdown();
+        super.destroy();
     }
 
 
@@ -161,12 +202,12 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
         output.append("</response>");
         if (_engine.enginePersistenceFailure())
         {
-            logger.fatal("************************************************************");
-            logger.fatal("A failure has occured whilst persisting workflow org.yawlfoundation.yawl.risk.state to the");
-            logger.fatal("database. Check the satus of the database connection defined");
-            logger.fatal("for the YAWL service, and restart the YAWL web application.");
-            logger.fatal("Further information may be found within the Tomcat log files.");
-            logger.fatal("************************************************************");
+            _log.fatal("************************************************************");
+            _log.fatal("A failure has occurred whilst persisting workflow state to the");
+            _log.fatal("database. Check the status of the database connection defined");
+            _log.fatal("for the YAWL service, and restart the YAWL web application.");
+            _log.fatal("Further information may be found within the Tomcat log files.");
+            _log.fatal("************************************************************");
             response.sendError(500, "Database persistence failure detected");
         }
         outputWriter.write(output.toString());
@@ -191,16 +232,22 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
         String taskID = request.getParameter("taskID");
 
         try {
-            if (logger.isDebugEnabled()) {
+            if (_log.isDebugEnabled()) {
                 debug(request, "Post");
             }
 
             if (action != null) {
-                if (action.equals("connect")) {
+                if (action.equals("checkConnection")) {
+                    msg.append(_engine.checkConnection(sessionHandle));
+                }
+                else if (action.equals("connect")) {
                     String userID = request.getParameter("userid");
                     String password = request.getParameter("password");
                     int interval = request.getSession().getMaxInactiveInterval();
                     msg.append(_engine.connect(userID, password, interval));
+                }
+                else if ("disconnect".equals(action)) {
+                    msg.append(_engine.disconnect(sessionHandle));
                 }
                 else if (action.equals("checkout")) {
                     msg.append(_engine.startWorkItem(workItemID, sessionHandle));
@@ -220,15 +267,34 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                     URI completionObserver = getCompletionObserver(request);
                     String caseParams = request.getParameter("caseParams");
                     String logDataStr = request.getParameter("logData");
-                    msg.append(_engine.launchCase(specID, caseParams,
+                    String mSecStr = request.getParameter("mSec");
+                    String startStr = request.getParameter("start");
+                    String waitStr = request.getParameter("wait");
+                    if (mSecStr != null) {
+                        msg.append(_engine.launchCase(specID, caseParams,
+                                   completionObserver, logDataStr,
+                                   StringUtil.strToLong(mSecStr, 0), sessionHandle));
+                    }
+                    else if (startStr != null) {
+                        long time = StringUtil.strToLong(startStr, 0);
+                        Date date = time > 0 ? new Date(time) : new Date();
+                        msg.append(_engine.launchCase(specID, caseParams,
+                                   completionObserver, logDataStr, date, sessionHandle));
+                    }
+                    else if (waitStr != null) {
+                        msg.append(_engine.launchCase(specID, caseParams,
+                                   completionObserver, logDataStr,
+                                   StringUtil.strToDuration(waitStr), sessionHandle));
+                    }
+                    else msg.append(_engine.launchCase(specID, caseParams,
                                     completionObserver, logDataStr, sessionHandle));
                 }
                 else if (action.equals("cancelCase")) {
                     String caseID = request.getParameter("caseID");
                     msg.append(_engine.cancelCase(caseID, sessionHandle));
                 }
-                else if (action.equals("details")) {
-                    msg.append(_engine.getWorkItemDetails(workItemID, sessionHandle));
+                else if (action.equals("getWorkItem")) {
+                    msg.append(_engine.getWorkItem(workItemID, sessionHandle));
                 }
                 else if (action.equals("startOne")) {
                     String userID = request.getParameter("user");
@@ -237,13 +303,17 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                 else if (action.equals("getLiveItems")) {
                     msg.append(_engine.describeAllWorkItems(sessionHandle));
                 }
+                else if (action.equals("getAllRunningCases")) {
+                    msg.append(_engine.getAllRunningCases(sessionHandle));
+                }
                 else if (action.equals("getWorkItemsWithIdentifier")) {
                     String idType = request.getParameter("idType");
                     String id = request.getParameter("id");
                     msg.append(_engine.getWorkItemsWithIdentifier(idType, id, sessionHandle));
                 }
-                else if (action.equals("checkConnection")) {
-                    msg.append(_engine.checkConnection(sessionHandle));
+                else if (action.equals("getWorkItemsForService")) {
+                    String serviceURI = request.getParameter("serviceuri");
+                    msg.append(_engine.getWorkItemsForService(serviceURI, sessionHandle));
                 }
                 else if (action.equals("taskInformation")) {
                     YSpecificationID specID =
@@ -285,6 +355,10 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                             new YSpecificationID(specIdentifier, specVersion, specURI);
                     msg.append(_engine.getCasesForSpecification(specID, sessionHandle));
                 }
+                else if (action.equals("getSpecificationForCase")) {
+                    String caseID = request.getParameter("caseID");
+                    msg.append(_engine.getSpecificationForCase(caseID, sessionHandle));
+                }
                 else if (action.equals("getCaseState")) {
                     String caseID = request.getParameter("caseID");
                     msg.append(_engine.getCaseState(caseID, sessionHandle));
@@ -295,6 +369,9 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                 }
                 else if (action.equals("getChildren")) {
                     msg.append(_engine.getChildrenOfWorkItem(workItemID, sessionHandle));
+                }
+                else if (action.equals("getWorkItemExpiryTime")) {
+                    msg.append(_engine.getWorkItemExpiryTime(workItemID, sessionHandle));
                 }
                 else if (action.equals("getCaseInstanceSummary")) {
                     msg.append(_engine.getCaseInstanceSummary(sessionHandle));
@@ -325,6 +402,9 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                 else if (action.equals("skip")) {
                     msg.append(_engine.skipWorkItem(workItemID, sessionHandle));
                 }
+                else if (action.equals("getStartingDataSnapshot")) {
+                    msg.append(_engine.getStartingDataSnapshot(workItemID, sessionHandle));
+                }
             }  // action is null
             else if (request.getRequestURI().endsWith("ib")) {
                 msg.append(_engine.getAvailableWorkItemIDs(sessionHandle));
@@ -333,13 +413,13 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
                 msg.append(_engine.getWorkItemOptions(workItemID,
                         request.getRequestURL().toString(), sessionHandle));
             }
-            else logger.error("Interface B called with null action.");
+            else _log.error("Interface B called with null action.");
         }
         catch (RemoteException e) {
-            logger.error("Remote Exception in Interface B with action: " + action, e);
+            _log.error("Remote Exception in Interface B with action: " + action, e);
         }
-        if (logger.isDebugEnabled()) {
-            logger.debug("InterfaceB_EngineBasedServer::doPost() result = " + msg + "\n");
+        if (_log.isDebugEnabled()) {
+            _log.debug("InterfaceB_EngineBasedServer::doPost() result = " + msg + "\n");
         }
         return msg.toString();
     }
@@ -351,7 +431,7 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
             try {
                 return new URI(completionObserver);
             } catch (URISyntaxException e) {
-                logger.error("Failure to ", e);
+                _log.error("Failure to ", e);
             }
         }
         return null;
@@ -359,14 +439,14 @@ public class InterfaceB_EngineBasedServer extends HttpServlet {
 
 
     private void debug(HttpServletRequest request, String service) {
-        logger.debug("\nInterfaceB_EngineBasedServer::do" + service + "() " +
+        _log.debug("\nInterfaceB_EngineBasedServer::do" + service + "() " +
                 "request.getRequestURL = " + request.getRequestURL());
-        logger.debug("\nInterfaceB_EngineBasedServer::do" + service +
+        _log.debug("\nInterfaceB_EngineBasedServer::do" + service +
                 "() request.parameters = ");
         Enumeration paramNms = request.getParameterNames();
         while (paramNms.hasMoreElements()) {
             String name = (String) paramNms.nextElement();
-            logger.debug("\trequest.getParameter(" + name + ") = " +
+            _log.debug("\trequest.getParameter(" + name + ") = " +
                     request.getParameter(name));
         }
     }

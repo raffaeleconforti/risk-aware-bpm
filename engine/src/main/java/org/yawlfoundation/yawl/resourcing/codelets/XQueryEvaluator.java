@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,12 +19,13 @@
 package org.yawlfoundation.yawl.resourcing.codelets;
 
 import net.sf.saxon.s9api.SaxonApiException;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.util.SaxonUtil;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * @author Michael Adams
@@ -52,7 +53,7 @@ public class XQueryEvaluator extends AbstractCodelet {
         this.setInputs(inData, inParams, outParams);
 
         // convert input vars to a Doc
-        Document dataDoc = new Document((Element) inData.clone());
+        Document dataDoc = new Document(inData.clone());
 
         String query = (String) getParameterValue("query");
         String output = evaluateQuery(query, dataDoc);
@@ -83,5 +84,22 @@ public class XQueryEvaluator extends AbstractCodelet {
                     "Exception in query evaluation: '" + query + "'.");
         }
     }
+
+
+    public List<YParameter> getRequiredParams() {
+        List<YParameter> params = new ArrayList<YParameter>();
+
+        YParameter param = new YParameter(null, YParameter._INPUT_PARAM_TYPE);
+        param.setDataTypeAndName("string", "query", XSD_NAMESPACE);
+        param.setDocumentation("The XQuery to evaluate");
+        params.add(param);
+
+        param = new YParameter(null, YParameter._OUTPUT_PARAM_TYPE);
+        param.setDataTypeAndName("string", "result", XSD_NAMESPACE);
+        param.setDocumentation("The result of the evaluation");
+        params.add(param);
+        return params;
+    }
+    
 
 }

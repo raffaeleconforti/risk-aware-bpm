@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,110 +18,123 @@
 
 package org.yawlfoundation.yawl.worklet.rdr;
 
-import org.apache.log4j.Logger;
-import org.jdom.Element;
-import org.yawlfoundation.yawl.engine.YSpecificationID;
-import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.jdom2.Element;
+import org.yawlfoundation.yawl.elements.YAttributeMap;
+import org.yawlfoundation.yawl.util.StringUtil;
+import org.yawlfoundation.yawl.util.XNode;
+import org.yawlfoundation.yawl.util.XNodeParser;
 import org.yawlfoundation.yawl.worklet.support.Library;
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
-// import org.apache.log4j.Logger;
 
-
-/** A Ripple Down Rule tree implementation.
+/**
+ * A Ripple Down Rule tree implementation.
  *
- *  This class maintains a set of RdrNodes. Each RdrTree contains the set of
- *  rules for one particular task in a specification.
+ *  @author Michael Adams
+ *  v0.8, 04-09/2006
+ */
+ /*
+ * This class maintains a set of RdrNodes. Each RdrTree contains the set of
+ * rules for one particular task in a specification.
  *  
  *  ==========        ===========        ===========
  *  | RdrSet | 1----M | RdrTree | 1----M | RdrNode |
  *  ==========        ===========        ===========
  *                        ^^^
  *
- *  @author Michael Adams
- *  v0.8, 04-09/2006
  */
 
 public class RdrTree {
 
-    private YSpecificationID _specId = null ;           // spec rules are for
-    private String _taskId = null ;                   // task rules are for    
-    private RdrNode _rootNode = null;
-    private RdrNode[] _lastPair = new RdrNode[2];     // see search()
-    
-    private static Logger _log = Logger.getLogger("RdrTree");
+    private long id;                         // for hibernate
+
+    private String taskId = null ;           // task rules are for, null for case level
+    private RdrNode rootNode = null;
+    private YAttributeMap attributes;
 
 
     /** Default constructor */
-    public RdrTree(){}
+    public RdrTree() {}
     
     
     /**
      *  Constructs an empty tree
-     *  @param specId - specification the task is a member of
      *  @param taskId - id of task that this tree will support
      */
-     public RdrTree(YSpecificationID specId, String taskId){
-    	_taskId = taskId ;
-    	_specId = specId ;
+     public RdrTree(String taskId) {
+    	this.taskId = taskId ;
     }
 
 //===========================================================================//
 	
     // GETTERS //
     
-    public RdrNode getRootNode(){
-        return _rootNode;
+    public RdrNode getRootNode() {
+        return rootNode;
     }
+
     
-    public YSpecificationID getSpecId(){
-        return _specId;
+    public String getTaskId() {
+        return taskId != null ? taskId : RdrSet.CASE_LEVEL_TREE_FLAG;
     }
-    
-    public String getTaskId(){
-        return _taskId;
-    }
-    
-    public RdrNode[] getLastPair(){
-        return(_lastPair);
-    }
-    
+
+
+
     /**
-     *  Returns the RdrNode for the id passed
-     *  @param id - the node id of the node to return
+     * Gets the RdrNode for the id passed
+     * @param id - the node id of the node to find
+     * @return the node identified by the id, or null if this tree has no matching node
      */
     public RdrNode getNode(int id) {
-       return getNode(_rootNode, id) ;
+       return getNode(rootNode, id) ;
     }
-    
-    /** recursively searches for the node id passed */    
+
+
+    /**
+     * Recursively searches the tree for the node with the id passed
+     * @param root the root node of the (sub)-tree
+     * @param id - the node id of the node to find
+     * @return the node identified by the id, or null if this tree has no matching node
+     */
     private RdrNode getNode(RdrNode root, int id) {
-        RdrNode result ;
-        if (root == null) return null ;            // no match - base case
-        else {
-        	if (root.getNodeId() == id) return root ;    // match found
-        	result = getNode(root.getTrueChild(), id) ;
-        	if (result == null) result = getNode(root.getFalseChild(), id) ;
-        	return result ;
-        }
+        if (root == null) return null;                          // no match - base case
+        if (root.getNodeId() == id) return root;                // match found
+        RdrNode result = getNode(root.getTrueChild(), id);      // search true branch
+        if (result == null) result = getNode(root.getFalseChild(), id);
+        return result ;
     }
 
 
+    /**
+     * Gets the condition of each node in this tree
+     * @return a List of all node conditions
+     */
     public List<String> getAllConditions() {
-        return getAllConditions(_rootNode) ;
+        return getAllConditions(rootNode);
     }
 
-    /** recurses the tree, collecting the condition from each node */
+
+    /**
+     * Recurses the tree, collecting the condition from each node
+     * @param node the root node of this (sub)-tree
+     * @return a List of all node conditions
+     */
     public List<String> getAllConditions(RdrNode node) {
         List<String> list = new ArrayList<String>();
         if (node != null) {
             list.add(node.getCondition());
-        	  list.addAll(getAllConditions(node.getTrueChild())) ;
-        	  list.addAll(getAllConditions(node.getFalseChild())) ;
+            list.addAll(getAllConditions(node.getTrueChild()));
+            list.addAll(getAllConditions(node.getFalseChild()));
         }
-        return list ;
+        return list;
+    }
+
+    protected YAttributeMap getAttributes() {
+        return attributes != null ? attributes : new YAttributeMap();
     }
   
 //===========================================================================//
@@ -129,16 +142,20 @@ public class RdrTree {
     // SETTERS //
     
     public void setRootNode(RdrNode root) {
-    	_rootNode = root ;
+    	rootNode = root ;
     }
     
-    public void setSpecId(YSpecificationID id) {
-    	_specId = id ;
-    }
-    
+
     public void setTaskId(String id) {
-    	_taskId = id ;
+    	taskId = id ;
     }
+
+    public void setAttributes(String rdrSetName, RuleType rType) {
+        attributes = new YAttributeMap();
+        attributes.put("ruleset", rdrSetName);
+        attributes.put("ruletype", rType.name());
+    }
+
 
 //===========================================================================//
    
@@ -147,73 +164,82 @@ public class RdrTree {
     *  @param caseData - a JDOM Element that contains the set of data
     *         attributes and values that are used to evaluate the conditional
     *         expressions
-    *  @return the conclusion of the last node satisfied
+    *  @return the pair of nodes resulting from the rule evaluation
     */ 
-    public Element search(Element caseData){
+    public RdrPair search(Element caseData) {
     	
     	// recursively search each node in the tree    	
-        _lastPair = _rootNode.recursiveSearch(caseData, _rootNode);
-        if (_lastPair[0] != null)
-           return (_lastPair[0].getConclusion());
-        else
-           return null ;   
-    }  
+        return rootNode.search(caseData, rootNode);
+    }
     
 //===========================================================================//
 
-	/** 
+	public RdrNode createRootNode() {
+        XNode nullConclusion = new XNode("conclusion", "null");
+        RdrNode root = new RdrNode(0, null, "true", nullConclusion.toElement());
+        root.setDescription("root node");
+        setRootNode(root);
+        return root;
+    }
+    
+    /** 
 	 *  Creates a new empty node.
 	 *  @param parentNode The proposed parent node for this node
 	 *  @param trueBranch if true, the new node will be placed on the 'true'
 	 *         exception branch; if false, the node will be placed on the
 	 *        'false' if-not branch
 	 */
-    public RdrNode addNode(RdrNode parentNode, boolean trueBranch)
-    {
-    	int nextID = nodeCount() + 1;
-        RdrNode temp = new RdrNode(nextID);
-        
-        if(trueBranch) {
-            parentNode.setTrueChild(temp);
+    public RdrNode addNode(RdrNode parentNode, boolean trueBranch) {
+        return addNode(new RdrNode(), parentNode, trueBranch);
+    }
+    
+    
+    public RdrNode addNode(RdrNode newNode, RdrNode parentNode, boolean trueBranch) {
+    //	newNode.setNodeId(nodeCount());                          // root id=0
+        newNode.setParent(parentNode);
+        if (trueBranch) {
+            parentNode.setTrueChild(newNode);
         }
         else {
-            parentNode.setFalseChild(temp);
+            parentNode.setFalseChild(newNode);
         }
-        return(temp);
+        return newNode;
     }
+    
     
 //===========================================================================//
 	
-    /** returns the number of nodes in the tree */
+    /**
+     * Gets the number of nodes in the tree
+     * @param root the root node of this (sub)-tree
+     * @return the number of nodes in this (sub)-tree, inclusive of the root node
+     */
     private int countNodes(RdrNode root) {
         if ( root == null ) return 0;          // empty tree. Base case.
-        else { 
-           int count = 1;                                // count the root.
-           count += countNodes(root.getTrueChild());      // add left subtree.
-           count += countNodes(root.getFalseChild());     // add right subtree.
-           return count;  
-        }
+
+        int count = 1;                                // count the root.
+        count += countNodes(root.getTrueChild());      // add left subtree.
+        count += countNodes(root.getFalseChild());     // add right subtree.
+        return count;
      }
 
     /**
-     * returns the number of nodes in the tree
+     * @return the number of nodes in the tree
      */
-    private int nodeCount(){
-        return(countNodes(_rootNode));
+    private int nodeCount() {
+        return countNodes(rootNode);
     }
     
 //===========================================================================//
 	
 	/** returns a String representation of this tree */
-    public String toString(){
+    public String dump(){
     	String n = Library.newline ;
-    	return n + "Spec ID: " + _specId + 
-    	       n + "Task ID: " + _taskId + n + n +
-               toString(_rootNode) ;
+    	return n + "Task ID: " + taskId + n + n + dump(rootNode) ;
     }
     
     /** recursively adds each node to a String representation of the tree */
-    private String toString(RdrNode root) {
+    private String dump(RdrNode root) {
     	StringBuilder s = new StringBuilder() ;
     	String n = Library.newline ;
     	
@@ -227,7 +253,7 @@ public class RdrTree {
            s.append(n) ;
            
            s.append("Conclusion: ");
-           s.append(JDOMUtil.elementToStringDump(root.getConclusion()));
+           s.append(root.getConclusion().toString());
            s.append(n) ;
            
            if (root.getTrueChild() != null) {
@@ -243,11 +269,77 @@ public class RdrTree {
            }
               
            s.append(n) ;                
-           s.append(toString(root.getTrueChild()));     // recurse true branch 
-           s.append(toString(root.getFalseChild()));    // recurse false branch
+           s.append(dump(root.getTrueChild()));     // recurse true branch
+           s.append(dump(root.getFalseChild()));    // recurse false branch
       }
         return s.toString() ;
-     } 
+    }
+
+    public String toString() {
+        return "task: " + taskId + ", nodes: " + nodeCount();
+    }
+
+
+    public String toXML() {
+        return toXNode().toPrettyString();
+    }
+
+
+    public XNode toXNode() { return toXNode("tree"); }   // default
+
+
+    public XNode toXNode(String name) {
+        XNode treeNode;
+        if (taskId != null) {
+            treeNode = new XNode("task");
+            treeNode.addAttribute("name", taskId);
+        }
+        else treeNode = new XNode(name);
+
+        treeNode.addAttributes(getAttributes());
+        treeNode.addChildren(toXNodeList(rootNode));
+        return treeNode;
+    }
+
+    private List<XNode> toXNodeList(RdrNode rdrNode) {
+        List<XNode> nodeList = new ArrayList<XNode>();
+        if (rdrNode != null) {
+            nodeList.add(rdrNode.toXNode());
+            nodeList.addAll(toXNodeList(rdrNode.getTrueChild()));
+            nodeList.addAll(toXNodeList(rdrNode.getFalseChild()));
+        }
+        return nodeList;
+    }
+    
+    
+    public void fromXML(String xml) {
+        fromXNode(new XNodeParser().parse(xml));
+    }
+    
+    private void fromXNode(XNode node) {
+        Map<Long, RdrNode> nodeMap = new Hashtable<Long, RdrNode>();
+        if (node != null) {
+            
+            // 2 passes - one to unmarshal the nodes, one to link them
+            for (XNode xRuleNode : node.getChildren()) {
+                RdrNode rdrNode = new RdrNode();
+                rdrNode.fromXNode(xRuleNode);
+                nodeMap.put(rdrNode.getNodeId(), rdrNode);
+            }
+            for (XNode xRuleNode : node.getChildren()) {
+                int id = StringUtil.strToInt(xRuleNode.getChildText("id"), -1);
+                int parentID = StringUtil.strToInt(xRuleNode.getChildText("parent"), -1);
+                int trueChildID = StringUtil.strToInt(xRuleNode.getChildText("trueChild"), -1);
+                int falseChildID = StringUtil.strToInt(xRuleNode.getChildText("falseChild"), -1);
+                RdrNode rdrNode = nodeMap.get(id);
+                if (parentID > -1) rdrNode.setParent(nodeMap.get(parentID));
+                if (parentID > -1) rdrNode.setParent(nodeMap.get(parentID));
+                if (trueChildID > -1) rdrNode.setTrueChild(nodeMap.get(trueChildID));
+                if (falseChildID > -1) rdrNode.setFalseChild(nodeMap.get(falseChildID));
+            }
+            setRootNode(nodeMap.get(0));
+        }
+    }
 
 //===========================================================================//
 //===========================================================================//

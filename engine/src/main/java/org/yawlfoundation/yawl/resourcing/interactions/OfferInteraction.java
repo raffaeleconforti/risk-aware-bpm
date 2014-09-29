@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,17 +19,16 @@
 package org.yawlfoundation.yawl.resourcing.interactions;
 
 import org.apache.log4j.Logger;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
 import org.yawlfoundation.yawl.resourcing.WorkQueue;
 import org.yawlfoundation.yawl.resourcing.constraints.AbstractConstraint;
-import org.yawlfoundation.yawl.resourcing.constraints.ConstraintFactory;
 import org.yawlfoundation.yawl.resourcing.filters.AbstractFilter;
-import org.yawlfoundation.yawl.resourcing.filters.FilterFactory;
 import org.yawlfoundation.yawl.resourcing.resource.Participant;
 import org.yawlfoundation.yawl.resourcing.resource.Role;
+import org.yawlfoundation.yawl.resourcing.util.PluginFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -315,8 +314,8 @@ public class OfferInteraction extends AbstractInteraction {
                                                  ArrayList<String> uniqueIDs,
                                                  Participant p) {
         if (! uniqueIDs.contains(p.getID())) {
-             uniqueIDs.add(p.getID()) ;
-             distributionSet.add(p) ;
+            uniqueIDs.add(p.getID()) ;
+            distributionSet.add(p) ;
         }
     }
 
@@ -366,10 +365,7 @@ public class OfferInteraction extends AbstractInteraction {
     private void parseParticipants(Element e, Namespace nsYawl) {
 
         // from the specified initial set, add all participants
-        List participants = e.getChildren("participant", nsYawl);
-        Iterator itr = participants.iterator();
-        while (itr.hasNext()) {
-            Element eParticipant = (Element) itr.next();
+        for (Element eParticipant : e.getChildren("participant", nsYawl)) {
             String participant = eParticipant.getText();
             if (participant.indexOf(',') > -1)
                 addParticipantsByID(participant);
@@ -382,10 +378,7 @@ public class OfferInteraction extends AbstractInteraction {
     private void parseRoles(Element e, Namespace nsYawl) {
 
         // ... and roles
-        List roles = e.getChildren("role", nsYawl);
-        Iterator itr = roles.iterator();
-        while (itr.hasNext()) {
-            Element eRole = (Element) itr.next();
+        for (Element eRole : e.getChildren("role", nsYawl)) {
             String role = eRole.getText();
             if (role.indexOf(',') > -1)
                 addRoles(role);
@@ -398,10 +391,7 @@ public class OfferInteraction extends AbstractInteraction {
     private void parseDynParams(Element e, Namespace nsYawl) {
 
         // ... and input parameters
-        List params = e.getChildren("param", nsYawl);
-        Iterator itr = params.iterator();
-        while (itr.hasNext()) {
-            Element eParam = (Element) itr.next();
+        for (Element eParam : e.getChildren("param", nsYawl)) {
             String name = eParam.getChildText("name", nsYawl);
             String refers = eParam.getChildText("refers", nsYawl);
             int pType = refers.equals("role") ? ROLE_PARAM : USER_PARAM;
@@ -415,17 +405,15 @@ public class OfferInteraction extends AbstractInteraction {
         // get the Filters
         Element eFilters = e.getChild("filters", nsYawl);
         if (eFilters != null) {
-            List filters = eFilters.getChildren("filter", nsYawl);
+            List<Element> filters = eFilters.getChildren("filter", nsYawl);
             if (filters == null)
                 throw new ResourceParseException(
                         "No filter elements found in filters element");
 
-            Iterator itr = filters.iterator();
-            while (itr.hasNext()) {
-                Element eFilter = (Element) itr.next();
+            for (Element eFilter : filters) {
                 String filterClassName = eFilter.getChildText("name", nsYawl);
                 if (filterClassName != null) {
-                    AbstractFilter filter = FilterFactory.getInstance(filterClassName);
+                    AbstractFilter filter = PluginFactory.newFilterInstance(filterClassName);
                     if (filter != null) {
                         filter.setParams(parseParams(eFilter, nsYawl));
                         _filters.add(filter);
@@ -443,18 +431,16 @@ public class OfferInteraction extends AbstractInteraction {
         // get the Constraints
         Element eConstraints = e.getChild("constraints", nsYawl);
         if (eConstraints != null) {
-            List constraints = eConstraints.getChildren("constraint", nsYawl);
+            List<Element> constraints = eConstraints.getChildren("constraint", nsYawl);
             if (constraints == null)
                 throw new ResourceParseException(
                         "No constraint elements found in constraints element");
 
-            Iterator itr = constraints.iterator();
-            while (itr.hasNext()) {
-                Element eConstraint = (Element) itr.next();
+            for (Element eConstraint : constraints) {
                 String constraintClassName = eConstraint.getChildText("name", nsYawl);
                 if (constraintClassName != null) {
                     AbstractConstraint constraint =
-                            ConstraintFactory.getInstance(constraintClassName);
+                            PluginFactory.newConstraintInstance(constraintClassName);
                     if (constraint != null) {
                         constraint.setParams(parseParams(eConstraint, nsYawl));
                         _constraints.add(constraint);
@@ -480,34 +466,27 @@ public class OfferInteraction extends AbstractInteraction {
     /********************************************************************************/
     
     public String toXML() {
-        Iterator itr ;
         StringBuilder xml = new StringBuilder("<offer ");
 
         xml.append("initiator=\"").append(getInitiatorString()).append("\">");
 
-        // the rest of the xml is only needed if it's system intiated
+        // the rest of the xml is only needed if it's system initiated
         if (isSystemInitiated()) {
             xml.append("<distributionSet>") ;
             xml.append("<initialSet>");
 
             if (_participants != null) {
-                itr = _participants.iterator();
-                while (itr.hasNext()) {
-                    Participant p = (Participant) itr.next();
+                for (Participant p : _participants) {
                     xml.append("<participant>").append(p.getID()).append("</participant>");
                 }
             }
             if (_roles != null) {
-                itr = _roles.iterator() ;
-                while (itr.hasNext()) {
-                    Role r = (Role) itr.next();
+                for (Role r : _roles) {
                     xml.append("<role>").append(r.getID()).append("</role>");
                 }
             }
             if (_dynParams != null) {
-                itr = _dynParams.iterator() ;
-                while (itr.hasNext()) {
-                    DynParam p = (DynParam) itr.next();
+                for (DynParam p : _dynParams) {
                     xml.append(p.toXML());
                 }
             }
@@ -516,9 +495,7 @@ public class OfferInteraction extends AbstractInteraction {
 
             if ((_filters != null) && (! _filters.isEmpty())) {
                 xml.append("<filters>") ;
-                itr = _filters.iterator() ;
-                while (itr.hasNext()) {
-                    AbstractFilter filter = (AbstractFilter) itr.next();
+                for (AbstractFilter filter : _filters) {
                     xml.append(filter.toXML());
                 }
                 xml.append("</filters>") ;
@@ -526,9 +503,7 @@ public class OfferInteraction extends AbstractInteraction {
 
             if ((_constraints != null) && (! _constraints.isEmpty())) {
                 xml.append("<constraints>") ;
-                itr = _constraints.iterator() ;
-                while (itr.hasNext()) {
-                    AbstractConstraint constraint = (AbstractConstraint) itr.next();
+                for (AbstractConstraint constraint : _constraints) {
                     xml.append(constraint.toXML());
                 }
                 xml.append("</constraints>") ;
@@ -562,7 +537,7 @@ public class OfferInteraction extends AbstractInteraction {
 
         /** the constructor
          *
-         * @param name - the name of a data variable of this task that willcontain
+         * @param name - the name of a data variable of this task that will contain
          *               a runtime value specifying a particular participant or role.
          * @param refers - either USER_PARAM or ROLE_PARAM
          */
@@ -590,11 +565,9 @@ public class OfferInteraction extends AbstractInteraction {
 
 
         public Set<Participant> evaluate(WorkItemRecord wir) {
-            HashSet<Participant> result = new HashSet<Participant>() ;
-            String varID = getNetParamValue(wir, _name) ;
-
-            if (varID != null) {
-                if (_refers == USER_PARAM) {
+            HashSet<Participant> result = new HashSet<Participant>();
+            if (_refers == USER_PARAM) {
+                for (String varID : getVarIDList(wir)) {
                     Participant p = _rm.getParticipantFromUserID(varID);
                     if (p != null)
                         result.add(p) ;
@@ -602,12 +575,13 @@ public class OfferInteraction extends AbstractInteraction {
                         _log.error("Unknown participant userID '" + varID +
                                 "' in dynamic parameter: " + _name );
                 }
-                else {
+            }
+            else {
+                for (String varID : getVarIDList(wir)) {
                     Role r = _rm.getOrgDataSet().getRoleByName(varID) ;
                     if (r != null) {
                         Set<Participant> rpSet = _rm.getOrgDataSet().getRoleParticipants(r.getID()) ;
-                        if (rpSet != null)
-                            result.addAll(rpSet) ;
+                        if (rpSet != null) result.addAll(rpSet) ;
                     }
                     else
                         _log.error("Unknown role '" + varID +
@@ -633,6 +607,18 @@ public class OfferInteraction extends AbstractInteraction {
                            wir.getID() + "'.");                
             }
             return result;
+        }
+
+
+        private List<String> getVarIDList(WorkItemRecord wir) {
+            List<String> idList = new ArrayList<String>();
+            String varValue = getNetParamValue(wir, _name);
+            if (varValue != null) {
+                for (String id : varValue.split(",")) {
+                     idList.add(id.trim());
+                }
+            }
+            return idList;
         }
 
     /*******************************************************************************/

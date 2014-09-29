@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,15 +18,16 @@
 
 package org.yawlfoundation.yawl.resourcing;
 
-import org.jdom.Element;
+import org.hibernate.Transaction;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.datastore.WorkItemCache;
 import org.yawlfoundation.yawl.resourcing.datastore.eventlog.EventLogger;
+import org.yawlfoundation.yawl.resourcing.datastore.persistence.Persister;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
-import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -36,7 +37,7 @@ import java.util.Set;
  *  v0.1, 23/08/2007
  */
 
-public class QueueSet implements Serializable {
+public class QueueSet {
 
     // participant queues
     private WorkQueue _qOffered ;
@@ -208,7 +209,7 @@ public class QueueSet implements Serializable {
     }
 
     public Set<WorkItemRecord> getQueuedWorkItems(int queue) {
-        if (isNullQueue(queue)) return null ;
+        if (isNullQueue(queue)) return Collections.emptySet() ;
         else return getQueue(queue).getAll();
     }
 
@@ -240,7 +241,7 @@ public class QueueSet implements Serializable {
     }
 
     public void removeFromAllQueues(WorkItemRecord wir) {
-        for (int queue = getStartQueue(); queue <= getEndQueue(); queue++) 
+        for (int queue = getStartQueue(); queue <= getEndQueue(); queue++)
             removeFromQueue(wir, queue);
     }
 
@@ -265,12 +266,6 @@ public class QueueSet implements Serializable {
     public void purgeAllQueues() {
         for (int queue = WorkQueue.OFFERED; queue <= WorkQueue.SUSPENDED; queue++)
             purgeQueue(queue);
-    }
-
-    
-    public void restoreWorkQueue(WorkQueue q, WorkItemCache cache) {
-        q.restore(cache) ;
-        setQueue(q);
     }
 
 
@@ -301,10 +296,9 @@ public class QueueSet implements Serializable {
 
     public void fromXML(Element element) {
         if (element != null) {
-            Iterator itr = element.getChildren().iterator();
-            while (itr.hasNext()) {
+            for (Element qElem : element.getChildren()) {
                 WorkQueue wq = new WorkQueue() ;
-                wq.fromXML((Element) itr.next());
+                wq.fromXML(qElem);
                 setQueue(wq) ;
             }
         }

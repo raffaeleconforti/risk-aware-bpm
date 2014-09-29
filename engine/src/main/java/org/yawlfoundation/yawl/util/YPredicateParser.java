@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,8 +18,8 @@
 
 package org.yawlfoundation.yawl.util;
 
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 
 import java.text.SimpleDateFormat;
 import java.util.Map;
@@ -183,9 +183,13 @@ public class YPredicateParser {
      * @return the result of the evaluation, or "__evaluation_error__" if there's a
      * problem evaluating the expression
      */
-    private String evaluateXQuery(String s, Element data) {
+    protected String evaluateXQuery(String s, Element data) {
+        return  evaluateXQuery(s, new Document(data.clone()));
+
+    }
+
+    protected String evaluateXQuery(String s, Document dataDoc) {
         try {
-            Document dataDoc = new Document((Element) data.clone());
             return SaxonUtil.evaluateQuery(s, dataDoc);
         }
         catch (Exception e) {
@@ -199,7 +203,7 @@ public class YPredicateParser {
      * @param s the delimited String
      * @return the inner contents of the String with the delimiters removed
      */
-    private String stripDelimiters(String s) {
+    protected String stripDelimiters(String s) {
         return s.substring(2, s.length() - 1);    
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,15 +18,16 @@
 
 package org.yawlfoundation.yawl.elements;
 
-import org.apache.log4j.Logger;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
-import org.yawlfoundation.yawl.engine.YEngine;
 import org.yawlfoundation.yawl.engine.YPersistenceManager;
 import org.yawlfoundation.yawl.engine.YWorkItem;
-import org.yawlfoundation.yawl.exceptions.*;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.exceptions.YDataStateException;
+import org.yawlfoundation.yawl.exceptions.YPersistenceException;
+import org.yawlfoundation.yawl.exceptions.YQueryException;
+import org.yawlfoundation.yawl.exceptions.YStateException;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 import java.util.*;
 
@@ -39,8 +40,6 @@ import java.util.*;
  * @since 0.1
  */
 public class YAtomicTask extends YTask {
-
-    private static Logger logger = Logger.getLogger(YAtomicTask.class);
 
     /**
      * Constructs a new atomic task.
@@ -66,7 +65,7 @@ public class YAtomicTask extends YTask {
 
 
     /**
-     * Changes the inner org.yawlfoundation.yawl.risk.state of an atomic task from entered to executing.
+     * Changes the inner state of an atomic task from entered to executing.
      * @param pmgr an instantiated persistence manager object.
      * @param id the identifier to move from inner marking 'entered' to inner marking
      * 'executing'.
@@ -80,7 +79,7 @@ public class YAtomicTask extends YTask {
 
     /**
      * Checks that a task is currently executing.
-     * @return true if the task has 'executing' org.yawlfoundation.yawl.risk.state.
+     * @return true if the task has 'executing' state.
      */
     public boolean isRunning() {
         return _i != null;
@@ -109,15 +108,36 @@ public class YAtomicTask extends YTask {
             throws YPersistenceException {
         if (! cancelBusyWorkItem(pmgr)) {
             String workItemID = caseID.get_idString() + ":" + getID();
-            YWorkItem workItem = _workItemRepository.getWorkItem(workItemID);
+            YWorkItem workItem = getWorkItemRepository().get(workItemID);
             if (null != workItem) cancelWorkItem(pmgr, workItem) ;
         }
         super.cancel(pmgr);
     }
 
 
+
+
+    private boolean cancelBusyWorkItem(YPersistenceManager pmgr)
+             throws YPersistenceException {
+
+        // nothing to do if not fired or has no decomposition
+        if ((_i == null) || (_decompositionPrototype == null)) return false;
+
+        YWorkItem workItem = getWorkItemRepository().get(_i.toString(), getID());
+        if (null != workItem) cancelWorkItem(pmgr, workItem) ;
+        return true;
+    }
+
+
+    private void cancelWorkItem(YPersistenceManager pmgr, YWorkItem workItem)
+            throws YPersistenceException {
+        getWorkItemRepository().removeWorkItemFamily(workItem);
+        workItem.cancel(pmgr);
+    }
+
+
     /**
-     * Rolls back a task's inner org.yawlfoundation.yawl.risk.state from 'executing' to 'entered'.
+     * Rolls back a task's inner state from 'executing' to 'entered'.
      * <p/>
      * The roll back will only occur if the task's inner 'executing' marking contains
      * the identifier specified.
@@ -136,15 +156,6 @@ public class YAtomicTask extends YTask {
             return true;
         }
         return false;
-    }
-
-
-    /**
-     * Gets the net that contains this atomic task.
-     * @return the containing net.
-     */
-    public YNet getNet() {
-        return _net;
     }
 
 
@@ -177,15 +188,12 @@ public class YAtomicTask extends YTask {
      * @return the enablement data set; that is, a set of data variables and
      * corresponding values that were populated after evaluating their mapping
      * expressions.
-     * @throws YQueryException if thre's a problem with a query evaluation.
-     * @throws YSchemaBuildingException if there's a problem populating the data set.
+     * @throws YQueryException if there's a problem with a query evaluation.
      * @throws YDataStateException if there's a problem with the evaluated data.
-     * @throws YStateException if there's a problem setting the task org.yawlfoundation.yawl.risk.state.
+     * @throws YStateException if there's a problem setting the task state.
      * @deprecated Since 2.0, enablement mappings have no function.
      */
-    public Element prepareEnablementData()
-            throws YQueryException, YSchemaBuildingException, YDataStateException,
-            YStateException {
+    public Element prepareEnablementData() throws YQueryException, YDataStateException {
         if (null == getDecompositionPrototype()) {
             return null;
         }
@@ -198,54 +206,33 @@ public class YAtomicTask extends YTask {
             String paramName = parameter.getPreferredName();
             String expression = _dataMappingsForTaskEnablement.get(paramName);
             Element result = performDataExtraction(expression, parameter);
-            enablementData.addContent((Element) result.clone());
+            enablementData.addContent(result.clone());
         }
         return enablementData;
     }
 
+
+    /***** VERIFICATION *******************************************************/
 
     /**
      * Verifies this atomic task definition against YAWL semantics.
      * @return a List of error and/or warning messages. An empty list is returned if
      * the atomic task verifies successfully.
      */
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
-        messages.addAll(super.verify());
+    public void verify(YVerificationHandler handler) {
+        super.verify(handler);
         if (_decompositionPrototype == null) {
             if (_multiInstAttr != null && (_multiInstAttr.getMaxInstances() > 1 ||
                     _multiInstAttr.getThreshold() > 1)) {
-                messages.add(new YVerificationMessage(this, this + " cannot have multiInstances and a "
-                        + " blank work description.", YVerificationMessage.ERROR_STATUS));
+                handler.error(this, this +
+                        " cannot have multiple instances and a blank work description.");
             }
         }
         else if (!(_decompositionPrototype instanceof YAWLServiceGateway)) {
-            messages.add(new YVerificationMessage(this, this + " task may not decompose to " +
-                    "other than a WebServiceGateway.", YVerificationMessage.ERROR_STATUS));
-            messages.addAll(checkEnablementParameterMappings());
+            handler.error(this, this +
+                    " task may not decompose to other than a WebServiceGateway.");
+            checkEnablementParameterMappings(handler);
         }
-        return messages;
-    }
-
-
-    private synchronized boolean cancelBusyWorkItem(YPersistenceManager pmgr)
-                                                         throws YPersistenceException {
-
-        // nothing to do if not fired or has no decomposition
-        if ((_i == null) || (_decompositionPrototype == null)) return false;
-
-        YWorkItem workItem = _workItemRepository.getWorkItem(_i.toString(), getID());
-        if (null != workItem) cancelWorkItem(pmgr, workItem) ;
-        return true;
-    }
-
-
-    private synchronized void cancelWorkItem(YPersistenceManager pmgr,
-                                             YWorkItem workItem)
-            throws YPersistenceException {
-        _workItemRepository.removeWorkItemFamily(workItem);
-        workItem.cancel(pmgr);
-        YEngine.getInstance().getAnnouncer().announceCancelledWorkItem(workItem);
     }
 
 
@@ -255,8 +242,7 @@ public class YAtomicTask extends YTask {
      * the atomic task's enablement mappings verify successfully.
      * @deprecated Since 2.0, enablement mappings have no function.
      */
-    private List<YVerificationMessage> checkEnablementParameterMappings() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
+    private void checkEnablementParameterMappings(YVerificationHandler handler) {
 
         //check that there is a link to each enablementParam
         Set<String> enablementParamNamesAtGateway =
@@ -266,28 +252,24 @@ public class YAtomicTask extends YTask {
         //check that task input var maps to decomp input var
         for (String paramName : enablementParamNamesAtGateway) {
             if (! enablementParamNamesAtTask.contains(paramName)) {
-                messages.add(new YVerificationMessage(this,
-                        "The task (id= " + this.getID() +
-                                ") needs to be connected with the enablement parameter (" +
-                                paramName + ") of decomposition (" +
-                                _decompositionPrototype + ").",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this,
+                        "The task [id= " + this.getID() +
+                        "] needs to be connected with the enablement parameter [" +
+                        paramName + "] of decomposition [" +
+                        _decompositionPrototype + "].");
             }
         }
         for (String paramNameAtTask : enablementParamNamesAtTask) {
             String query = _dataMappingsForTaskEnablement.get(paramNameAtTask);
-            messages.addAll(checkXQuery(query, paramNameAtTask));
+            checkXQuery(query, paramNameAtTask, handler);
             if (! enablementParamNamesAtGateway.contains(paramNameAtTask)) {
-                messages.add(new YVerificationMessage(this,
-                        "The task (id= " + this.getID() +
-                                ") cannot connect with enablement parameter (" +
-                                paramNameAtTask + ") because it doesn't exist" +
-                                " at its decomposition (" + _decompositionPrototype + ").",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this,
+                        "The task [id= " + this.getID() +
+                        "] cannot connect with enablement parameter [" +
+                        paramNameAtTask + "] because it doesn't exist" +
+                        " at its decomposition [" + _decompositionPrototype + "].");
             }
         }
-
-        return messages;
     }
 
 }

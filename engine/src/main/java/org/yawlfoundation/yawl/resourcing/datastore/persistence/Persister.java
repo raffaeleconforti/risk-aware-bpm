@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,6 +19,7 @@
 package org.yawlfoundation.yawl.resourcing.datastore.persistence;
 
 import org.hibernate.Query;
+import org.hibernate.Transaction;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.WorkQueue;
 import org.yawlfoundation.yawl.resourcing.datastore.HibernateEngine;
@@ -31,33 +32,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *  This class implements methods for Organisational Data CRUD.
+ * This class is a thin client of HibernateEngine that implements methods for 
+ * Organisational Data CRUD.
  *
  *  @author Michael Adams
  *  v0.1, 03/08/2007
  */
 
-public class Persister implements Serializable {
+public final class Persister implements Serializable {
 
-    private HibernateEngine _db ;
-    private static Persister _me;
-
-    // persistence actions
-    public final int _UPDATE = HibernateEngine.DB_UPDATE;
-    public final int _DELETE = HibernateEngine.DB_DELETE;
-    public final int _INSERT = HibernateEngine.DB_INSERT;
+    private static final HibernateEngine _db = HibernateEngine.getInstance(true);
+    private static final Persister INSTANCE = new Persister();
 
 
-    public Persister() {
-        _db = HibernateEngine.getInstance(true) ; 
-    }
+    private Persister() { }
+
 
     // only want one persister instance at runtime
-    public static Persister getInstance() {
-        if (_me == null) _me = new Persister();
-        return _me ;
+    public static Persister getInstance() { return INSTANCE; }
 
-    }
 
    /*******************************************************************************/
 
@@ -79,6 +72,7 @@ public class Persister implements Serializable {
            List<SpecLog> slList = _db.getObjectsForClass(className) ;
            for (SpecLog sl : slList) result.put(sl.getSpecID().getKey() + sl.getVersion(), sl) ;
        }
+       commit();
        return result ;
    }
 
@@ -103,13 +97,31 @@ public class Persister implements Serializable {
         return _db.execUpdate(statement);
     }
 
+    public int execUpdate(String statement, boolean commit) {
+        return _db.execUpdate(statement, commit);
+    }
+
     public Query createQuery(String query) {
         return _db.createQuery(query);
     }
 
+    public Transaction beginTransaction() { return _db.beginTransaction(); }
+
+    public Transaction getOrBeginTransaction() { return _db.getOrBeginTransaction(); }
+
+    public Object load(Class claz, Serializable key) { return _db.load(claz, key); }
+
+    public Object get(Class claz, Serializable key) { return _db.get(claz, key); }
+
+    public void commit() { _db.commit(); }
+
+    public void rollback() { _db.rollback(); }
+
+    public void closeDB() { _db.closeFactory(); }
+
 
     public Object selectScalar(String className, String id) {
-       Object retObj = null ;
+       Object retObj ;
        if (className.endsWith("Participant"))
            retObj = _db.selectScalar(className,"_resourceID", id);
        else if (className.endsWith("UserPrivileges"))
@@ -121,14 +133,37 @@ public class Persister implements Serializable {
            retObj = _db.selectScalar(className,"_wirID", id);
        else
            retObj = _db.selectScalar(className,"_id", id);
-
        return retObj ;
     }
 
-    public void update(Object obj) { _db.exec(obj, _UPDATE); }
+    public boolean update(Object obj) { return _db.exec(obj, HibernateEngine.DB_UPDATE); }
 
-    public void delete(Object obj) { _db.exec(obj, _DELETE); }
+    public boolean delete(Object obj) { return _db.exec(obj, HibernateEngine.DB_DELETE); }
 
-    public void insert(Object obj) { _db.exec(obj, _INSERT); }
+    public boolean insert(Object obj) { return _db.exec(obj, HibernateEngine.DB_INSERT); }
+
+    public boolean update(Object obj, Transaction tx) {
+        return (tx != null) ? _db.exec(obj, HibernateEngine.DB_UPDATE, tx) : update(obj);
+    }
+
+    public boolean delete(Object obj, Transaction tx) {
+        return (tx != null) ? _db.exec(obj, HibernateEngine.DB_DELETE, tx) : delete(obj);
+    }
+
+    public boolean insert(Object obj, Transaction tx) {
+        return (tx != null) ? _db.exec(obj, HibernateEngine.DB_INSERT, tx): insert(obj);
+    }
+
+    public boolean update(Object obj, boolean commit) {
+        return _db.exec(obj, HibernateEngine.DB_UPDATE, commit);
+    }
+
+    public boolean delete(Object obj, boolean commit) {
+        return _db.exec(obj, HibernateEngine.DB_DELETE, commit);
+    }
+
+    public boolean insert(Object obj, boolean commit) {
+        return _db.exec(obj, HibernateEngine.DB_INSERT, commit);
+    }
 
 }

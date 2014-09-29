@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,6 +20,7 @@ package org.yawlfoundation.yawl.engine.interfce.interfaceB;
 
 import org.apache.log4j.Logger;
 import org.yawlfoundation.yawl.elements.data.YParameter;
+import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
 import org.yawlfoundation.yawl.engine.interfce.ServletUtils;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
@@ -62,12 +63,6 @@ public class InterfaceB_EnvironmentBasedServer extends HttpServlet {
         String controllerClassName =
                 context.getInitParameter("InterfaceBWebSideController");
 
-        //If there is an auth proxy firewall and it has been configured it in the
-        //web.xml file the settings be retrieved for use.
-        String userName = context.getInitParameter("UserName");
-        String password = context.getInitParameter("Password");
-        String proxyHost = context.getInitParameter("ProxyHost");
-        String proxyPort = context.getInitParameter("ProxyPort");
         try {
             Class controllerClass = Class.forName(controllerClassName);
 
@@ -84,10 +79,25 @@ public class InterfaceB_EnvironmentBasedServer extends HttpServlet {
             // retrieve the URL of the YAWL Engine from the web.xml file.
             String engineBackendAddress = context.getInitParameter("InterfaceB_BackEnd");
             _controller.setUpInterfaceBClient(engineBackendAddress);
+
+            //If there is an auth proxy firewall and it has been configured it in the
+            //web.xml file the settings be retrieved for use.
+            String userName = context.getInitParameter("UserName");
+            String password = context.getInitParameter("Password");
+            String proxyHost = context.getInitParameter("ProxyHost");
+            String proxyPort = context.getInitParameter("ProxyPort");
             _controller.setRemoteAuthenticationDetails(
                     userName, password, proxyHost, proxyPort);
+            
+            // if there are overridden engine logon & password, set them for the service
+            String logonName = context.getInitParameter("EngineLogonUserName");
+            String logonPassword = context.getInitParameter("EngineLogonPassword");
+            if (logonName != null) _controller.setEngineLogonName(logonName);
+            if (logonPassword != null) _controller.setEngineLogonPassword(logonPassword);
+
             context.setAttribute("controller", _controller);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -138,48 +148,75 @@ public class InterfaceB_EnvironmentBasedServer extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        String caseID = request.getParameter("caseID");
         String workItemXML = request.getParameter("workItem");
-        WorkItemRecord workItem = null;
-        if (workItemXML != null) {
-            workItem = Marshaller.unmarshalWorkItem(workItemXML);
-        }
-        
-        if ("handleEnabledItem".equals(action)) {
+        WorkItemRecord workItem = (workItemXML != null) ?
+                Marshaller.unmarshalWorkItem(workItemXML) : null;
+
+        // where there are two choices for 'action' below, those on the left are
+        // passed from 2.2 or later engine versions, while those on the right come
+        // from pre-2.2 engine versions
+        if ("announceItemEnabled".equals(action) || "handleEnabledItem".equals(action)) {
             _controller.handleEnabledWorkItemEvent(workItem);
-        }
-        else if ("cancelWorkItem".equals(action)) {
-            _controller.handleCancelledWorkItemEvent(workItem);
-        }
-        else if ("timerExpiry".equals(action)) {
-            _controller.handleTimerExpiryEvent(workItem);
-        }
-        else if ("announceCompletion".equals(action)) {
-            String caseID = request.getParameter("caseID");
-            String casedata = request.getParameter("casedata");
-            _controller.handleCompleteCaseEvent(caseID, casedata);
-        }
-        else if ("announceCaseCancelled".equals(action)) {
-            String caseID = request.getParameter("caseID");
-            _controller.handleCancelledCaseEvent(caseID);
-        }
-        else if ("announceEngineInitialised".equals(action)) {
-            _controller.handleEngineInitialisationCompletedEvent();
         }
         else if ("announceItemStatus".equals(action)) {
             String oldStatus = request.getParameter("oldStatus");
             String newStatus = request.getParameter("newStatus");
             _controller.handleWorkItemStatusChangeEvent(workItem, oldStatus, newStatus);
         }
+        else if ("announceCaseStarted".equals(action)) {
+            String launchingService = request.getParameter("launchingService");
+            String delayedStr = request.getParameter("delayed");
+            boolean delayed = delayedStr != null && delayedStr.equalsIgnoreCase("true");
+            YSpecificationID specID = new YSpecificationID(
+                    request.getParameter("specidentifier"),
+                    request.getParameter("specversion"),
+                    request.getParameter("specuri"));
+            _controller.handleStartCaseEvent(specID, caseID, launchingService, delayed);
+        }
+        else if ("announceCaseCompleted".equals(action) || "announceCompletion".equals(action)) {
+            String casedata = request.getParameter("casedata");
+            _controller.handleCompleteCaseEvent(caseID, casedata);
+        }
+        else if ("announceItemCancelled".equals(action) || "cancelWorkItem".equals(action)) {
+            _controller.handleCancelledWorkItemEvent(workItem);
+        }
+        else if ("announceCaseCancelled".equals(action)) {
+            _controller.handleCancelledCaseEvent(caseID);
+        }
+        else if ("announceCaseDeadlocked".equals(action)) {
+            String tasks = request.getParameter("tasks");
+            _controller.handleDeadlockedCaseEvent(caseID, tasks);
+        }
+        else if ("announceTimerExpiry".equals(action) || "timerExpiry".equals(action)) {
+            _controller.handleTimerExpiryEvent(workItem);
+        }
+        else if ("announceEngineInitialised".equals(action)) {
+            _controller.handleEngineInitialisationCompletedEvent();
+        }
+        else if ("announceCaseSuspending".equals(action)) {
+            _controller.handleCaseSuspendingEvent(caseID);
+        }
+        else if ("announceCaseSuspended".equals(action)) {
+            _controller.handleCaseSuspendedEvent(caseID);
+        }
+        else if ("announceCaseResumed".equals(action)) {
+            _controller.handleCaseResumedEvent(caseID);
+        }
         else if ("ParameterInfoRequest".equals(action)) {
             YParameter[] params = _controller.describeRequiredParams();
             StringBuilder output = new StringBuilder();
             for (YParameter param : params) {
-                output.append(param.toXML());
+                if (param != null) output.append(param.toXML());
             }
             return output.toString();
         }
         return "<success/>";
     }
 
+
+    public void destroy() {
+        _controller.destroy();
+    }
 
 }

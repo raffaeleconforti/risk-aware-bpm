@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing.resource;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.XNode;
 
@@ -49,6 +49,9 @@ public class Role extends AbstractResourceAttribute implements Comparable {
     }
 
 
+    public void setLabel(String label) { setName(label); }
+
+
     public String getName() { return _role; }
 
     public void setName(String role) {
@@ -64,7 +67,7 @@ public class Role extends AbstractResourceAttribute implements Comparable {
 
     public boolean setOwnerRole(String ownerRoleID) {
         if (ownerRoleID != null) {
-            Role ownerRole = _resMgr.getOrgDataSet().getRole(ownerRoleID);
+            Role ownerRole = getOrgDataSet().getRole(ownerRoleID);
             if (ownerRole != null) {
                 setOwnerRole(ownerRole);
                 return true;
@@ -93,7 +96,7 @@ public class Role extends AbstractResourceAttribute implements Comparable {
 
     public int compareTo(Object o) {
         if ((o == null) || (! (o instanceof Role))) return 1;
-        return this.getName().compareTo(((Role) o).getName());
+        return this.getName().toUpperCase().compareTo(((Role) o).getName().toUpperCase());
     }
    
 

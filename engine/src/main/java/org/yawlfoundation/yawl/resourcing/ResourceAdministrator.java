@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,10 +19,9 @@
 package org.yawlfoundation.yawl.resourcing;
 
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
-import org.yawlfoundation.yawl.resourcing.datastore.WorkItemCache;
 import org.yawlfoundation.yawl.resourcing.resource.Participant;
 
-import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Provides resource administration capabilties to authorised participants
@@ -38,9 +37,7 @@ public class ResourceAdministrator {
 
     private static ResourceAdministrator _me ;
 
-    private ResourceAdministrator() {
-//        _qSet = new QueueSet("", QueueSet.setType.adminSet, false);
-    }
+    private ResourceAdministrator() { }
 
     public static ResourceAdministrator getInstance() {
         if (_me == null) _me = new ResourceAdministrator() ;
@@ -52,16 +49,22 @@ public class ResourceAdministrator {
         return _qSet ;
     }
 
-    public void addToUnoffered(WorkItemRecord wir) {
+    public void addToUnoffered(WorkItemRecord wir, boolean announce) {
         ResourceManager rm = ResourceManager.getInstance();
         rm.getWorkItemCache().updateResourceStatus(wir, WorkItemRecord.statusResourceUnoffered);
         _qSet.addToQueue(wir, WorkQueue.UNOFFERED);
-        rm.announceResourceUnavailable(wir);
+        if (announce) rm.getClients().announceResourceUnavailable(wir);
     }
 
-    public void removeFromAllQueues(WorkItemRecord wir) {
+    public void addToUnoffered(WorkItemRecord wir) {
+        addToUnoffered(wir, true);
+    }
+
+
+    public boolean removeFromAllQueues(WorkItemRecord wir) {
         _qSet.removeFromQueue(wir, WorkQueue.UNOFFERED);
         _qSet.removeFromQueue(wir, WorkQueue.WORKLISTED);
+        return true;
     }
 
     public void removeCaseFromAllQueues(String caseID) {
@@ -99,9 +102,9 @@ public class ResourceAdministrator {
     }
 
 
-    public void restoreWorkQueue(WorkQueue q, WorkItemCache cache, boolean persisting) {
+    public void attachWorkQueue(WorkQueue q, boolean persisting) {
         if (_qSet == null) createWorkQueues(persisting) ;
-        _qSet.restoreWorkQueue(q, cache) ;
+        _qSet.setQueue(q) ;
     }
 
 
@@ -109,7 +112,7 @@ public class ResourceAdministrator {
         if (_qSet == null) createWorkQueues(false) ;
         _qSet.purgeQueue(WorkQueue.WORKLISTED);
 
-        HashSet<Participant> pSet = ResourceManager.getInstance().getOrgDataSet().getParticipants();
+        Set<Participant> pSet = ResourceManager.getInstance().getOrgDataSet().getParticipants();
         for (Participant p : pSet)
             _qSet.addToQueue(WorkQueue.WORKLISTED, p.getWorkQueues().getWorklistedQueues());
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,13 +18,13 @@
 
 package org.yawlfoundation.yawl.engine.interfce;
 
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.Namespace;
-import org.yawlfoundation.yawl.elements.YSpecification;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
+import org.yawlfoundation.yawl.schema.YSchemaVersion;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class SpecificationData {
     private String _specAsXML;
     private Map<String, YParameter> _inputParams = new HashMap<String, YParameter>();
     private Map<String, String> _dataTypes = new HashMap<String, String>();
-    private String _schemaVersion;
+    private YSchemaVersion _schemaVersion;
     private String _rootNetID;
     private String _schema ;
     private String _title;
@@ -58,7 +58,7 @@ public class SpecificationData {
     private String _externalDataGateway;
 
     public SpecificationData(YSpecificationID specID, String specificationName,
-                             String documentation, String status, String version) {
+                             String documentation, String status, YSchemaVersion version) {
         _specificationID = specID ;
         _documentation = documentation;
         _specificationName = specificationName;
@@ -139,7 +139,7 @@ public class SpecificationData {
         Document document = JDOMUtil.stringToDocument(_specAsXML);
         Element yawlSpecSetElement = document.getRootElement();
 
-        String ns = _schemaVersion.startsWith("2.") ?
+        String ns = isSecondGenSchemaVersion() ?
                 "http://www.yawlfoundation.org/yawlschema" :
                 "http://www.citi.qut.edu.au/yawl" ;
 
@@ -158,8 +158,13 @@ public class SpecificationData {
     }
 
 
-    public String getSchemaVersion() {
+    public YSchemaVersion getSchemaVersion() {
         return _schemaVersion;
+    }
+
+
+    public boolean isSecondGenSchemaVersion() {
+        return ! _schemaVersion.isBetaVersion();
     }
 
 
@@ -173,7 +178,7 @@ public class SpecificationData {
     }
 
 
-    public void setSchemaVersion(String version) {
+    public void setSchemaVersion(YSchemaVersion version) {
         _schemaVersion = version;
     }
 
@@ -198,8 +203,7 @@ public class SpecificationData {
     }
 
     public boolean usesSimpleRootData() {
-        return YSpecification.Beta2.equals(_schemaVersion) ||
-               YSpecification.Beta3.equals(_schemaVersion);
+        return _schemaVersion.usesSimpleRootData();
     }
 
     public String getMetaTitle() {

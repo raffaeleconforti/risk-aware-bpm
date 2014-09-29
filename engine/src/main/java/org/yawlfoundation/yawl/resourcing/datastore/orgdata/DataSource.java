@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -45,10 +45,11 @@ public abstract class DataSource {
      * implementations that use a different unique key format (or ignored in favour
      * of some other method that returns a unique ID).
      * @param prefix some (optional) characters to place at the start of the id
-     * @return a unique String identitifer
+     * @return a unique String identifier
      */
     protected String getNextID(String prefix) {
-        return String.format("%s-%s", prefix, UUID.randomUUID().toString()) ;
+        String id = UUID.randomUUID().toString();
+        return prefix != null ? prefix + "-" + id : id;
     }
 
     /********************************************************************************/
@@ -76,7 +77,7 @@ public abstract class DataSource {
      * deletes a persisted object
      * @param obj the object to delete
      */
-    public abstract void delete(Object obj) ;
+    public abstract boolean delete(Object obj) ;
 
 
     /**

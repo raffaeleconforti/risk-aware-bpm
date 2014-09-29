@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,10 +18,7 @@
 
 package org.yawlfoundation.yawl.elements.state;
 
-import org.yawlfoundation.yawl.elements.YCondition;
-import org.yawlfoundation.yawl.elements.YInputCondition;
-import org.yawlfoundation.yawl.elements.YNetElement;
-import org.yawlfoundation.yawl.elements.YTask;
+import org.yawlfoundation.yawl.elements.*;
 import org.yawlfoundation.yawl.engine.YEngine;
 import org.yawlfoundation.yawl.engine.YPersistenceManager;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
@@ -32,13 +29,11 @@ import java.util.Set;
 import java.util.Vector;
 
 /**
- * 
  * This class has control over data structures that allow for
  * storing an identifer and managing a set of children.
- * @author Lachlan Aldred
  *
+ * @author Lachlan Aldred
  * @author Michael Adams (refactored for v2.0, 06/08 & 04/09)
- * 
  */
 public class YIdentifier {
 
@@ -51,16 +46,16 @@ public class YIdentifier {
     private String id = null;
     private String _idString;
 
-    private long _logKey = -1 ;                    // the FK of the logged task instance
+    private long _logKey = -1;                    // the FK of the logged task instance
 
 
     public YIdentifier() { }                       // only for hibernate
+
 
     public YIdentifier(String idString) {
         _idString = (idString != null) ? idString : YEngine.getInstance().getNextCaseNbr();
     }
 
-    
 
     public String getId() {
         return id;
@@ -113,7 +108,7 @@ public class YIdentifier {
         descendants.add(this);
 
         for (YIdentifier child : _children) {
-            descendants.addAll(child.getDescendants());
+            if (child != null) descendants.addAll(child.getDescendants());
         }
         return descendants;
     }
@@ -150,7 +145,7 @@ public class YIdentifier {
             String childIDSuffix = childID.substring(childID.lastIndexOf('.') + 1);
             if (childNumStr.equals(childIDSuffix)) {
                 throw new IllegalArgumentException(
-                                   "Childnum uses an int already being used.");
+                        "Childnum uses an int already being used.");
             }
         }
         return createChildWithID(pmgr, this._idString + "." + childNumStr);
@@ -166,7 +161,7 @@ public class YIdentifier {
 
         if (pmgr != null) {
             pmgr.storeObjectFromExternal(identifier);
-            pmgr.updateObjectExternal(this);
+            updateThis(pmgr);
         }
         return identifier;
     }
@@ -175,6 +170,8 @@ public class YIdentifier {
     public YIdentifier getParent() {
         return _parent;
     }
+
+    public boolean hasParent() { return _parent != null; }
 
 
     public boolean isImmediateChildOf(YIdentifier identifier) {
@@ -186,7 +183,7 @@ public class YIdentifier {
         return parent != null && (parent.equals(this) || isAncestorOf(parent));
     }
 
-    
+
     public String toString() {
         return _idString;
     }
@@ -202,33 +199,26 @@ public class YIdentifier {
         if ((condition instanceof YCondition) && !(condition instanceof YInputCondition)) {
             String locName = condition.toString();
             locationNames.add(locName.substring(locName.indexOf(":") + 1, locName.length()));
-        }
-        else {
+        } else {
             locationNames.add(condition.toString());
         }
 
-        if (pmgr != null) {
-            pmgr.updateObjectExternal(this);
-        }
+        updateThis(pmgr);
     }
 
-    
+
     public synchronized void clearLocations(YPersistenceManager pmgr)
             throws YPersistenceException {
         _locations.clear();
         locationNames.clear();
-        if (pmgr != null) {
-            pmgr.updateObjectExternal(this);
-        }
+        updateThis(pmgr);
     }
 
 
     public synchronized void clearLocation(YPersistenceManager pmgr, YNetElement condition)
             throws YPersistenceException {
         removeLocation(pmgr, condition);
-        if (pmgr != null) {
-            pmgr.updateObjectExternal(this);
-        }
+        updateThis(pmgr);
     }
 
 
@@ -244,10 +234,10 @@ public class YIdentifier {
         if (condition instanceof YCondition && !(condition instanceof YInputCondition)) {
             String locName = condition.toString();
             locationNames.remove(locName.substring(locName.indexOf(":") + 1, locName.length()));
-        }
-        else {
+        } else {
             locationNames.remove(condition.toString());
         }
+        updateThis(pmgr);
     }
 
 
@@ -258,10 +248,7 @@ public class YIdentifier {
         }
         _locations.add(task);
         locationNames.add(task.getID());
-
-        if (pmgr != null) {
-            pmgr.updateObjectExternal(this);
-        }
+        updateThis(pmgr);
     }
 
 
@@ -279,15 +266,22 @@ public class YIdentifier {
         return _locations;
     }
 
-    
+
     public YIdentifier getRootAncestor() {
         return getRootAncestor(this);
     }
 
-    
+
     private YIdentifier getRootAncestor(YIdentifier identifier) {
         YIdentifier parent = identifier.getParent();
         return (parent != null) ? getRootAncestor(parent) : identifier;
+    }
+
+
+    private void updateThis(YPersistenceManager pmgr) throws YPersistenceException {
+        if (pmgr != null) {
+            pmgr.updateObjectExternal(this);
+        }
     }
 
     public long getLogKey() {
@@ -298,13 +292,25 @@ public class YIdentifier {
         _logKey = key;
     }
 
-    public boolean equals(Object another) {
-        return (another instanceof YIdentifier) &&
-                another.toString().equals(this.toString());
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other instanceof YIdentifier) {
+            YIdentifier otherID = (YIdentifier) other;
+            if ((toString() != null) && toString().equals(otherID.toString())) {
+                return (getParent() == null) ? (otherID.getParent() == null) :
+                        getParent().equals(otherID.getParent());
+            }
+        }
+        return false;
+    }
+
+    public boolean equalsOrIsAncestorOf(YIdentifier another) {
+        return equals(another) || isAncestorOf(another);
     }
 
     /**
      * Returns a hash code value for the object.
+     *
      * @return a hash code value for this object.
      * @see Object#equals(Object)
      * @see java.util.Hashtable

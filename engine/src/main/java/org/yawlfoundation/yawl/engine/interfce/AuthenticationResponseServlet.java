@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -72,7 +72,7 @@ public class AuthenticationResponseServlet extends HttpServlet {
         String proxyHost = authConfig.getProxyHost() != null ? authConfig.getProxyHost() : "";
         String proxyPort = authConfig.getProxyPort() != null ? authConfig.getProxyPort() : "";
 
-        response.setContentType("text/html");
+        response.setContentType("text/html; charset=UTF-8");
         PrintWriter outputWriter = response.getWriter();
         StringBuilder output = new StringBuilder();
 

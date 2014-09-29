@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,7 +19,7 @@
 package org.yawlfoundation.yawl.wsif;
 
 import org.apache.log4j.Logger;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.TaskInformation;
@@ -54,21 +54,18 @@ public class WSIFController extends InterfaceBWebsideController {
     private static final String WSDL_PORTNAME_PARAMNAME = "YawlWSInvokerPortName";
     private static final String WSDL_OPERATIONNAME_PARAMNAME = "YawlWSInvokerOperationName";
 
-    private static final String _engineUser = "wsInvokerService";
-    private static final String _enginePassword = "yWSInvoker";
-
 
     /**
-     * Implements InterfaceBWebsideController.  It recieves messages from the engine
+     * Implements InterfaceBWebsideController.  It receives messages from the engine
      * notifying an enabled task and acts accordingly.  In this case it takes the message,
      * tries to check out the work item, and if successful it begins to start up a web service
-     * invokation.
+     * invocation.
      * @param enabledWorkItem
      */
     public void handleEnabledWorkItemEvent(WorkItemRecord enabledWorkItem) {
         try {
             if (!checkConnection(_sessionHandle)) {
-                _sessionHandle = connect(_engineUser, _enginePassword);
+                _sessionHandle = connect(engineLogonName, engineLogonPassword);
             }
             if (successful(_sessionHandle)) {
                 List<WorkItemRecord> executingChildren =
@@ -79,7 +76,7 @@ public class WSIFController extends InterfaceBWebsideController {
                     String portName = inputData.getChildText(WSDL_PORTNAME_PARAMNAME);
                     String operationName = inputData.getChildText(WSDL_OPERATIONNAME_PARAMNAME);
 
-                    Element webServiceArgsData = (Element) inputData.clone();
+                    Element webServiceArgsData = inputData.clone();
                     webServiceArgsData.removeChild(WSDL_LOCATION_PARAMNAME);
                     webServiceArgsData.removeChild(WSDL_PORTNAME_PARAMNAME);
                     webServiceArgsData.removeChild(WSDL_OPERATIONNAME_PARAMNAME);
@@ -122,7 +119,7 @@ public class WSIFController extends InterfaceBWebsideController {
                 }
             }
 
-        } catch (Exception e) {
+        } catch (Throwable e) {
             _logger.error(e.getMessage(), e);
         }
     }

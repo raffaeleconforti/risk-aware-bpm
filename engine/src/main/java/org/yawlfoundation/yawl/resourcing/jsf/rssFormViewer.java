@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -34,7 +34,8 @@ import java.io.IOException;
 import java.util.Set;
 
 /*
- * The backing bean for the YAWL 2.0 login form
+ * The backing bean for the YAWL 2.0 rss form - shows a dynform instance via an RSS
+ * request (such as the iGoogle gadget)
  *
  * @author Michael Adams
  * Date: 21/10/2007
@@ -154,15 +155,15 @@ public class rssFormViewer extends AbstractPageBean {
 
     // SPECIFIC DELARATIONS AND METHODS //
 
-    private ResourceManager rm = getApplicationBean().getResourceManager();
-    private SessionBean sb = getSessionBean();
-    private MessagePanel msgPanel = sb.getMessagePanel() ;
+    private final ResourceManager rm = getApplicationBean().getResourceManager();
+    private final SessionBean sb = getSessionBean();
+    private final MessagePanel msgPanel = sb.getMessagePanel() ;
 
     private final static String success = "<success/>";
 
     public void prerender() {
+        String msg = "";
         if (sb.isRssFormDisplay()) {
-            String msg = "";
             FormViewer form = sb.getFormViewerInstance();
             if (form != null) {
                 msg = form.postDisplay(sb.getRssFormWIR()) ;
@@ -176,13 +177,20 @@ public class rssFormViewer extends AbstractPageBean {
             }
             showMessage(msg + " Please click the button below to close this window/tab.");
         }
+        else if (sb.isRssFormCloseAttempted()) {
+            btnClose.setVisible(false);
+            sb.setRssFormCloseAttempted(false);
+            msg = "This browser does not support automatic closing of the current window/tab." +
+                  " Please close it manually.";
+            staticText1.setText(msg);            
+        }
         else {
             HttpServletRequest request = getRequest();
             String userid = request.getParameter("userid");
             String password = request.getParameter("password");
             String itemid = request.getParameter("itemid");
 
-            String msg = validateCredentials(userid, password);
+            msg = validateCredentials(userid, password);
             WorkItemRecord wir = null;
             if (successful(msg)) {
                 wir = rm.getWorkItemRecord(itemid);
@@ -202,6 +210,7 @@ public class rssFormViewer extends AbstractPageBean {
 
 
     public String btnClose_action() {
+        sb.setRssFormCloseAttempted(true);
         return null;
     }
 
@@ -228,7 +237,6 @@ public class rssFormViewer extends AbstractPageBean {
                            " queued items via your iGoogle Gadget, please " +
                            " logout the currently logged on user first." ;
             }
-            else sb.setRssAlreadyLoggedOn(true);
         }
         else {
             if (rm == null) {
@@ -242,11 +250,12 @@ public class rssFormViewer extends AbstractPageBean {
                 return "Incorrect password.";
             }
             if (! rm.hasOrgDataSource()) {
-                return "Missing or invalid organisational data source. The resource" +
-                           " service requires a connection to a valid data source" +
-                           " that contains organisational data. Please check the" +
-                           " settings in the service's web.xml to ensure a valid" +
-                           " data source is set.";
+                msgPanel.error("Missing or invalid organisational data source. The resource" +
+                               " service requires a connection to a valid data source" +
+                               " that contains organisational data. Please check the" +
+                               " settings of the 'OrgDataSource' parameter in the service's" +
+                               " web.xml to ensure a valid data source is set, and/or check" +
+                               " the configuration properties set for the data source.");
             }
             String handle = rm.login(userid, password, sb.getExternalSessionID());
             if (! rm.successful(handle)) {
@@ -265,6 +274,7 @@ public class rssFormViewer extends AbstractPageBean {
      * @param handle the session handle supplied by the service
      */
     private void initSession(Participant p, String userid, String handle) {
+        sb.setRssUserAlreadyLoggedOn(false);
         sb.setSessionhandle(handle);
         sb.setUserid(userid);
         if (! userid.equals("admin")) {
@@ -423,11 +433,8 @@ public class rssFormViewer extends AbstractPageBean {
 
 
     private void logout() {
-        if (! sb.isRssAlreadyLoggedOn()) {
+        if (! sb.isRssUserAlreadyLoggedOn()) {
             sb.doLogout();
-        }
-        else {
-            sb.setRssAlreadyLoggedOn(false);
         }
     }
 

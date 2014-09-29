@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
-import org.jdom.Element;
-import org.jdom.JDOMException;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
 import org.yawlfoundation.yawl.engine.interfce.ServletUtils;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.util.JDOMUtil;
@@ -84,9 +84,6 @@ public class RiskBased implements MetricInterface {
 	    	}
 	    	
 	    	return result;
-		} catch (JDOMException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -98,7 +95,6 @@ public class RiskBased implements MetricInterface {
      * Sends data to the specified url via a HTTP POST, and returns the reply
      * @param urlStr the url to connect to
      * @param paramsMap a map of attribute=value pairs representing the data to send
-     * @param post true if this was originally a POST request, false if a GET request
      * @return the response from the url
      * @throws IOException when there's some kind of communication problem
      */

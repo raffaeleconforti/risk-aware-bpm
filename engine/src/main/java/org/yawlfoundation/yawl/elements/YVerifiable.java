@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,9 +18,7 @@
 
 package org.yawlfoundation.yawl.elements;
 
-import org.yawlfoundation.yawl.util.YVerificationMessage;
-
-import java.util.List;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 /**
  * Implementers of this interface are contracted to verify themselves against
@@ -34,7 +32,6 @@ public interface YVerifiable {
      * Internally verify the object against YAWL language semantics and
      * report any errors and/or warnings.
      * @see org.yawlfoundation.yawl.util.YVerificationMessage
-     * @return a List of YVerificationMessage objects
      */
-    public List<YVerificationMessage> verify();
+    void verify(YVerificationHandler verificationHandler);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -72,6 +72,16 @@ public class YLogNetInstance {
 
     public void setParentTaskInstanceID(long parentTaskInstanceID) {
         this.parentTaskInstanceID = parentTaskInstanceID;
+    }
+
+
+    public boolean equals(Object other) {
+        return (other instanceof YLogNetInstance) &&
+                (this.getNetInstanceID() == ((YLogNetInstance) other).getNetInstanceID());
+    }
+
+    public int hashCode() {
+        return (int) (31 * getNetInstanceID()) % Integer.MAX_VALUE;
     }
 
 

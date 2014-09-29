@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,8 +18,8 @@
 
 package org.yawlfoundation.yawl.logging;
 
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.elements.YDecomposition;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YWorkItem;
@@ -107,6 +107,26 @@ public class YLogPredicate {
             xml.append(StringUtil.wrapEscaped(_completionPredicate, "completion"));
         xml.append("</logPredicate>");
         return xml.toString();
+    }
+
+
+    public boolean equals(Object o) {
+        if (o instanceof YLogPredicate) {
+            YLogPredicate other = (YLogPredicate) o;
+            return ((_startPredicate == null && other._startPredicate == null) ||
+                    (_startPredicate != null &&
+                            _startPredicate.equals(other._startPredicate)) &&
+                   ((_completionPredicate == null && other._completionPredicate == null) ||
+                    (_completionPredicate != null &&
+                            _completionPredicate.equals(other._completionPredicate))));
+        }
+        return false;
+    }
+
+
+    public int hashCode() {
+        return 17 * (_startPredicate != null ? _startPredicate.hashCode() : 17) *
+                (_completionPredicate != null ? _completionPredicate.hashCode() : 33);
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -32,6 +32,12 @@ public class FontUtil {
     // Uses a generic JComponent (see below) and gives a quite accurate result.
     public static Dimension getFontMetrics(String s, Font font) {
         return new FontBox().getFontBounds(s, font) ;
+    }
+
+
+    public static int getTextWidth(String s, Font font) {
+        if ((s == null) || (s.length() == 0)) return 0;
+        return (int) Math.ceil(getFontMetrics(s, font).getWidth());
     }
 
 

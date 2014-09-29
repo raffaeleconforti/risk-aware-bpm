@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -23,11 +23,9 @@ import com.sun.rave.web.ui.component.*;
 import com.sun.rave.web.ui.model.Option;
 import com.sun.rave.web.ui.model.UploadedFile;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
 import org.yawlfoundation.yawl.resourcing.datastore.orgdata.DataBackupEngine;
 import org.yawlfoundation.yawl.resourcing.datastore.orgdata.ResourceDataSet;
-import org.yawlfoundation.yawl.util.JDOMUtil;
 
 import javax.faces.FacesException;
 import javax.faces.context.ExternalContext;
@@ -37,6 +35,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 /*
  * The backing bean for the YAWL 2.0 org data mgt form
@@ -79,7 +79,6 @@ public class orgDataMgt extends AbstractPageBean {
             log("userWorkQueues Initialization Failure", e);
             throw e instanceof FacesException ? (FacesException) e: new FacesException(e);
         }
-//        tabRoles_action();
     }
 
     public void preprocess() { }
@@ -298,25 +297,28 @@ public class orgDataMgt extends AbstractPageBean {
 
     public enum AttribType { role, position, capability, orggroup }
 
-    private SessionBean _sb = getSessionBean();
-    private ResourceManager _rm = getApplicationBean().getResourceManager();
-    private ResourceDataSet orgDataSet = _rm.getOrgDataSet();
-    private MessagePanel msgPanel = _sb.getMessagePanel() ;
-    private pfOrgData innerForm = (pfOrgData) getBean("pfOrgData");
-    private Logger _log = Logger.getLogger(this.getClass());
+    private final SessionBean _sb = getSessionBean();
+    private final ResourceManager _rm = getApplicationBean().getResourceManager();
+    private final ResourceDataSet orgDataSet = _rm.getOrgDataSet();
+    private final MessagePanel msgPanel = _sb.getMessagePanel() ;
+    private final pfOrgData innerForm = (pfOrgData) getBean("pfOrgData");
+    private final Logger _log = Logger.getLogger(this.getClass());
 
 
     // Callback method that is called just before rendering takes place.
     public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.orgDataMgt);
-        _sb.showMessagePanel();
+
+        // abort load if org data isn't currently available
+        if (_sb.orgDataIsRefreshing()) return;
+
+        showMessagePanel();
 
         String selTabName = tabSet.getSelected() ;
         Tab selTab = null;
 
         if (selTabName == null) {
-
        //     setRefreshRate(0) ;               // get default refresh rate from web.xml
             tabSet.setSelected("tabRoles");
             selTab = tabRoles;
@@ -368,6 +370,7 @@ public class orgDataMgt extends AbstractPageBean {
             btnReset_action();
             _sb.setOrgDataItemRemovedFlag(false) ;
         }
+        checkDataModsEnabled();
     }
 
 
@@ -381,22 +384,26 @@ public class orgDataMgt extends AbstractPageBean {
         DataBackupEngine exporter = new DataBackupEngine();
         String result = exporter.exportOrgData();
         try {
-            Document doc = JDOMUtil.stringToDocument(result);
-            FacesContext context = FacesContext.getCurrentInstance();
-            HttpServletResponse response =
+            if (result != null) {
+                FacesContext context = FacesContext.getCurrentInstance();
+                HttpServletResponse response =
                      ( HttpServletResponse ) context.getExternalContext().getResponse();
-            response.setContentType("text/xml");
-            response.setHeader("Content-Disposition",
-                               "attachment;filename=\"YAWLOrgDataExport.ybkp\"");
-            OutputStream os = response.getOutputStream();
-            OutputStreamWriter osw = new OutputStreamWriter(os);
-            osw.write(JDOMUtil.documentToString(doc));
-            osw.flush();
-            osw.close();
-            FacesContext.getCurrentInstance().responseComplete();
+                response.setContentType("text/xml");
+                response.setCharacterEncoding("UTF-8");
+                response.setHeader("Content-Disposition",
+                                   "attachment;filename=\"YAWLOrgDataExport.ybkp\"");
+                OutputStream os = response.getOutputStream();
+                OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
+                osw.write(result);
+                osw.flush();
+                osw.close();
+                FacesContext.getCurrentInstance().responseComplete();
+            //    msgPanel.success("Data successfully exported to file 'YAWLOrgDataExport.ybkp'");
+            }
+            else msgPanel.error("Unable to create export file: malformed xml.");
         }
         catch (IOException ioe) {
-            msgPanel.error("Could not create export file. Please see the log for details.");
+            msgPanel.error("Unable to create export file. Please see the log for details.");
         }
         return null ;
     }
@@ -417,12 +424,25 @@ public class orgDataMgt extends AbstractPageBean {
         if (fileName.length() > 0) {
             if (fileName.endsWith(".ybkp")) {
                 DataBackupEngine importer = new DataBackupEngine();
-                String result = importer.importOrgData(uploadedFile.getAsString());
-                if (result.startsWith("Invalid"))
-                    msgPanel.error(result);
+                String xml;
+                try {
+                    xml = new String(uploadedFile.getBytes(), "UTF-8");
+                }
+                catch (UnsupportedEncodingException uee) {
+                    xml = uploadedFile.getAsString();
+                }
+                List<String> result = importer.importOrgData(xml);
+                if (! ((result == null) || result.isEmpty())) {
+                    if (result.size() == 1) {
+                        msgPanel.error(result);
+                    }
+                    else {
+                        _sb.refreshOrgDataParticipantList();
+                        msgPanel.success(result);
+                    }
+                }
                 else {
-                    _sb.refreshOrgDataParticipantList();
-                    msgPanel.success(result);
+                    msgPanel.error("Data import failed. Please see log file for details.");
                 }
             }
             else msgPanel.error(
@@ -489,7 +509,7 @@ public class orgDataMgt extends AbstractPageBean {
             }
             catch (Exception e) {
                 msgPanel.error("Could not remove chosen item. See log file for details.");
-                _log.error("Handled Exception: Unable to remove reosurce attribute", e);
+                _log.error("Handled Exception: Unable to remove resource attribute", e);
             }
             _sb.setOrgDataItemRemovedFlag(true) ;
             _sb.setOrgDataChoice(null);
@@ -538,7 +558,6 @@ public class orgDataMgt extends AbstractPageBean {
             btnReset.setToolTip("Discard unsaved changes");
             btnSave.setDisabled(false);
             btnRemove.setDisabled(false);
-            body1.setFocus("form1:pfQueueUI:txtAdd");
             populateForm(getAttribType(_sb.getActiveTab())) ;            
         }
         else {
@@ -655,6 +674,28 @@ public class orgDataMgt extends AbstractPageBean {
 
     private void showItem(String id, AttribType type) {
         innerForm.populateGUI(id, type);
+    }
+
+
+    private void showMessagePanel() {
+        body1.setFocus(msgPanel.hasMessage() ? "form1:pfMsgPanel:btnOK001" :
+                "form1:pfOrgData:txtName");
+        _sb.showMessagePanel();
+    }
+
+
+    private void checkDataModsEnabled() {
+        if (! orgDataSet.isExternalOrgDataModsAllowed()) {
+            disableButton(btnAdd);
+            disableButton(btnRemove);
+            disableButton(btnSave);
+            disableButton(btnReset);
+        }
+    }
+
+    private void disableButton(Button b) {
+       b.setToolTip("External data modifications are disabled");
+       b.setDisabled(true);
     }
 
 }

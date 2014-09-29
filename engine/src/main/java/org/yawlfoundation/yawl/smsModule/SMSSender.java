@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,7 +19,7 @@
 package org.yawlfoundation.yawl.smsModule;
 
 import org.apache.log4j.Logger;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.engine.interfce.interfaceB.InterfaceBWebsideController;
@@ -61,8 +61,6 @@ public class SMSSender extends InterfaceBWebsideController implements Runnable {
     private static final String SMS_PHONENO_PARAMNAME = "SMSPhoneNumber";
     private static final String SMS_REPLYMESSAGE_PARAMNAME = "SMSReplyMessage";
 
-    private static final String _engineUser = "smsService";
-    private static final String _enginePassword = "ySMS";
 
     /**
      * Checks the work item out of the engine, sends an sms message, and
@@ -72,7 +70,7 @@ public class SMSSender extends InterfaceBWebsideController implements Runnable {
     public void handleEnabledWorkItemEvent(WorkItemRecord enabledWorkItem) {
         try {
             if (!checkConnection(_sessionHandle)) {
-                _sessionHandle = connect(_engineUser, _enginePassword);
+                _sessionHandle = connect(engineLogonName, engineLogonPassword);
             }
             if (successful(_sessionHandle)) {
                 List executingChildren = checkOutAllInstancesOfThisTask(enabledWorkItem, _sessionHandle);
@@ -86,7 +84,7 @@ public class SMSSender extends InterfaceBWebsideController implements Runnable {
 //                    String smsConnectionID = performSMSConnection(_smsUsername, _smsPassword);
 
                     //next get the parameters for message sending.
-                    Element paramsData = itemRecord.getWorkItemData();
+                    Element paramsData = itemRecord.getDataList();
                     String message = paramsData.getChildText(SMS_MESSAGE_PARAMNAME);
                     String toPhone = paramsData.getChildText(SMS_PHONENO_PARAMNAME);
 //                    String msgCorrelationID = itemRecord.getID().substring(0, 12);
@@ -267,7 +265,7 @@ public class SMSSender extends InterfaceBWebsideController implements Runnable {
                             smsReplyMessage.setText(inter._replyMessage._messageTxt);
                             inter._caseDataBoundForEngine.addContent(smsReplyMessage);
                             String result = checkInWorkItem(inter._workItemRecord.getID(),
-                                    inter._workItemRecord.getWorkItemData(),
+                                    inter._workItemRecord.getDataList(),
                                     inter._caseDataBoundForEngine,
                                     _sessionHandle);
                             _logger.info("result of work item checkin = " + result);

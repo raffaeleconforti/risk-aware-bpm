@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,14 +19,11 @@
 package org.yawlfoundation.yawl.swingWorklist;
 
 import org.apache.log4j.Logger;
-import org.jdom.input.JDOMParseException;
+import org.jdom2.input.JDOMParseException;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.gui.YAdminGUI;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
-import org.yawlfoundation.yawl.exceptions.YLogException;
-import org.yawlfoundation.yawl.exceptions.YPersistenceException;
-import org.yawlfoundation.yawl.exceptions.YQueryException;
-import org.yawlfoundation.yawl.exceptions.YSchemaBuildingException;
+import org.yawlfoundation.yawl.exceptions.*;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -295,11 +292,7 @@ public class YWorklistGUI extends JPanel implements ActionListener, ListSelectio
         if (rowSel >= 0) {
             String caseID = (String) _availableTable.getValueAt(rowSel, 0);
             String taskID = (String) _availableTable.getValueAt(rowSel, 1);
-            try {
-                _worklistModel.applyForWorkItem(caseID, taskID);
-            } catch (YSchemaBuildingException e) {
-                e.printStackTrace();
-            }
+            _worklistModel.applyForWorkItem(caseID, taskID);
         }
     }
 
@@ -313,9 +306,7 @@ public class YWorklistGUI extends JPanel implements ActionListener, ListSelectio
         if (e.getValueIsAdjusting()) return;
         ListSelectionModel lsm =
                 (ListSelectionModel) e.getSource();
-        if (lsm.isSelectionEmpty()) {
-            //no rows are selected
-        } else {
+        if (!lsm.isSelectionEmpty()) {
             int selectedRow = lsm.getMinSelectionIndex();
             //selectedRow is selected
             String caseID = (String) _activeTable.getValueAt(selectedRow, 0);
@@ -334,7 +325,6 @@ public class YWorklistGUI extends JPanel implements ActionListener, ListSelectio
         JMenuItem _viewDataItem = new JMenuItem(_viewDataCommand);
         JMenuItem _newInstanceItem = new JMenuItem(_newInstanceCommand);
         JMenuItem _cancelItem = new JMenuItem(_suspendTaskCommand);
-
 
         public WorkListPopupMenu(YWorklistGUI ref) {
             super("File");

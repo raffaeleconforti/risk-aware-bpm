@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -55,13 +55,13 @@ public class YTimerVariable {
 
     public void setState(YWorkItemTimer.State state, boolean restoring) {
 
-        // when restoring, the initial org.yawlfoundation.yawl.risk.state is always 'dormant', so invalid
+        // when restoring, the initial state is always 'dormant', so invalid
         // transitions should be ignored
         if (restoring || isValidTransition(state)) {
             _state = state;
         }
         else {
-            Logger.getLogger(this.getClass()).debug("Attempt made to move timer variable org.yawlfoundation.yawl.risk.state " +
+            Logger.getLogger(this.getClass()).debug("Attempt made to move timer variable state " +
             "for task '" + _ownerTask.getName() + "' from " + _state.name() + " to " + state.name());
         }
     }
@@ -75,7 +75,7 @@ public class YTimerVariable {
 
 
     // a timer predicate takes the form "timer(taskname) op 'value'"
-    // op must be "=" or "!="; value must be a valid timer org.yawlfoundation.yawl.risk.state
+    // op must be "=" or "!="; value must be a valid timer state
     public boolean evaluatePredicate(String predicate) throws YQueryException {
         boolean negate;
         if (predicate.contains("!=")) {
@@ -94,7 +94,7 @@ public class YTimerVariable {
             return negate ^ queryState.equals(getStateString());     // XOR op & result
         }
         else throw new YQueryException("Malformed timer predicate: missing " +
-                "quote(s) around org.yawlfoundation.yawl.risk.state value; predicate: " + predicate);
+                "quote(s) around state value; predicate: " + predicate);        
     }
 
 

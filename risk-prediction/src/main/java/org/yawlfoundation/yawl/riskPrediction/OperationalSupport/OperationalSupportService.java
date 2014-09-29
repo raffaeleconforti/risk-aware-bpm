@@ -119,7 +119,12 @@ public class OperationalSupportService extends InterfaceBWebsideController imple
 		
 	}
 
-	@Override
+    @Override
+    public String handleWorkItemAbortException(WorkItemRecord wir, String caseData) {
+        return null;
+    }
+
+    @Override
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		
 		// TODO Auto-generated method stub
@@ -141,32 +146,21 @@ public class OperationalSupportService extends InterfaceBWebsideController imple
 	}
 
 	@Override
-	public void handleWorkItemAbortException(WorkItemRecord wir) {
-		
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	public void handleTimeoutEvent(WorkItemRecord wir, String taskList) {
 		
 		// TODO Auto-generated method stub
 		
 	}
 
-	@Override
-	public void handleResourceUnavailableException(WorkItemRecord wir) {
-		
-		// TODO Auto-generated method stub
-		
-	}
+    @Override
+    public void handleResourceUnavailableException(String resourceID, WorkItemRecord wir, String caseData, boolean primary) {
 
-	@Override
-	public void handleConstraintViolationException(WorkItemRecord wir) {
-		
-		// TODO Auto-generated method stub
-		
-	}
+    }
+
+    @Override
+    public String handleConstraintViolationException(WorkItemRecord wir, String caseData) {
+        return null;
+    }
 
 	public OperationalSupportService getOperationalSupportClientInstance(InterfaceManager im) {
     	

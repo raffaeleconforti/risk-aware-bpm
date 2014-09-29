@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,13 +20,15 @@ package org.yawlfoundation.yawl.engine.announcement;
 
 /**
  * @author Mike Fowler
- *         Date: Apr 29, 2008
+ * @date Apr 29, 2008
  */
 
 public enum AnnouncementContext
 {
-    NORMAL,               //Announcements are being posted as part of a specification or an extra-engine request
+    NORMAL,               // Announcements are being posted as part of a specification or
+                          // an extra-engine request
 
-    RECOVERING            //Announcements are being posted due to restart processing within the engine.
-                          // Note: In this context, the underlying engine status may be running rather than initialising!
+    RECOVERING            // Announcements are being posted due to restart processing
+                          // within the engine. Note: In this context, the underlying
+                          // engine status may be running rather than initialising!
 }

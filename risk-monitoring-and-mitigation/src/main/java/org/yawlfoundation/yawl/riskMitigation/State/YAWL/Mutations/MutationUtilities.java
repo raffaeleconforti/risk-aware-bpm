@@ -12,7 +12,7 @@ import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.riskMitigation.State.YAWL.StateYAWLProcess;
 import org.yawlfoundation.yawl.riskMitigation.State.YAWL.YStateProcessUtilities;
 import org.yawlfoundation.yawl.sensors.YSensorManagerImplLayer;

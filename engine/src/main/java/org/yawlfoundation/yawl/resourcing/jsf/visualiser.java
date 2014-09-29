@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,8 +20,10 @@ package org.yawlfoundation.yawl.resourcing.jsf;
 
 import com.sun.rave.web.ui.appbase.AbstractPageBean;
 import com.sun.rave.web.ui.component.*;
-import org.jdom.Element;
+import com.sun.rave.web.ui.component.Button;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.resourcing.DynamicForm;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
 import org.yawlfoundation.yawl.resourcing.WorkQueue;
 import org.yawlfoundation.yawl.resourcing.jsf.dynform.DynFormFactory;
@@ -31,6 +33,7 @@ import org.yawlfoundation.yawl.util.JDOMUtil;
 import javax.faces.FacesException;
 import javax.faces.component.html.HtmlOutputText;
 import javax.faces.context.ExternalContext;
+import java.awt.*;
 import java.io.IOException;
 import java.util.Set;
 
@@ -171,6 +174,7 @@ public class visualiser extends AbstractPageBean {
     private SessionBean _sb = getSessionBean();
     private MessagePanel msgPanel = _sb.getMessagePanel() ;
     private ResourceManager _rm = getApplicationBean().getResourceManager();
+    private static final Dimension DEFAULT_DIMENSION = new Dimension(800,600);
 
 
     public String btnReturn_action() {
@@ -196,10 +200,10 @@ public class visualiser extends AbstractPageBean {
         }
 
         _sb.setDynFormType(ApplicationBean.DynFormType.tasklevel);
-        DynFormFactory df = (DynFormFactory) getBean("DynFormFactory");
-        df.setHeaderText("Edit Work Item: " + selectedWIR.getCaseID());
-        df.setDisplayedWIR(selectedWIR);
-        if (df.initDynForm("YAWL 2.0 - Edit Work Item")) {
+        DynamicForm df = (DynamicForm) getBean("DynFormFactory");
+        String title = "YAWL 3.0 - Edit Work Item";
+        String header = "Edit Work Item: " + selectedWIR.getCaseID();
+        if (df.makeForm(title, header, _sb.getTaskSchema(selectedWIR), selectedWIR)) {
             _sb.setVisualiserReferred(true);
             _sb.setVisualiserEditedWIR(selectedWIR);
             return "showDynForm" ;
@@ -279,12 +283,15 @@ public class visualiser extends AbstractPageBean {
     public String getAppletHtml() {
         String baseURI = getApplicationBean().getResServiceBaseURI();
         Participant p = _sb.getParticipant();
-        StringBuilder result = new StringBuilder("<applet width=\"800\" height=\"600\"");
-        result.append(" archive=\"visualiser.jar,javax.servlet.jar,jdom.jar,")
-              .append(" resourceService.jar,saxon9.jar,log4j-1.2.14.jar,commons-codec-1.4.jar\"")
-              .append(" codebase=\"")
-              .append(baseURI)
-              .append("/visualiserApplet\"")
+        Dimension view = getViewSize();
+        StringBuilder result = new StringBuilder("<applet width=\"");
+        result.append(view.width)
+              .append("\" height=\"")
+              .append(view.height)
+              .append("\"")
+              .append(" archive=\"visualiser.jar,javax.servlet.jar,jdom-2.0.5.jar,")
+              .append(" resourceService.jar,saxon9.jar,log4j-1.2.16.jar,commons-codec-1.9.jar\"")
+              .append(" codebase=\"../../visualiserApplet\"")
               .append(" code=\"worklist.WRKLApplet.class\" MAYSCRIPT>")
               .append(" <param name=\"user\" value=\"")
               .append(p.getUserID())
@@ -311,6 +318,12 @@ public class visualiser extends AbstractPageBean {
             }
         }
         return selectedWIR;
+    }
+
+
+    private Dimension getViewSize() {
+        Dimension d = _rm.getVisualiserDimension();
+        return (d != null) ? d : DEFAULT_DIMENSION;
     }
 
 }

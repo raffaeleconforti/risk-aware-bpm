@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -76,7 +76,7 @@ public class InterfaceX_EngineSideServer extends HttpServlet {
             if (_engine == null) {
 
                 // turn on persistence if required
-                String persistOn = context.getInitParameter("EnablePersistance");
+                String persistOn = context.getInitParameter("EnablePersistence");
                 boolean persist = "true".equalsIgnoreCase(persistOn);
                 _engine = new EngineGatewayImpl(persist);
                 context.setAttribute("engine", _engine);
@@ -111,7 +111,7 @@ public class InterfaceX_EngineSideServer extends HttpServlet {
         if (_engine.enginePersistenceFailure())
         {
             logger.fatal("************************************************************");
-            logger.fatal("A failure has occured whilst persisting workflow org.yawlfoundation.yawl.risk.state to the");
+            logger.fatal("A failure has occured whilst persisting workflow state to the");
             logger.fatal("database. Check the satus of the database connection defined");
             logger.fatal("for the YAWL service, and restart the YAWL web application.");
             logger.fatal("Further information may be found within the Tomcat log files.");
@@ -173,7 +173,7 @@ public class InterfaceX_EngineSideServer extends HttpServlet {
             }
             else if ("cancelWorkItem".equals(action)) {
                 String fail = request.getParameter("fail");
-                msg.append(_engine.cancelWorkItem(workitemID, fail, sessionHandle));
+                msg.append(_engine.cancelWorkItem(workitemID, data, fail, sessionHandle));
             }
         }
         catch (RemoteException re) {

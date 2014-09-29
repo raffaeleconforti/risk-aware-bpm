@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,18 +19,18 @@
 package org.yawlfoundation.yawl.worklet.exception;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.IllegalAddException;
-import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.IllegalAddException;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
+import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.worklet.rdr.RdrConclusion;
+import org.yawlfoundation.yawl.worklet.rdr.RuleType;
 import org.yawlfoundation.yawl.worklet.support.Library;
 import org.yawlfoundation.yawl.worklet.support.RdrConversionTools;
 import org.yawlfoundation.yawl.worklet.support.WorkletRecord;
 
-import java.util.Iterator;
 import java.util.List;
 
 /** The HandlerRunner class manages an exception handling process. An instance
@@ -68,7 +68,7 @@ public class HandlerRunner extends WorkletRecord {
      * @param monitor the CaseMonitor for the case the generated the exception
      * @param rdrConc the RdrConclusion of a rule that represents the handling process
      */
-    public HandlerRunner(CaseMonitor monitor, RdrConclusion rdrConc, int xType) {
+    public HandlerRunner(CaseMonitor monitor, RdrConclusion rdrConc, RuleType xType) {
         super() ;
         _parentMonitor = monitor ;
         _rdrConc = rdrConc ;
@@ -83,7 +83,7 @@ public class HandlerRunner extends WorkletRecord {
 
     /** This constructor is used when an exception is raised at the workitem level */
     public HandlerRunner(CaseMonitor monitor, WorkItemRecord wir,
-                         RdrConclusion rdrConc, int xType) {
+                         RdrConclusion rdrConc, RuleType xType) {
         this(monitor, rdrConc, xType);
         _wir = wir ;
         _wirStr = wir.toXML();
@@ -145,6 +145,11 @@ public class HandlerRunner extends WorkletRecord {
         Element list = super.getDatalist() ;
         if (list == null) list = _parentMonitor.getCaseData();
         return list ;
+    }
+
+    public Element getUpdatedData() {
+        if (_wir != null) return _wir.getUpdatedData();
+        return _parentMonitor.getCaseData();
     }
 
     //***************************************************************************//
@@ -238,7 +243,7 @@ public class HandlerRunner extends WorkletRecord {
 
     /** Stringifies some data members for persistence purposes */
     private void initPersistedData() {
-        _rdrConcStr = JDOMUtil.elementToStringDump(_rdrConc.getConclusion());
+        _rdrConcStr = JDOMUtil.elementToStringDump(_rdrConc.toElement());
         _caseID = _parentMonitor.getCaseID() ;
         _id = this.hashCode();
     }
@@ -338,13 +343,10 @@ public class HandlerRunner extends WorkletRecord {
         Element eWorklets = new Element("worklets") ;
 
         try {
-           // transfer the workitem's data items to the file
-           List dataItems = getDatalist().getChildren() ;
-           Iterator itr = dataItems.iterator();
-           while (itr.hasNext()) {
-               Element e = (Element) itr.next() ;
-               eCaseData.addContent((Element) e.clone());
-           }
+            // transfer the workitem's data items to the file
+            for (Element e : getDatalist().getChildren()) {
+                eCaseData.addContent(e.clone());
+            }
 
            // set values for case identifiers
            eSpecid.setText(_parentMonitor.getSpecID().getIdentifier());
@@ -359,14 +361,12 @@ public class HandlerRunner extends WorkletRecord {
             }
 
             // add the worklet names and case ids
-            Iterator witr = _runners.getAllWorkletNames().iterator() ;
-            while (witr.hasNext()) {
-                Element eWorkletName = new Element("workletName") ;
-                Element eRunningCaseId = new Element("runningcaseid") ;
+            for (String wName : _runners.getAllWorkletNames()) {
+                Element eWorkletName = new Element("workletName");
+                Element eRunningCaseId = new Element("runningcaseid");
                 Element eWorklet = new Element("worklet");
-                String wName = (String) witr.next();
-                eWorkletName.setText(wName) ;
-                eRunningCaseId.setText(_runners.getCaseID(wName)) ;
+                eWorkletName.setText(wName);
+                eRunningCaseId.setText(_runners.getCaseID(wName));
                 eWorklet.addContent(eWorkletName);
                 eWorklet.addContent(eRunningCaseId);
                 eWorklets.addContent(eWorklet);
@@ -375,8 +375,8 @@ public class HandlerRunner extends WorkletRecord {
             eReason.setText(String.valueOf(_reasonType));
 
             // add the nodeids to the relevent elements
-            eSatisfied.setText(_searchPair[0].getNodeIdAsString()) ;
-            eTested.setText(_searchPair[1].getNodeIdAsString()) ;
+            eSatisfied.setText(_searchPair.getLastTrueNode().getNodeIdAsString()) ;
+            eTested.setText(_searchPair.getLastEvaluatedNode().getNodeIdAsString()) ;
             eLastNode.addContent(eSatisfied) ;
             eLastNode.addContent(eTested) ;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.engine.instance;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 
 /**
  * Author: Michael Adams
@@ -26,9 +26,9 @@ import org.jdom.Element;
  */
 public interface YInstance {
 
-    public String toXML();
+    String toXML();
 
-    public void fromXML(String s);
+    void fromXML(String s);
 
-    public void fromXML(Element e);
+    void fromXML(Element e);
 }

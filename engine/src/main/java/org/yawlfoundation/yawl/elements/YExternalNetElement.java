@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,10 +18,15 @@
 
 package org.yawlfoundation.yawl.elements;
 
+import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YNetElementDocoParser;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -54,13 +59,33 @@ public abstract class YExternalNetElement extends YNetElement implements YVerifi
     }
 
 
+    public void setID(String id) {
+        String oldID = getID();
+        super.setID(id);
+        _net.refreshNetElementIdentifier(oldID);
+    }
+
+
     public String getName() { return _name; }
 
     public void setName(String name) { _name = name; }
 
-    public String getDocumentation() { return _documentation; }
+    public String getDocumentation() {
+        return _documentation;
+    }
+
+    public String getDocumentationPreParsed() {
+        return preparseDocumentation();
+    }
 
     public void setDocumentation(String doco) { _documentation = doco; }
+
+
+    /**
+     * Gets the net that contains this atomic task.
+     * @return the containing net.
+     */
+    public YNet getNet() { return _net; }
 
 
     public String getProperID() {
@@ -75,8 +100,10 @@ public abstract class YExternalNetElement extends YNetElement implements YVerifi
     public void addPreset(YFlow flow) {
         if (flow != null) {
             YExternalNetElement prior = flow.getPriorElement();
-            _presetFlows.put(prior.getID(), flow);
-            prior._postsetFlows.put(this.getID(), flow);
+            if (prior != null) {
+                _presetFlows.put(prior.getID(), flow);
+                prior._postsetFlows.put(this.getID(), flow);
+            }
         }
     }
 
@@ -88,8 +115,10 @@ public abstract class YExternalNetElement extends YNetElement implements YVerifi
     public void addPostset(YFlow flow) {
         if (flow != null) {
             YExternalNetElement next = flow.getNextElement();
-            _postsetFlows.put(next.getID(), flow);
-            next._presetFlows.put(this.getID(), flow);
+            if (next != null) {
+                _postsetFlows.put(next.getID(), flow);
+                next._presetFlows.put(this.getID(), flow);
+            }
         }
     }
 
@@ -162,7 +191,7 @@ public abstract class YExternalNetElement extends YNetElement implements YVerifi
      * @return the flow connecting the elements
      */
     public YFlow getPresetFlow(YExternalNetElement netElement) {
-        return _postsetFlows.get(netElement.getID());
+        return _presetFlows.get(netElement.getID());
     }
 
 
@@ -234,66 +263,56 @@ public abstract class YExternalNetElement extends YNetElement implements YVerifi
  	      _yawlMappingSet.addAll(elements);
     }
 
+
+    private String preparseDocumentation() {
+        if ((_documentation != null) && (_documentation.contains("${/"))) {
+            return new YNetElementDocoParser(_net.getInternalDataDocument()).parse(_documentation);
+        }
+        return _documentation;
+    }
+    
+
      /************************************************************************/
 
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
-        messages.addAll(verifyPresetFlows());
-        messages.addAll(verifyPostsetFlows());
-        return messages;
+    public void verify(YVerificationHandler handler) {
+        verifyPresetFlows(handler);
+        verifyPostsetFlows(handler);
     }
 
 
-    protected List<YVerificationMessage> verifyPostsetFlows() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
+    protected void verifyPostsetFlows(YVerificationHandler handler) {
         if (_net == null) {
-            messages.add(new YVerificationMessage(this,
-                    this + " This must have a net to be valid.",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " must have a net to be valid.");
         }
         if (_postsetFlows.size() == 0) {
-            messages.add(new YVerificationMessage(this,
-                    this + " The postset size must be > 0",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " postset size must be > 0");
         }
         for (YFlow flow : _postsetFlows.values()) {
             if (flow.getPriorElement() != this) {
-                messages.add(new YVerificationMessage(
-                        this, "The XML based imports should never cause this ... any flow that "
-                        + this
-                        + " contains should have the getPriorElement() point back to "
-                        + this +
-                        " [END users should never see this message.]",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, "Element [" + flow.getPriorElement() +
+                        "] is a prior element of [" + this + "] but that element" +
+                        " does not contain [" + this + "] on an outgoing flow.");
             }
-            messages.addAll(flow.verify(this));
+            flow.verify(this, handler);
         }
-        return messages;
     }
 
 
-    protected List<YVerificationMessage> verifyPresetFlows() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
+    protected void verifyPresetFlows(YVerificationHandler handler) {
         if (_presetFlows.size() == 0) {
-            messages.add(new YVerificationMessage(this,
-                    this + " The preset size must be > 0",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " preset size must be > 0");
         }
         for (YFlow flow : _presetFlows.values()) {
             if (flow.getNextElement() != this) {
-                messages.add(new YVerificationMessage(this,
-                        "The XML Schema would have caught this... But the getNextElement()" +
-                        " method must point to the element containing the flow in its preset." +
-                        " [END users should never see this message.]",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, this + " has a preset flow [" +
+                        flow + "] that does not have " + this + " as a postset element.");
             }
             if (!flow.getPriorElement().getPostsetElements().contains(this)) {
-                messages.add(new YVerificationMessage(this, this + " has a preset element " +
+                handler.error(this, this + " has a flow from a preset element " +
                         flow.getPriorElement() + " that does not have " + this +
-                        " as a postset element.", YVerificationMessage.ERROR_STATUS));
+                        " as a postset element.");
             }
         }
-        return messages;
     }
 
 
@@ -334,9 +353,9 @@ public abstract class YExternalNetElement extends YNetElement implements YVerifi
 
     public String toXML() {
         StringBuilder xml = new StringBuilder();
-        if (_name != null) xml.append(StringUtil.wrap(_name, "name"));
+        if (_name != null) xml.append(StringUtil.wrapEscaped(_name, "name"));
         if (_documentation != null)
-            xml.append(StringUtil.wrap(_documentation, "documentation"));
+            xml.append(StringUtil.wrapEscaped(_documentation, "documentation"));
 
         for (YFlow flow : _postsetFlows.values()) {
             String flowsToXML = flow.toXML();

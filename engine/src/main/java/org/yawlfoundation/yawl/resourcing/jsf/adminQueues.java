@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -77,7 +77,6 @@ public class adminQueues extends AbstractPageBean {
             log("userWorkQueues Initialization Failure", e);
             throw e instanceof FacesException ? (FacesException) e: new FacesException(e);
         }
-//        tabUnOffered_action();
     }
 
 
@@ -251,6 +250,13 @@ public class adminQueues extends AbstractPageBean {
     public void setBtnSynch(Button btn) { btnSynch = btn; }
 
 
+    private Button btnSecRes = new Button();
+
+    public Button getBtnSecRes() { return btnSecRes; }
+
+    public void setBtnSecRes(Button btn) { btnSecRes = btn; }
+
+
     private Meta metaRefresh = new Meta();
 
     public Meta getMetaRefresh() { return metaRefresh; }
@@ -269,7 +275,8 @@ public class adminQueues extends AbstractPageBean {
 
     // SPECIFIC DELARATIONS AND METHODS //
 
-    private SessionBean _sb = getSessionBean();
+    private final SessionBean _sb = getSessionBean();
+    private final MessagePanel _msgPanel = _sb.getMessagePanel();
 
     /**
      * Overridden method that is called immediately before the page is rendered
@@ -281,12 +288,15 @@ public class adminQueues extends AbstractPageBean {
         // hide 'direct to me' checkbox if logged on with 'admin' userid
         cbxDirectToMe.setVisible(_sb.getParticipant() != null);
 
+        // abort load if org data isn't currently available
+        if (_sb.orgDataIsRefreshing()) return;
+
         // take appropriate postback action if required
         if (! _sb.performAdminQueueAction()) {
-            _sb.getMessagePanel().error("Could not complete workitem action." +
+           _msgPanel.error("Could not complete workitem action." +
                     " Please see the log files for details.");               
         }
-        _sb.showMessagePanel();
+        showMessagePanel();
 
         // goto last selected tab
         if (_sb.getSourceTab() != null) {
@@ -341,6 +351,11 @@ public class adminQueues extends AbstractPageBean {
         return null ;
     }
 
+    public String btnSecRes_action() {
+        _sb.loadSecondaryResources();
+        return "showSecondaryResources";
+    }
+
     public String btnOffer_action() {
         return selectParticipant("Offer") ;
     }
@@ -387,7 +402,7 @@ public class adminQueues extends AbstractPageBean {
         else {
             _sb.setDirectToMeChoice(null);
             if (ResourceManager.getInstance().getOrgDataSet().getParticipantCount() == 0) {
-                _sb.getMessagePanel().error("Unable to assign workitem: " +
+                _msgPanel.error("Unable to assign workitem: " +
                     "Missing or empty organisational database. Please check and, if " +
                     "necessary, add some participants via the 'User Mgt' form, then " +
                     "return to this form to assign the workitem.");
@@ -450,9 +465,11 @@ public class adminQueues extends AbstractPageBean {
     private int populateQueue(int queueType) {
         int result = -1;                                    // default for empty queue
         Set<WorkItemRecord> queue = _sb.refreshQueue(queueType);
+        boolean queueHasItems = (! ((queue == null) || queue.isEmpty()));
         ((pfQueueUI) getBean("pfQueueUI")).clearQueueGUI();
+        ((pfQueueUI) getBean("pfQueueUI")).getTxtDocumentation().setReadOnly(! queueHasItems);
 
-        if ((queue != null) && (!queue.isEmpty())) {
+        if (queueHasItems) {
             addItemsToListOptions(queue, _sb.getChosenWIR(queueType)) ;
             showWorkItem(_sb.getChosenWIR(queueType), queueType);
             result = queue.size() ;
@@ -476,9 +493,12 @@ public class adminQueues extends AbstractPageBean {
             cbbAssignedTo.setItems(_sb.getAdminQueueAssignedList());
             lblAssignedTo.setText(_sb.getAssignedToText());
             txtResourceState.setText(wir.getResourceStatus());
-            processButtonEnablement(wir.getResourceStatus());
+            processButtonEnablement(wir);
         }
-        else enableUnofferedButtons(! wir.hasStatus(WorkItemRecord.statusSuspended));
+        else {
+            enableUnofferedButtons(! wir.hasStatus(WorkItemRecord.statusSuspended));
+            btnSecRes.setDisabled(isBetaVersion(wir) || (! wir.isEnabledOrFired()));
+        }
     }
 
     
@@ -508,10 +528,12 @@ public class adminQueues extends AbstractPageBean {
 
     /**
      * Enable or disable buttons based on the status of the selected workitem
-     * @param status the resource stats of the workitem
+     * @param wir the selected workitem
      */
-    private void processButtonEnablement(String status) {
-        btnReoffer.setDisabled(false);
+    private void processButtonEnablement(WorkItemRecord wir) {
+        btnReoffer.setDisabled(! getApplicationBean().canReoffer(wir));
+        btnSecRes.setDisabled(isBetaVersion(wir) || (! wir.isEnabledOrFired()));
+        String status = wir.getResourceStatus();
         if (status != null) {
             btnReallocate.setDisabled(status.equals(WorkItemRecord.statusResourceOffered));
             btnRestart.setDisabled(status.equals(WorkItemRecord.statusResourceOffered) ||
@@ -521,6 +543,11 @@ public class adminQueues extends AbstractPageBean {
             btnReallocate.setDisabled(true);
             btnRestart.setDisabled(true);
         }
+    }
+
+
+    private boolean isBetaVersion(WorkItemRecord wir) {
+        return ResourceManager.getInstance().isSpecBetaVersion(wir);
     }
 
 
@@ -535,18 +562,27 @@ public class adminQueues extends AbstractPageBean {
             btnReallocate.setDisabled(true);
             btnRestart.setDisabled(true);
         }
+        btnSecRes.setDisabled(true);
     }
 
 
     private void enableUnofferedButtons(boolean liveStatus) {
         btnOffer.setDisabled(false);
         btnAllocate.setDisabled(false);
-        btnStart.setDisabled(! liveStatus);        
+        btnStart.setDisabled(! liveStatus);
     }
+
 
     private void clearWorklistedFields() {
         cbbAssignedTo.setItems(null);
         lblAssignedTo.setText("Assigned To");
         txtResourceState.setText(" ");        
     }
+
+    private void showMessagePanel() {
+        body1.setFocus(_msgPanel.hasMessage() ? "form1:pfMsgPanel:btnOK001" :
+                "form1:pfQueueUI:lbxItems");
+        _sb.showMessagePanel();
+    }
+
 }

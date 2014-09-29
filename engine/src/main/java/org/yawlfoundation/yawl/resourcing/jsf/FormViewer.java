@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,16 +18,22 @@
 
 package org.yawlfoundation.yawl.resourcing.jsf;
 
-import org.jdom.Element;
+import org.apache.log4j.Logger;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.resourcing.DynamicForm;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
-import org.yawlfoundation.yawl.resourcing.jsf.dynform.DynFormFactory;
+import org.yawlfoundation.yawl.util.HttpURLValidator;
 import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.util.SaxonUtil;
+import org.yawlfoundation.yawl.util.StringUtil;
 
 import javax.faces.context.ExternalContext;
 import javax.faces.context.FacesContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.io.IOException;
 
 /**
  * Author: Michael Adams
@@ -37,8 +43,12 @@ public class FormViewer {
 
     private SessionBean _sb;
     private ResourceManager _rm;
+    private Logger _log;
 
-    public FormViewer() { _rm = ResourceManager.getInstance(); }
+    public FormViewer() {
+        _rm = ResourceManager.getInstance();
+        _log = Logger.getLogger(this.getClass());
+    }
 
     public FormViewer(SessionBean sb) {
         this();
@@ -51,7 +61,7 @@ public class FormViewer {
 
 
     public String display(WorkItemRecord wir) {
-        String result ;
+        String result = null;
 
         // if there's a custom form for this item, use it
         if (wir.getCustomFormURL() != null) {
@@ -59,12 +69,12 @@ public class FormViewer {
         }
 
         // otherwise default to a dynamic form
-        else {
+        if (result == null) {
             _sb.setDynFormType(ApplicationBean.DynFormType.tasklevel);
 
-            DynFormFactory factory = _sb.getDynFormFactoryInstance();
-            factory.setDisplayedWIR(wir);
-            if (factory.initDynForm("YAWL 2.1 - Edit Work Item")) {
+            DynamicForm factory = _sb.getDynFormFactoryInstance();
+            String title = "YAWL " + _sb.getYawlVersion() + " - Edit Work Item";
+            if (factory.makeForm(title, null, _sb.getTaskSchema(wir), wir)) {
                 result = "showDynForm" ;
             }
             else {
@@ -90,30 +100,30 @@ public class FormViewer {
 
     
     private String showCustomForm(WorkItemRecord wir) {
-        String result = "<failure>Unspecified form URI</failure>";
         String url = wir.getCustomFormURL();
         if (url != null) {
-            _sb.setCustomFormPost(true);
-            try {
+            String uriPlusParams = buildURI(wir);
 
-                // adjust session timeout value if required
+            // check custom form exists and responds without error
+            String validateMsg = HttpURLValidator.validate(uriPlusParams);
+            if (validateMsg.equals("<success/>")) {
+                _sb.setCustomFormPost(true);
                 adjustSessionTimeout(wir);
-
-                // add params to the custom form url
-                result = buildURI(wir);
+                return uriPlusParams;   // return validated custom form url incl. params
             }
-            catch (Exception e) {
-                _sb.setCustomFormPost(false);
-                result = "<failure>IO Exception attempting to display custom form: " +
-                               e.getMessage() + "</failure>";
-            }
+            else _log.warn("Missing or invalid custom form: '" +
+                    uriPlusParams.substring(0, uriPlusParams.indexOf('?')) + "', message: " +
+                    StringUtil.unwrap(validateMsg) + ". Defaulting to dynamic form.");
         }
-        return result;
+        else _log.warn("Unspecified form URI. Defaulting to dynamic form.");
+
+        return null;                   // invalid form
     }
 
 
+    // @pre: wir.getCustomFormURL() != null
     private String buildURI(WorkItemRecord wir) {
-        StringBuilder redir = new StringBuilder(wir.getCustomFormURL());
+        StringBuilder redir = new StringBuilder(parseCustomFormURI(wir));
         redir.append((redir.indexOf("?") == -1) ? "?" : "&")      // any static params?
              .append("workitem=")
              .append(wir.getID())
@@ -153,6 +163,35 @@ public class FormViewer {
     }
 
 
+    private String parseCustomFormURI(WorkItemRecord wir) {
+        String formURI = wir.getCustomFormURL();
+        if (! formURI.contains("{")) return formURI;
+        try {
+            String dataStr = _rm.getClients().getCaseData(wir.getRootCaseID());
+            if (dataStr != null) {
+                Document dataDoc = JDOMUtil.stringToDocument(dataStr);
+                String[] parts = formURI.split("(?=\\{)|(?<=\\})");
+                for (int i=0; i < parts.length; i++) {
+                    String part = parts[i];
+                    if (part.startsWith("{")) {
+                        parts[i] = evaluateXQuery(
+                                part.substring(1, part.lastIndexOf('}')), dataDoc);
+                    }
+                }
+                StringBuilder joined = new StringBuilder();
+                for (String part : parts) {
+                    joined.append(part);
+                }
+                return joined.toString();
+            }
+        }
+        catch (IOException ioe) {
+            // fall through to default return value below
+        }
+        return formURI;
+    }
+
+
     private String getSourceURI() {
         String result = "";
         ExternalContext context = FacesContext.getCurrentInstance().getExternalContext();
@@ -174,7 +213,7 @@ public class FormViewer {
                 Element data = JDOMUtil.stringToElement(
                                         _sb.getDynFormFactoryInstance().getDataList());
                 wir.setUpdatedData(data);
-                _rm.getWorkItemCache().update(wir) ;
+                _rm.getWorkItemCache().update(wir);
                 if (_sb.isCompleteAfterEdit()) result = completeWorkItem(wir);
             }
             else {
@@ -211,6 +250,16 @@ public class FormViewer {
     private String completeWorkItem(WorkItemRecord wir) {
         String result = _rm.checkinItem(_sb.getParticipant(), wir);
         return _rm.successful(result) ? "<success/>" : result ;
+    }
+
+
+    protected String evaluateXQuery(String s, Document dataDoc) {
+        try {
+            return SaxonUtil.evaluateQuery(s, dataDoc);
+        }
+        catch (Exception e) {
+            return "__evaluation_error__";
+        }
     }
 
 }
