@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -33,27 +33,14 @@ import java.util.UUID;
  * @since 2.1
  */
 
-public class YSession {
-
-    private String _handle ;                                    // the session handle
-    private Timer _activityTimer ;
-    private long _interval;
+public class YSession extends YAbstractSession {
 
     private YClient _client;                            // overridden in child classes
 
 
-   /**
-    * Creates an anonymous session with the engine.
-    * @param timeOutSeconds the maximum idle time for this session (in seconds). A
-    * value of 0 will default to 60 minutes; a value less than zero means this session
-    * will never timeout.
-    */
-    protected YSession(long timeOutSeconds) {
-        _handle = UUID.randomUUID().toString();
-        setInterval(timeOutSeconds);
-        startActivityTimer();
+    public YSession(long timeOutSeconds) {
+        super(timeOutSeconds);
     }
-
 
     /**
      * Creates a session with the engine for the client.
@@ -62,7 +49,7 @@ public class YSession {
      * @see #YSession(long)
      */
     public YSession(YClient client, long timeOutSeconds) {
-        this(timeOutSeconds);
+        super(timeOutSeconds);
         _client = client;
     }
 
@@ -99,42 +86,4 @@ public class YSession {
 
     public YClient getClient() { return _client; }
 
-    public String getHandle() { return _handle; }
-
-    /**
-     * Resets the idle timer for this session.
-     */
-    public void refresh() { resetActivityTimer(); }
-
-
-    /*****************************************************************/
-    
-    // sets secs to msecs, default to 60 mins if 0 seconds passed
-    private void setInterval(long seconds) {
-        _interval = (seconds == 0) ? 3600000 : seconds * 1000;
-    }
-
-
-    // starts a timertask to timeout the connection after the specified period of
-    // inactivity - iff the timer interval set is +ve (a -ve interval means never timeout)
-    private void startActivityTimer() {
-        if (_interval > 0) {
-            _activityTimer = new Timer() ;
-            TimerTask tTask = new TimeOut();
-            _activityTimer.schedule(tTask, _interval);
-        }    
-    }
-
-    // restarts a timer
-    private void resetActivityTimer() {
-        if (_activityTimer != null) _activityTimer.cancel();  // cancel old timer
-        startActivityTimer();                                 // start new one
-    }
-
-    // expires (removes) this active session. Called when a session timer expires.
-    private class TimeOut extends TimerTask {
-        public void run() {
-            YSessionCache.getInstance().expire(_handle) ;
-        }
-    }
 }

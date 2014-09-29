@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -28,7 +28,7 @@
         <ui:page binding="#{adminQueues.page1}" id="page1">
             <ui:html binding="#{adminQueues.html1}" id="html1">
                 <ui:head binding="#{adminQueues.head1}" id="head1"
-                         title="YAWL 2.1 Admin Worklist">
+                         title="YAWL #{ApplicationBean.yawlVersion} Admin Worklist">
 
                     <ui:link binding="#{adminQueues.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
@@ -52,6 +52,7 @@
                         <center>
                         <ui:panelLayout binding="#{adminQueues.pnlContainer}"
                                         id="pnlAQContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="adminQueuesContainerPanel">
 
                         <ui:tabSet binding="#{adminQueues.tabSet}"
@@ -175,6 +176,13 @@
                                      label="Directly to me"
                                      styleClass="queuesCheckbox"
                                      selected="#{SessionBean.redirectToMe}"/>
+
+                        <ui:button action="#{adminQueues.btnSecRes_action}"
+                                   binding="#{adminQueues.btnSecRes}"
+                                   id="btnSecRes"
+                                   styleClass="queuesButton"
+                                   style="top: 250px"
+                                   text="Secondary..."/>
 
                         <div>
                             <jsp:include page="pfQueueUI.jspf"/>

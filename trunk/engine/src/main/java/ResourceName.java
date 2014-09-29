@@ -19,8 +19,8 @@ public class ResourceName{
 			else {
 				try {
 					risorsa = _resClient.getParticipant(ID, _resClient.connect("admin", "YAWL"));
-					org.jdom.Element e = JDOMUtil.stringToElement(risorsa);
-					List<org.jdom.Element> l = e.getChildren();
+					org.jdom2.Element e = JDOMUtil.stringToElement(risorsa);
+					List<org.jdom2.Element> l = e.getChildren();
 					risorsa = l.get(1).getValue()+" "+l.get(2).getValue();
 				} catch (IOException e) {
 					risorsa = null;

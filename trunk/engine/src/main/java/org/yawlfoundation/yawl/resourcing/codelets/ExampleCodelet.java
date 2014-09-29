@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,9 +18,10 @@
 
 package org.yawlfoundation.yawl.resourcing.codelets;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -53,7 +54,7 @@ public class ExampleCodelet extends AbstractCodelet {
     }
 
     /**
-     * The implentation of the abstact class that does the work of this codelet. Note
+     * The implementation of the abstract class that does the work of this codelet. Note
      * that calls to most of the base class methods may throw a CodeletExecutionException
      * which should be passed back to the caller,
      *
@@ -65,7 +66,8 @@ public class ExampleCodelet extends AbstractCodelet {
      */
     public Element execute(Element inData, List<YParameter> inParams,
                            List<YParameter> outParams) throws CodeletExecutionException {
-        // set the inputs passed in the base class
+
+        // set the inputs passed via methods in the base class
         setInputs(inData, inParams, outParams);
 
         // get the data values required - note that getParameterValue returns the value
@@ -88,6 +90,27 @@ public class ExampleCodelet extends AbstractCodelet {
 
         // return the Element created in the base class and containing the result.
         return getOutputData();
+    }
+
+
+    public List<YParameter> getRequiredParams() {
+        List<YParameter> params = new ArrayList<YParameter>();
+
+        YParameter param = new YParameter(null, YParameter._INPUT_PARAM_TYPE);
+        param.setDataTypeAndName("long", "a", XSD_NAMESPACE);
+        param.setDocumentation("The first number to add");
+        params.add(param);
+
+        param = new YParameter(null, YParameter._INPUT_PARAM_TYPE);
+        param.setDataTypeAndName("long", "b", XSD_NAMESPACE);
+        param.setDocumentation("The second number to add");
+        params.add(param);
+
+        param = new YParameter(null, YParameter._OUTPUT_PARAM_TYPE);
+        param.setDataTypeAndName("long", "c", XSD_NAMESPACE);
+        param.setDocumentation("The result of the addition");
+        params.add(param);
+        return params;
     }
 
 }

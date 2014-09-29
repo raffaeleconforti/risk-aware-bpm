@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -42,11 +42,10 @@ public class CharsetFilter implements Filter {
 
         // Respect the client-specified character encoding
         // (see HTTP specification section 3.4.1)
-        if (null == request.getCharacterEncoding())
+        if (null == request.getCharacterEncoding()) {
             request.setCharacterEncoding(encoding);
+        }
 
-        // Set the default response content type and encoding
-        response.setContentType("text/html; charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
 
         next.doFilter(request, response);

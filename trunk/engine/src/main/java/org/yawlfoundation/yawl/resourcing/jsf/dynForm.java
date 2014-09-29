@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -27,6 +27,9 @@ import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.SpecificationData;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.WorkQueue;
+import org.yawlfoundation.yawl.resourcing.ResourceManager;
+import org.yawlfoundation.yawl.resourcing.client.DocStoreClient;
+import org.yawlfoundation.yawl.resourcing.jsf.dynform.DocComponent;
 import org.yawlfoundation.yawl.resourcing.jsf.dynform.DynFormFactory;
 import org.yawlfoundation.yawl.resourcing.jsf.dynform.SubPanel;
 import org.yawlfoundation.yawl.risk.prediction.OperationalSupportExecutionHelper;
@@ -35,6 +38,8 @@ import javax.faces.FacesException;
 import javax.faces.component.UIComponent;
 import javax.faces.component.html.HtmlGraphicImage;
 import javax.faces.event.ActionEvent;
+import java.io.IOException;
+import java.util.List;
 
 /**
  *  Backing bean for the dynamic forms.
@@ -73,8 +78,7 @@ public class dynForm extends AbstractPageBean {
         return (DynFormFactory) getBean("DynFormFactory");
     }
 
-    @Override
-	public void init() {
+    public void init() {
         super.init();
 
         // *Note* - JSF requirement this block should NOT be modified
@@ -88,11 +92,9 @@ public class dynForm extends AbstractPageBean {
 
     /****** Abstract Method Implementations *************************************/
 
-    @Override
-	public void preprocess() { }
+    public void preprocess() { }
 
-    @Override
-	public void destroy() { }
+    public void destroy() { }
 
 
     /****** Page Components ****************************************************/
@@ -196,11 +198,10 @@ public class dynForm extends AbstractPageBean {
 
     /****** Custom Methods ******************************************************/
 
-    private final SessionBean _sb = getSessionBean();
+    private SessionBean _sb = getSessionBean();
 
 
-    @Override
-	public void prerender() {
+    public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.dynForm);
         _sb.showMessagePanel();
@@ -214,9 +215,6 @@ public class dynForm extends AbstractPageBean {
      * @return a reference to the referring page
      */
     public String btnOK_action() {
-        if (! getDynFormFactory().validateInputs())
-            return null;
-
         return saveForm();
     }
 
@@ -227,8 +225,7 @@ public class dynForm extends AbstractPageBean {
      * @return a reference to the referring page
      */
     public String btnComplete_action() {
-        if (! getDynFormFactory().validateInputs())
-            return null;
+        if (! getDynFormFactory().validateInputs(true)) return null;
 
         _sb.setCompleteAfterEdit(true);
         return saveForm();
@@ -255,6 +252,9 @@ public class dynForm extends AbstractPageBean {
             _sb.setVisualiserReferred(false);
             _sb.setVisualiserEditedWIR(null);
         }
+        else if (refPage.equals("showCaseMgt")) {
+            cleanUpAnyDocs();
+        }
         return refPage;
     }
 
@@ -275,6 +275,7 @@ public class dynForm extends AbstractPageBean {
 
 
     private String getReferringPage() {
+        getDynFormFactory().resetFormHeight();  // for subsequent message panel location
         String result;
         if (_sb.getDynFormType() == ApplicationBean.DynFormType.netlevel) {
            result = "showCaseMgt";
@@ -297,11 +298,13 @@ public class dynForm extends AbstractPageBean {
     private void setupButtons() {
         if (getSessionBean().getDynFormType() == ApplicationBean.DynFormType.netlevel) {
             btnOK.setText("Start");                        // start new case
+            btnOK.setPrimary(true);
             btnComplete.setVisible(false);                 // hide for case starts
             btnPredict.setVisible(false);                 // hide for case starts
         }
         else {
             btnOK.setText("Save");                         // save workitem edits
+            btnComplete.setPrimary(true);
         }
     }
 
@@ -334,6 +337,68 @@ public class dynForm extends AbstractPageBean {
     
     /********************************************************************************/
 
+
+    public String btnDocumentAction(ActionEvent event) {
+        DocComponent docComponent = getDocComponentForEvent(event);
+        if (docComponent != null) {
+            String errorMsg = docComponent.processButtonAction((Button) event.getComponent());
+            if (errorMsg != null) {
+                _sb.getMessagePanel().error(errorMsg);
+            }
+        }
+        return null;
+    }
+
+
+    public String btnUploadAction(ActionEvent event) {
+        DocComponent docComponent = getDocComponentForEvent(event);
+        if (docComponent != null) {
+            String errorMsg = docComponent.doUpload();
+            if (errorMsg != null) {
+                _sb.getMessagePanel().error(errorMsg);
+            }
+        }
+        return null;
+    }
+
+
+    public String btnCancelUploadAction(ActionEvent event) {
+        DocComponent docComponent = getDocComponentForEvent(event);
+        if (docComponent != null) docComponent.completeUpload();
+        return null;
+    }
+
+
+    private DocComponent getDocComponentForEvent(ActionEvent event) {
+        Button source = (Button) event.getComponent();
+        UIComponent parent = source.getParent();
+        if (parent instanceof DocComponent) {     // if doc component button clicked
+            return (DocComponent) parent;
+        }
+        else {
+            return (DocComponent) parent.getAttributes().get("docComponent");
+        }
+    }
+
+    private void cleanUpAnyDocs() {
+        List<Long> docIDs = getDynFormFactory().getDocComponentIDs();
+        if (! docIDs.isEmpty()) {
+            DocStoreClient client = ResourceManager.getInstance().getClients().getDocStoreClient();
+            if (client != null) {
+                try {
+
+                    // an id of -1 means no doc was uploaded by the doc component
+                    for (Long docID : docIDs) {
+                        if (docID > -1) client.removeDocument(docID, client.getHandle());
+                    }
+                }
+                catch (IOException ioe) {
+                    // nothing more can be done
+                }
+            }
+        }
+    }
+
 	/**
 	 * Loads the background image or colour for the entire page based in risk level (not the form within)
 	 */
@@ -362,6 +427,7 @@ public class dynForm extends AbstractPageBean {
 		
 		imgRiskIndicator.setUrl("resources/risk"+prediction+".png");
 		
-	}
+	}	
+
 }
 

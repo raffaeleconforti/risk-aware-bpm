@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -29,7 +29,7 @@
         <ui:page binding="#{participantData.page1}" id="page1">
             <ui:html binding="#{participantData.html1}" id="html1">
                 <ui:head binding="#{participantData.head1}" id="head1"
-                         title="YAWL 2.1: User Maintenance">
+                         title="YAWL #{ApplicationBean.yawlVersion}: User Maintenance">
                     <ui:link binding="#{participantData.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
 
@@ -55,6 +55,7 @@
 
                         <ui:panelLayout binding="#{participantData.pnlContainer}"
                                         id="pnlContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="userMgtContainerPanel">
 
                         <!-- Select Participant Panel -->
@@ -177,14 +178,17 @@
 
                             <ui:textField binding="#{participantData.txtFirstName}"
                                           id="txtFirstName"
+                                          onKeyPress="return disableEnterKey(event);"
                                           style="left: 100px; top: 12px; width: 280px; position: absolute"/>
 
                             <ui:textField binding="#{participantData.txtLastName}"
                                           id="txtLastName"
+                                          onKeyPress="return disableEnterKey(event);"
                                           style="left: 100px; top: 48px; width: 280px; position: absolute"/>
 
                             <ui:textField binding="#{participantData.txtUserID}"
                                           id="txtUserID"
+                                          onKeyPress="return disableEnterKey(event);"
                                           style="left: 100px; top: 84px; width: 150px; position: absolute"/>
 
                             <ui:checkbox binding="#{participantData.cbxAdmin}"
@@ -285,10 +289,12 @@
 
                             <ui:passwordField binding="#{participantData.txtNewPassword}"
                                               id="txtNewPassword"
+                                              onKeyPress="return disableEnterKey(event);"
                                               style="left: 70px; top: 40px; width: 160px; position: absolute"/>
 
                             <ui:passwordField binding="#{participantData.txtConfirmPassword}"
                                               id="txtConfirmPassword"
+                                              onKeyPress="return disableEnterKey(event);"
                                               style="left: 70px; top: 76px; width: 160px; position: absolute"/>
 
                         </ui:panelLayout>

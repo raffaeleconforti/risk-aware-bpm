@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,35 +20,43 @@ package org.yawlfoundation.yawl.resourcing.jsf;
 
 import com.sun.rave.web.ui.appbase.AbstractSessionBean;
 import com.sun.rave.web.ui.component.Button;
+import com.sun.rave.web.ui.component.Listbox;
 import com.sun.rave.web.ui.component.PanelLayout;
 import com.sun.rave.web.ui.component.Script;
-import com.sun.rave.web.ui.component.Listbox;
 import com.sun.rave.web.ui.model.Option;
-import org.yawlfoundation.yawl.authentication.YExternalClient;
-import org.yawlfoundation.yawl.elements.YAWLServiceReference;
+import org.apache.commons.lang.time.DateUtils;
 import org.yawlfoundation.yawl.elements.YSpecVersion;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.SpecificationData;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
-import org.yawlfoundation.yawl.resourcing.QueueSet;
-import org.yawlfoundation.yawl.resourcing.ResourceManager;
-import org.yawlfoundation.yawl.resourcing.ResourceMap;
-import org.yawlfoundation.yawl.resourcing.WorkQueue;
-import org.yawlfoundation.yawl.resourcing.jsf.comparator.*;
+import org.yawlfoundation.yawl.exceptions.YAWLException;
+import org.yawlfoundation.yawl.resourcing.*;
+import org.yawlfoundation.yawl.resourcing.calendar.*;
+import org.yawlfoundation.yawl.resourcing.datastore.orgdata.ResourceDataSet;
+import org.yawlfoundation.yawl.resourcing.jsf.comparator.CalendarRowComparator;
+import org.yawlfoundation.yawl.resourcing.jsf.comparator.OptionComparator;
+import org.yawlfoundation.yawl.resourcing.jsf.comparator.ParticipantNameComparator;
+import org.yawlfoundation.yawl.resourcing.jsf.comparator.SpecificationDataComparator;
 import org.yawlfoundation.yawl.resourcing.jsf.dynform.DynFormFactory;
-import org.yawlfoundation.yawl.resourcing.jsf.dynform.FormParameter;
 import org.yawlfoundation.yawl.resourcing.resource.*;
-import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanCategory;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanResource;
+import org.yawlfoundation.yawl.resourcing.rsInterface.ResourceGatewayException;
+import org.yawlfoundation.yawl.util.StringUtil;
+import org.yawlfoundation.yawl.util.YPredicateParser;
 
 import javax.faces.FacesException;
-import javax.faces.event.ActionEvent;
 import javax.faces.application.Application;
 import javax.faces.application.NavigationHandler;
 import javax.faces.context.ExternalContext;
 import javax.faces.context.FacesContext;
+import javax.faces.event.ActionEvent;
 import javax.servlet.http.HttpSession;
+import javax.xml.datatype.Duration;
 import java.io.IOException;
 import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /*
@@ -262,6 +270,12 @@ public class SessionBean extends AbstractSessionBean {
     }
 
 
+    private Map<ResourceDataSet.ResUnit, Long> _changeStamp =
+            new Hashtable<ResourceDataSet.ResUnit, Long>();
+
+
+
+
     /*******************************************************************************/
 
     // ENUMS FOR ACTIVE PAGES AND DYN FORM TYPES //
@@ -270,17 +284,43 @@ public class SessionBean extends AbstractSessionBean {
 
     private ApplicationBean.DynFormType dynFormType ;
 
+    private boolean navigationBegun = false;
+
+    public boolean hasNavigationBegun() { return navigationBegun; }
+
 
     public ApplicationBean.PageRef getActivePage() { return activePage; }
 
     public void setActivePage(ApplicationBean.PageRef page) {
         activePage = page;
+        if (page != ApplicationBean.PageRef.Login) {
+            navigationBegun = true;
+        }
         if (page != ApplicationBean.PageRef.participantData) {
-            setEditedParticipant((Participant) null);
+            setEditedParticipantToNull();
         }
         if (page != ApplicationBean.PageRef.externalClients) {
-            this.setAddClientAccountMode(true);
+            setAddClientAccountMode(true);
         }
+        if (page != ApplicationBean.PageRef.calendarMgt) {
+            setAddCalendarRowMode(true);
+            btnRefresh.setStyle(null);
+        }
+        if (page != ApplicationBean.PageRef.nonHumanMgt) {
+            setSubCatAddMode(false);
+            try {
+                setSelectedNonHumanResource(null, true);
+            }
+            catch (CloneNotSupportedException cnse) {
+                // no further action required
+            }
+        }        
+    }
+
+
+    public void dispatchToActivePage() throws IOException {
+        FacesContext.getCurrentInstance().getExternalContext().dispatch(
+                    getActivePage().getFileName());
     }
 
 
@@ -311,6 +351,9 @@ public class SessionBean extends AbstractSessionBean {
     private Option[] orgDataOptions;                              // org data mgt
     private Option[] orgDataBelongsItems;                         // org data mgt
     private Option[] orgDataGroupItems;                           // org data mgt
+    private Option[] nhResourcesOptions;                          // nonhuman resource mgt
+    private Option[] nhResourcesCategoryItems;                    // nonhuman resource mgt
+    private Option[] nhResourcesSubcategoryItems;                 // nonhuman resource mgt
 
 
     public Option[] getWorklistOptions() {
@@ -359,6 +402,17 @@ public class SessionBean extends AbstractSessionBean {
         return orgDataGroupItems;
     }
 
+    public Option[] getNhResourcesOptions() {
+        return nhResourcesOptions;
+    }
+
+    public Option[] getNhResourcesCategoryItems() {
+        return nhResourcesCategoryItems;
+    }
+
+    public Option[] getNhResourcesSubcategoryItems() {
+        return nhResourcesSubcategoryItems;
+    }
 
     public void setWorklistOptions(Option[] options) {
         worklistOptions = options;
@@ -404,8 +458,30 @@ public class SessionBean extends AbstractSessionBean {
         this.orgDataGroupItems = orgDataGroupItems;
     }
 
+    public void setNhResourcesOptions(Option[] nhResourcesOptions) {
+        this.nhResourcesOptions = nhResourcesOptions;
+    }
 
-    // user selection from each listbox
+    public void setNhResourcesCategoryItems(Option[] nhResourcesCategoryItems) {
+        this.nhResourcesCategoryItems = nhResourcesCategoryItems;
+    }
+
+    public void setNhResourcesSubcategoryItems(Option[] nhResourcesSubcategoryItems) {
+        this.nhResourcesSubcategoryItems = nhResourcesSubcategoryItems;
+    }
+
+    private Option[] nhResourcesSubcategoryList;
+
+    public Option[] getNhResourcesSubcategoryList() {
+        return nhResourcesSubcategoryList;
+    }
+
+    public void setNhResourcesSubcategoryList(Option[] nhResourcesSubcategoryList) {
+        this.nhResourcesSubcategoryList = nhResourcesSubcategoryList;
+    }
+
+// user selection from each listbox
+
     private String worklistChoice;
     private YSpecificationID loadedSpecListChoice;
     private String runningCaseListChoice;
@@ -415,6 +491,9 @@ public class SessionBean extends AbstractSessionBean {
     private String orgDataChoice;
     private String orgDataBelongsChoice;
     private String orgDataGroupChoice;
+    private String nhResourcesChoice;
+    private String nhResourcesCategoryChoice;
+    private String nhResourcesSubcategoryChoice = "None";
 
 
     public String getWorklistChoice() { return worklistChoice; }
@@ -426,6 +505,9 @@ public class SessionBean extends AbstractSessionBean {
     public String getChainedCasesChoice() { return chainedCasesChoice; }
     public String getOrgDataBelongsChoice() { return orgDataBelongsChoice; }
     public String getOrgDataGroupChoice() { return orgDataGroupChoice; }
+    public String getNhResourcesChoice() { return nhResourcesChoice; }
+    public String getNhResourcesCategoryChoice() { return nhResourcesCategoryChoice; }
+    public String getNhResourcesSubcategoryChoice() { return nhResourcesSubcategoryChoice; }
 
     public void setWorklistChoice(String choice) { worklistChoice = choice ; }
     public void setRunningCaseListChoice(String choice) { runningCaseListChoice = choice ; }
@@ -435,6 +517,9 @@ public class SessionBean extends AbstractSessionBean {
     public void setChainedCasesChoice(String choice) { chainedCasesChoice = choice; }
     public void setOrgDataBelongsChoice(String choice) { orgDataBelongsChoice = choice; }
     public void setOrgDataGroupChoice(String choice) { orgDataGroupChoice = choice; }
+    public void setNhResourcesChoice(String choice) { nhResourcesChoice = choice; }
+    public void setNhResourcesCategoryChoice(String choice) { nhResourcesCategoryChoice = choice; }
+    public void setNhResourcesSubcategoryChoice(String choice) { nhResourcesSubcategoryChoice = choice; }
 
     public void setLoadedSpecListChoice(SpecificationData choice) {        
         loadedSpecListChoice = choice.getID() ;
@@ -470,7 +555,6 @@ public class SessionBean extends AbstractSessionBean {
             lbxUserList.setMultiple(false);
             lbxUserList.setSelected(selectUserListChoice);
         }
-  //      lbxUserList.setSelected(selectUserListChoices);
     }
 
 
@@ -503,6 +587,12 @@ public class SessionBean extends AbstractSessionBean {
         runningCaseListChoices = list;
     }
 
+    public String getRunningCasesCaption() {
+        String caption = "Running Cases";
+        if (runningCaseListOptions != null) caption += " (" + runningCaseListOptions.length + ")";
+        return caption;
+    }
+
     /******************************************************************/
 
     private ArrayList selectUserListChoices;
@@ -514,7 +604,6 @@ public class SessionBean extends AbstractSessionBean {
     public void setSelectUserListChoices(ArrayList list) {
         selectUserListChoices = list;
     }
-
 
 
     /********************************************************************************/
@@ -551,7 +640,6 @@ public class SessionBean extends AbstractSessionBean {
     public boolean isFirstWorkItemChosen() {
         if ((worklistOptions != null) && (worklistOptions.length > 0)) {
             String first = (String) getWorklistOptions()[0].getValue();
-     //       return (first.equals(worklistChoice));
             return (first.equals(chosenWIR.getID()));
         }
         else return false;
@@ -565,7 +653,7 @@ public class SessionBean extends AbstractSessionBean {
     // logs out of session //
     public void doLogout() {
         _rm.logout(sessionhandle) ;
-        setEditedParticipant((Participant) null);
+        setEditedParticipantToNull();
         getApplicationBean().removeLiveUser(userid);
         setUserid(null);
         
@@ -604,6 +692,27 @@ public class SessionBean extends AbstractSessionBean {
             }
             catch (IOException ioe) {
                 // message about destroyed app
+            }
+        }
+    }
+
+
+    /*
+     * if there's a current session, goto the last active page
+     */
+    public void redirectIfActiveSession() {
+        if ((getUserid() != null) && _rm.isActiveSession(getExternalSessionID())) {
+
+            // halt the rendering of the current page
+            FacesContext.getCurrentInstance().responseComplete();
+            try {
+                dispatchToActivePage();
+            }
+            catch (Exception e) {
+
+                // could not redirect, so end session and start a new one
+                doLogout();
+                gotoPage("Login.jsp");
             }
         }
     }
@@ -657,7 +766,7 @@ public class SessionBean extends AbstractSessionBean {
     private String title ;
 
     public String getTitle() {
-        title = "YAWL 2.1 Worklist";
+        title = "YAWL " + getYawlVersion() + " Worklist";
         if ((activePage == ApplicationBean.PageRef.userWorkQueues) && (participant != null))
              title += ": " + participant.getFullName() ;
         return title ;
@@ -695,7 +804,7 @@ public class SessionBean extends AbstractSessionBean {
             result = new Option[taskMaps.size()];
             int i = 0;
             for (ResourceMap map : taskMaps)
-                result[i++] = new Option(map, formatPiledTaskString(map));
+                result[i++] = new Option(formatPiledTaskString(map));
         }
         return result;
     }
@@ -704,6 +813,32 @@ public class SessionBean extends AbstractSessionBean {
         YSpecificationID specID = map.getSpecID();
         return String.format("%s (%s)::%s", specID.getUri(),
                       specID.getVersionAsString(), map.getTaskID()) ;
+    }
+
+    public ResourceMap getResourceMapFromLabel(String label) {
+        if (label != null) {
+            String specURI = label.substring(0, label.indexOf(' '));
+            String version = label.substring(label.indexOf('(') + 1, label.indexOf(')'));
+            String taskID = label.substring(label.indexOf(':') + 2);
+            List<SpecificationData> loadedSpecs = getLoadedSpecs();
+            if (loadedSpecs != null) {
+                YSpecificationID specID = null;
+                for (SpecificationData specData : loadedSpecs) {
+                     if (specData.getSpecURI().equals(specURI) &&
+                             specData.getSpecVersion().equals(version)) {
+                         specID = new YSpecificationID(specData.getSpecIdentifier(),
+                                 specData.getSpecVersion(), specData.getSpecURI());
+                         break;
+                     }
+                }
+                if (specID != null) {
+                    ResourceMap map = _rm.getCachedResourceMap(specID, taskID);
+                    if (map == null) map = _rm.getPersistedPiledTask(specID, taskID);
+                    return map;
+                }
+            }
+        }
+        return null;
     }
 
     private Option[] getParticipantChainedCases() {
@@ -718,145 +853,6 @@ public class SessionBean extends AbstractSessionBean {
         return result;
     }
 
-
-    /****** This section used by the 'Service Mgt' Page ***************************/
-
-    List<YAWLServiceReference> registeredServices;
-
-
-    public List<YAWLServiceReference> getRegisteredServices() {
-        if (registeredServices == null) refreshRegisteredServices() ;
-
-        return registeredServices;
-    }
-
-
-    public void setRegisteredServices(List<YAWLServiceReference> services) {
-        registeredServices = services ;
-    }
-
-
-    public String removeRegisteredService(int listIndex) {
-        String result = null;
-        try {
-            YAWLServiceReference service = registeredServices.get(listIndex);
-            result = _rm.removeRegisteredService(service.getServiceID());
-            if (_rm.successful(result)) refreshRegisteredServices();
-        }
-        catch (IOException ioe) {
-            // message ...
-        }
-        return result ;
-    }
-
-
-    public String addRegisteredService(String name, String pw, String uri, String doco) {
-        String result = null;
-        try {
-            YAWLServiceReference service = new YAWLServiceReference(uri, null, name, pw, doco);
-            result = _rm.addRegisteredService(service);
-            if (_rm.successful(result)) refreshRegisteredServices();
-        }
-        catch (IOException ioe) {
-            // message ...
-        }
-        return result ;
-    }
-
-    
-    public void refreshRegisteredServices() {
-        Set<YAWLServiceReference> services = _rm.getRegisteredServices();
-        if (services != null) {
-
-            // sort the items
-            List<YAWLServiceReference> servList = new ArrayList<YAWLServiceReference>();
-            for (YAWLServiceReference service : services) {
-                if (service.isAssignable())
-                    servList.add(service) ;
-            }
-            registeredServices = servList;
-            Collections.sort(registeredServices, new YAWLServiceComparator());
-        }
-        else
-            registeredServices = null ;
-    }
-
-
-    /****** This section used by the 'External App Mgt' Page ***************************/
-
-    List<YExternalClient> externalClients;
-
-
-    public List<YExternalClient> getExternalClients() {
-        if (externalClients == null) refreshExternalClients() ;
-
-        return externalClients;
-    }
-
-
-    public void setExternalClients(List<YExternalClient> clients) {
-        externalClients = clients ;
-    }
-
-
-    public YExternalClient getSelectedExternalClient(int listIndex) {
-        return externalClients.get(listIndex);
-    }
-
-
-    public String removeExternalClient(int listIndex) {
-        String result;
-        try {
-            YExternalClient client = externalClients.get(listIndex);
-            result = _rm.removeExternalClient(client.getUserName());
-            if (_rm.successful(result)) refreshExternalClients();
-        }
-        catch (IOException ioe) {
-            result = "Error attempting to remove client. Please see the log files for details.";
-        }
-        return result ;
-    }
-
-
-    public String updateExternalClient(String name, String pw, String doco) {
-        try {
-            return _rm.updateExternalClient(name, pw, doco);
-        }
-        catch (IOException ioe) {
-            return "Error attempting to update client. Please see the log files for details.";
-        }
-    }
-
-
-
-    public String addExternalClient(String name, String pw, String doco) {
-        String result;
-        if (name.equals("admin")) {
-            return "Cannot add client 'admin' because it is a reserved client name.";
-        }
-        try {      
-            YExternalClient client = new YExternalClient(name, pw, doco);
-            result = _rm.addExternalClient(client);
-            if (_rm.successful(result)) refreshExternalClients();
-        }
-        catch (IOException ioe) {
-            result = "Error attempting to add new client. Please see the log files for details.";
-        }
-        return result ;
-    }
-
-
-    public void refreshExternalClients() {
-        try {
-            externalClients = new ArrayList<YExternalClient>(_rm.getExternalClients());
-        }
-        catch (IOException ioe) {
-            externalClients = null; 
-        }
-        if (externalClients != null) {
-            Collections.sort(externalClients, new YExternalClientComparator());
-        }
-    }
 
 
     /****** This section used by the 'Case Mgt' Page ***************************/
@@ -885,24 +881,30 @@ public class SessionBean extends AbstractSessionBean {
         if (specDataSet != null) {
             loadedSpecs = new ArrayList<SpecificationData>(specDataSet);
             Collections.sort(loadedSpecs, new SpecificationDataComparator());
-        //    refreshSchemaLibraries() ;
         }
-        else
-            loadedSpecs = null ;
+        else loadedSpecs = null ;
+    }
+
+
+    public String getLoadedSpecsCaption() {
+        String caption = "Loaded Specifications";
+        if (loadedSpecs != null) caption += " (" + loadedSpecs.size() + ")";
+        return caption;
     }
 
 
     public SpecificationData getLoadedSpec(int listIndex) {
-        if (! loadedSpecs.isEmpty())
-            return loadedSpecs.get(listIndex);
-        else
-            return null;
+        return ((getLoadedSpecs() != null) && (! loadedSpecs.isEmpty())) ?
+              loadedSpecs.get(listIndex) : null;
     }
 
 
     public YSpecVersion getLatestLoadedSpecVersion(SpecificationData spec) {
+        List<SpecificationData> specs = getLoadedSpecs();
+        if (specs == null) return null;
+
         YSpecVersion result = new YSpecVersion("0.1");
-        for (SpecificationData sd : loadedSpecs) {
+        for (SpecificationData sd : specs) {
             if (sd.getID().equals(spec.getID())) {
                  YSpecVersion thisVersion = new YSpecVersion(sd.getSpecVersion());
                  if (result.compareTo(thisVersion) < 0) {
@@ -915,12 +917,15 @@ public class SessionBean extends AbstractSessionBean {
 
 
     public boolean isLoadedSpec(String uri, String version, String documentation) {
-        for (SpecificationData sd : loadedSpecs) {
-            if (sd.getSpecURI().equals(uri) &&
-                sd.getSpecVersion().equals(version) &&
-                sd.getDocumentation().equals(documentation)) {
+        List<SpecificationData> specs = getLoadedSpecs();
+        if (specs != null) {
+            for (SpecificationData sd : specs) {
+                if (sd.getSpecURI().equals(uri) &&
+                    sd.getSpecVersion().equals(version) &&
+                    sd.getDocumentation().equals(documentation)) {
 
-                return true;
+                    return true;
+                }
             }
         }
         return false;
@@ -930,58 +935,12 @@ public class SessionBean extends AbstractSessionBean {
         return _rm.getDataSchema(getLoadedSpecListChoice()) ;
     }
 
-    public Map<String, FormParameter> getCaseParams() {
-        return _rm.getCaseInputParams(getLoadedSpecListChoice());
-    }
-
-    public String getInstanceData(String schema) {
-        return _rm.getInstanceData(schema, getLoadedSpecListChoice()) ;
-    }
-
 
     public String getTaskSchema(WorkItemRecord wir) {
         YSpecificationID specID = new YSpecificationID(wir);
         return _rm.getDataSchema(wir, specID) ;
     }
 
-    public String getInstanceData(String schema, WorkItemRecord wir) {
-        if (wir.getUpdatedData() != null)
-            return JDOMUtil.elementToStringDump(wir.getUpdatedData());
-        else
-            return _rm.getInstanceData(schema, wir) ;
-    }
-
-
-    
-
-    private void refreshSchemaLibraries() {
-//        schemaLibraries = new Hashtable<String, String>();
-//        for (SpecificationData spec : loadedSpecs) {
-//            try {
-//                String schema = _rm.getSchemaLibrary(spec.getID(),
-//                                                                      sessionhandle) ;
-//                if (schema != null)
-//                    schemaLibraries.put(spec.getID(), schema) ;
-//            }
-//            catch (Exception e) {
-//                // some kind of io or jdom exception
-//            }
-//        }
-    }
-
-//    public String getSchemaLibrary(String specID) {
-//        String result = schemaLibraries.get(specID) ;
-//
-//        // not in local cache, try getting it from engine
-//        if (result == null) {
-//            result = _rm.getDataSchema(specID) ;
-//
-//            // not in engine = problem or not loaded
-//            if (result != null) schemaLibraries.put(specID, result) ;
-//        }
-//
-//        return result ;
-//    }
 
     /****** This section used by the 'Admin Queues' Page ***************************/
 
@@ -1026,6 +985,17 @@ public class SessionBean extends AbstractSessionBean {
         else
             return "Assigned To (" + adminQueueAssignedList.length + ")" ;
     }
+
+    public boolean orgDataIsRefreshing() {
+        if (_rm.isOrgDataRefreshing()) {
+            messagePanel.info("Organisational data is currently refreshing. " +
+                    "Please try again in a moment.");
+            showMessagePanel();
+            return true;
+        }
+        return false;
+    }
+
 
     private String adminQueueAction ;
 
@@ -1109,16 +1079,25 @@ public class SessionBean extends AbstractSessionBean {
     public Mode getOrgMgtMode() { return _orgMgtMode; }
     public void setOrgMgtMode(Mode mode) { _orgMgtMode = mode; }
 
+    private Mode _nhrMgtMode = Mode.edit;
+
+    public Mode getNhrMgtMode() { return _nhrMgtMode; }
+    public void setNhrMgtMode(Mode mode) { _nhrMgtMode = mode; }
+
+
     private Option[] orgDataParticipantList ;
-    private HashMap<String, Participant> participantMap ;
+    private Map<String, Participant> participantMap ;
 
 
     public Option[] getOrgDataParticipantList() {
-        if (orgDataParticipantList == null) refreshOrgDataParticipantList() ;
+        if ((orgDataParticipantList == null) ||
+             orgDataUpdated(ResourceDataSet.ResUnit.Participant)) {
+            refreshOrgDataParticipantList() ;
+        }
         return orgDataParticipantList;
     }
 
-    private HashMap<String, Participant> getParticipantMap() {
+    private Map<String, Participant> getParticipantMap() {
         participantMap = _rm.getOrgDataSet().getParticipantMap();
         return participantMap;
     }
@@ -1140,8 +1119,15 @@ public class SessionBean extends AbstractSessionBean {
 
 
 
+    private boolean orgDataUpdated(ResourceDataSet.ResUnit unit) {
+        Long time = _changeStamp.get(unit);
+        Long lastChange = _changeStamp.put(unit, _rm.getOrgDataSet().getChangeStamp(unit));
+        return (time == null) || (lastChange == null) || (time < lastChange) ;
+    }
+
+    
     public void refreshOrgDataParticipantList() {
-        HashMap<String, Participant> pMap = getParticipantMap();
+        Map<String, Participant> pMap = getParticipantMap();
 
         if (pMap != null) {
             int i = 0 ;
@@ -1161,8 +1147,7 @@ public class SessionBean extends AbstractSessionBean {
                                             p.getLastName() + ", " + p.getFirstName()) ;
             }
         }
-        else
-            orgDataParticipantList = null ;
+        else orgDataParticipantList = null ;
     }
 
     
@@ -1196,22 +1181,33 @@ public class SessionBean extends AbstractSessionBean {
 
     public Participant getEditedParticipant() { return editedParticipant; }
 
-    public void setEditedParticipant(Participant p) {
-        if (editedParticipant != null) editedParticipant.removeAttributeReferences();
-        editedParticipant = p;
+    public void setEditedParticipantToNull() {
+        if (editedParticipant != null) {
+            editedParticipant.removeAttributeReferences();
+        }
+        preEditAttributes = null;
+        editedParticipant = null;
     }
 
-    public Participant setEditedParticipant(String pid) {
-        if (editedParticipant != null) editedParticipant.removeAttributeReferences();
-        editedParticipant = getParticipantMap().get(pid).clone();
+    public Participant setEditedParticipant(String pid) throws CloneNotSupportedException {
+        Participant p = getParticipantMap().get(pid);
+        if (p != null) {
+            preEditAttributes = p.getAttributeReferences();
+            editedParticipant = p.clone();
+        }
         return editedParticipant;
     }
 
-    public void saveParticipantUpdates(Participant temp) {
-        Participant p = getParticipantMap().get(temp.getID());
-        p.merge(temp);
+    // the set of attributes held by a resource before it has been edited
+    private Set<AbstractResourceAttribute> preEditAttributes;
+
+    public void saveParticipantUpdates(Participant cloned)
+            throws CloneNotSupportedException, ResourceGatewayException {
+        String actualID = cloned.getID().substring(7);
+        Participant p = getParticipantMap().get(actualID);
+        p.setValues(cloned);
         p.save();
-        setEditedParticipant(p.getID()) ;             // reset
+ //       setEditedParticipant(p.getID()) ;             // reset
     }
 
     
@@ -1252,6 +1248,7 @@ public class SessionBean extends AbstractSessionBean {
     }
 
 
+
     public Option[] getParticipantAttributeList(String tab, Participant p) {
         Option[] options = null;
         if (tab.equals("tabRoles")) {
@@ -1278,7 +1275,13 @@ public class SessionBean extends AbstractSessionBean {
     }
 
 
-    private Option[] getRoleList(HashMap<String, Role> roleMap) {
+    public Option[] getSortedRoleList() {
+        Option[] options = getRoleList(_rm.getOrgDataSet().getRoleMap());
+        sortOptions(options);
+        return options;
+    }
+
+    private Option[] getRoleList(Map<String, Role> roleMap) {
         if (roleMap != null) {
             Option[] result = new Option[roleMap.size()];
             int i = 0 ;
@@ -1292,7 +1295,7 @@ public class SessionBean extends AbstractSessionBean {
 
     }
 
-    private Option[] getPositionList(HashMap<String, Position> positionMap) {
+    private Option[] getPositionList(Map<String, Position> positionMap) {
         if (positionMap != null) {
             Option[] result = new Option[positionMap.size()];
             int i = 0 ;
@@ -1303,10 +1306,9 @@ public class SessionBean extends AbstractSessionBean {
             return result ;
         }
         else return null ;
-
     }
 
-    private Option[] getCapabilityList(HashMap<String, Capability> capabilityMap) {
+    private Option[] getCapabilityList(Map<String, Capability> capabilityMap) {
         if (capabilityMap != null) {
             Option[] result = new Option[capabilityMap.size()];
             int i = 0 ;
@@ -1317,10 +1319,9 @@ public class SessionBean extends AbstractSessionBean {
             return result ;
         }
         else return null ;
-
     }
 
-    private Option[] getOrgGroupList(HashMap<String, OrgGroup> orgGroupMap) {
+    private Option[] getOrgGroupList(Map<String, OrgGroup> orgGroupMap) {
         if (orgGroupMap != null) {
             Option[] result = new Option[orgGroupMap.size()];
             int i = 0 ;
@@ -1331,8 +1332,201 @@ public class SessionBean extends AbstractSessionBean {
             return result ;
         }
         else return null ;
-
     }
+
+
+    public Option[] getNhrItems(String tabName) {
+        Option[] options = null;
+        if (tabName.equals("tabResources")) {
+            options = getNhResourcesList();
+        }
+        if (tabName.equals("tabCategories")) {
+            options = getNhResourcesCategoryList();
+        }
+ //       if (options != null) Arrays.sort(options, new OptionComparator());
+        return options;
+    }
+
+
+    public Option[] getNhResourcesList() {
+        Map<String, NonHumanResource> resMap = _rm.getOrgDataSet().getNonHumanResourceMap();
+        if (resMap != null) {
+            Option[] result = new Option[resMap.size()];
+            int i = 0 ;
+            for (String id : resMap.keySet()) {
+                NonHumanResource r = resMap.get(id);
+                result[i++] = new Option(id, r.getName()) ;
+            }
+            Arrays.sort(result, new OptionComparator());
+            return result ;
+        }
+        else return null ;
+    }
+
+
+    public Option[] getNhResourcesCategoryList() {
+        Map<String, NonHumanCategory> catMap = _rm.getOrgDataSet().getNonHumanCategoryMap();
+        if (catMap != null) {
+            Option[] result = new Option[catMap.size()];
+            int i = 0 ;
+            for (String id : catMap.keySet()) {
+                NonHumanCategory c = catMap.get(id);
+                result[i++] = new Option(id, c.getName()) ;
+            }
+            Arrays.sort(result, new OptionComparator());
+            return result ;
+        }
+        else return null ;
+    }
+
+
+    public boolean hasAtLeastOneNonHumanCategory() {
+        Map<String, NonHumanCategory> catMap = _rm.getOrgDataSet().getNonHumanCategoryMap();
+        return ((catMap != null) && (! catMap.isEmpty()));
+    }
+
+
+    public Option[] getNhResourcesCategoryListExpanded() {
+        Map<String, NonHumanCategory> catMap = _rm.getOrgDataSet().getNonHumanCategoryMap();
+        if (catMap != null) {
+            Map<String, String> items = new HashMap<String, String>();
+            for (String id : catMap.keySet()) {
+                NonHumanCategory c = catMap.get(id);
+                items.put(id, c.getName());
+                for (String subcat : c.getSubCategoryNames()) {
+                    items.put(id + "::" + subcat, c.getName() + " -> " + subcat);
+                }
+            }
+
+            Option[] result = new Option[items.size()];
+            int i = 0 ;
+            for (String id : items.keySet()) {
+                result[i++] = new Option(id, items.get(id)) ;
+            }
+            Arrays.sort(result, new OptionComparator());
+            return result ;
+        }
+        else return null ;
+    }
+
+
+    private SecondaryResources.SecResDataSet secResDataSet =
+            new SecondaryResources().newDataSet();
+
+
+    public void addSecondaryParticipant(String id) {
+        secResDataSet.addParticipant(id);
+    }
+
+    public void addSecondaryRole(String id) {
+        secResDataSet.addRole(id);
+    }
+
+    public void addSecondaryNHResource(String id) {
+        secResDataSet.addNonHumanResource(id);
+    }
+
+    public void addSecondaryNHCategory(String id) {
+        if (id != null) {
+            secResDataSet.addNonHumanCategory(id);
+        }
+    }
+
+
+    private Option[] selectedSecondaryResources = new Option[0];
+
+    public Option[] getSelectedSecondaryResources() {
+        return selectedSecondaryResources;
+    }
+
+    public void setSecondaryResources(Option[] options) {
+        selectedSecondaryResources = options;
+    }
+
+    public void loadSecondaryResources() {
+        int queue = getActiveTab().equals("tabUnOffered") ? WorkQueue.UNOFFERED :
+                WorkQueue.WORKLISTED;
+        WorkItemRecord wir = getChosenWIR(queue);
+        if (wir != null) {
+            SecondaryResources resources = _rm.getSecondaryResources(wir);
+            if (resources != null) {
+                secResDataSet = resources.getDataSet(wir).copy();
+                refreshSelectedSecondaryResourcesOptions();
+            }
+            else setSecondaryResources(new Option[0]);
+
+            setSecondaryResourcesItemID(wir.getID());
+        }
+    }
+
+    private String secondaryResourcesItemID = "";
+
+    public String getSecondaryResourcesItemID() { return secondaryResourcesItemID; }
+
+    public void setSecondaryResourcesItemID(String s) { secondaryResourcesItemID = s; }
+
+    public String getSecondaryResourcesTitle() {
+        return "Selected Secondary Resources for Workitem: " + secondaryResourcesItemID;
+    }
+
+    public void refreshSelectedSecondaryResourcesOptions() {
+        Option[] options = new Option[secResDataSet.getResourcesCount()];
+        int i = 0;
+        for (Participant p : secResDataSet.getParticipants()) {
+            options[i++] = new Option(p.getID(),
+                    p.getLastName() + ", " + p.getFirstName());
+        }
+        for (Role r : secResDataSet.getRoles()) {
+            options[i++] = new Option(r.getID(), r.getName());
+        }
+        for (NonHumanResource r : secResDataSet.getNonHumanResources()) {
+            options[i++] = new Option(r.getID(), r.getName());
+        }
+        for (String id : secResDataSet.getNonHumanCategories().keySet()) {
+            for (String label : secResDataSet.getCategoryLabelList(id)) {
+                options[i++] = new Option(id, label);
+            }    
+        }
+        sortOptions(options);
+        setSecondaryResources(options);
+    }
+
+
+    public void saveSelectedSecondaryResources() {
+        int queue = getActiveTab().equals("tabUnOffered") ? WorkQueue.UNOFFERED :
+                WorkQueue.WORKLISTED;
+        WorkItemRecord wir = getChosenWIR(queue);
+        if (wir != null) {
+            SecondaryResources resources = _rm.getSecondaryResources(wir);
+            if (resources != null) {
+                resources.addDataSet(wir, secResDataSet);
+            }
+        }
+    }
+
+
+    public List<String> checkSelectedSecondaryResources() throws YAWLException{
+        int queue = getActiveTab().equals("tabUnOffered") ? WorkQueue.UNOFFERED :
+                WorkQueue.WORKLISTED;
+        WorkItemRecord wir = getChosenWIR(queue);
+        if (wir != null) {
+            return secResDataSet.checkAvailability();
+        }
+        throw new YAWLException("Could not locate secondary resources for workitem.");
+    }
+
+
+    public boolean removeSelectedSecondaryResource() {
+        return (selectedSecondaryResource != null) &&
+                secResDataSet.remove(selectedSecondaryResource);
+    }
+
+
+    private String selectedSecondaryResource = null;
+
+    public String getSelectedSecondaryResource() { return selectedSecondaryResource; }
+
+    public void setSelectedSecondaryResource(String s) { selectedSecondaryResource = s; }
 
     private boolean orgDataItemRemovedFlag ;
 
@@ -1340,8 +1534,18 @@ public class SessionBean extends AbstractSessionBean {
         return orgDataItemRemovedFlag;
     }
 
-    public void setOrgDataItemRemovedFlag(boolean orgDataItemRemovedFlag) {
-        this.orgDataItemRemovedFlag = orgDataItemRemovedFlag;
+    public void setOrgDataItemRemovedFlag(boolean flag) {
+        orgDataItemRemovedFlag = flag;
+    }
+
+    private boolean nhResourcesItemRemovedFlag ;
+
+    public boolean isNhResourcesItemRemovedFlag() {
+        return nhResourcesItemRemovedFlag;
+    }
+
+    public void setNhResourcesItemRemovedFlag(boolean flag) {
+        orgDataItemRemovedFlag = flag;
     }
 
     private String activeResourceAttributeTab = "tabRoles";           // start value
@@ -1370,7 +1574,7 @@ public class SessionBean extends AbstractSessionBean {
         getParticipantAttributeList(activeResourceAttributeTab, p) ;
     }
 
-    public void selectResourceAttribute(String id) {
+    public void selectResourceAttribute(String id) throws ResourceGatewayException {
         selectResourceAttribute(id, getParticipantForCurrentMode());
     }
 
@@ -1378,7 +1582,8 @@ public class SessionBean extends AbstractSessionBean {
         return isAddParticipantMode() ? addedParticipant : editedParticipant ;
     }
 
-    private void selectResourceAttribute(String id, Participant p) {
+    private void selectResourceAttribute(String id, Participant p)
+            throws ResourceGatewayException {
         if (activeResourceAttributeTab.equals("tabRoles"))
             p.addRole(id);
         else if (activeResourceAttributeTab.equals("tabPosition"))
@@ -1391,24 +1596,50 @@ public class SessionBean extends AbstractSessionBean {
     }
 
     // resets all edits by reloading participant from org database
-    public Participant resetParticipant() {
-        if (editedParticipant != null)
-            editedParticipant = setEditedParticipant(editedParticipant.getID());
+    public Participant resetParticipant() throws CloneNotSupportedException {
+        if (editedParticipant != null) {
+            String actualID = editedParticipant.getID().substring(7);      // remove 'CLONE_' from edited id
+            if (preEditAttributes != null) {
+                getParticipantMap().get(actualID).setAttributeReferences(preEditAttributes);
+                preEditAttributes = null;
+            }
+            editedParticipant = setEditedParticipant(actualID);
+        }
         return editedParticipant ;
     }
 
-    public String addParticipant(Participant p) {
+    public String addParticipant(Participant p) throws CloneNotSupportedException  {
         String newID = _rm.addParticipant(p);
         refreshOrgDataParticipantList();
-        editedParticipant = p.clone() ;
+        preEditAttributes = p.getAttributeReferences();
+        editedParticipant = p.clone();
         return newID;
     }
 
     public void removeParticipant(Participant p) {
-        Participant pToRemove = participantMap.get(p.getID());
-        setEditedParticipant((Participant) null);
+        String actualID = p.getID().substring(7);      // remove 'CLONE_' from edited id
+        Participant pToRemove = participantMap.get(actualID);
+        setEditedParticipantToNull();
         _rm.removeParticipant(pToRemove);
         refreshOrgDataParticipantList();
+    }
+
+
+    private String lblAgeText = "Age";
+
+    public String getLblAgeText() { return lblAgeText; }
+
+    public void setLblAgeText(String text) { lblAgeText = text; }
+
+
+    private YPredicateParser docoParser = new YPredicateParser();
+
+    public void updateWIRDoco(String doco) {
+        if (chosenWIR != null) {
+            chosenWIR.setDocumentation(docoParser.parse(doco));
+            chosenWIR.setDocumentationChanged(true);
+            _rm.getWorkItemCache().update(chosenWIR);
+        }
     }
 
     /******************************************************************************/
@@ -1591,7 +1822,11 @@ public class SessionBean extends AbstractSessionBean {
                         "border: none;";
         transparentPanel.setStyle(style);
         transparentPanel.setVisible(messagePanel.hasMessage());
-        messagePanel.show(getOuterPanelWidth());
+
+        if (activePage != ApplicationBean.PageRef.dynForm)
+            messagePanel.show(getOuterPanelWidth());
+        else
+            messagePanel.show(getOuterPanelWidth(), getOuterPanelHeight());
     }
 
     public String messagePanelOKBtnAction(ActionEvent event) {
@@ -1601,51 +1836,9 @@ public class SessionBean extends AbstractSessionBean {
     }
 
 
-    private int getOuterPanelWidth() {
-        switch (activePage) {
-            case adminQueues     : return 798;
-            case caseMgt         : return 602;
-            case customServices  : return 666;
-            case Login           : return 240;
-            case orgDataMgt      : return 698;
-            case participantData : return 670;
-            case userWorkQueues  : return 798;
-            case viewProfile     : return 538;
-            case addInstance     : return 306;
-            case teamQueues      : return 796;
-            case externalClients : return 666;
-            case dynForm         : return getDynFormFactoryInstance().getFormWidth();
-            default: return -1;
-        }
-    }
 
-    private int getOuterPanelHeight() {
-        switch (activePage) {
-            case adminQueues     : return 328;
-            case caseMgt         : return 590;
-            case customServices  : return 515;
-            case orgDataMgt      : return 328;
-            case participantData : return 543;
-            case userWorkQueues  : return 328;
-            case viewProfile     : return 377;
-            case addInstance     : return 370;
-            case teamQueues      : return 350;
-            case externalClients : return 485;
-            default: return -1;
-        }
-    }
 
     /*****************************************************************************/
-
-
-//    public void setConnectionTimeout() {
-//        if (! getApplicationBean().isSessionTimeoutSet()) {
-//            int interval = this.getExternalSession().getMaxInactiveInterval();
-//            _rm.setConnectionTimeoutInterval(interval * 1000);      // secs --> msecs
-//            getApplicationBean().setSessionTimeoutSet(true);
-//        }
-//    }
-
     /*****************************************************************************/
     
 
@@ -1669,7 +1862,7 @@ public class SessionBean extends AbstractSessionBean {
         this.orgDataBelongsLabelText = orgDataBelongsLabelText;
     }
 
-        private String orgDataGroupLabelText = "Org Group";
+    private String orgDataGroupLabelText = "Org Group";
 
     public String getOrgDataGroupLabelText() {
         return orgDataGroupLabelText;
@@ -1679,10 +1872,31 @@ public class SessionBean extends AbstractSessionBean {
         this.orgDataGroupLabelText = orgDataGroupLabelText;
     }
 
+    private String nhResourceListLabelText = "Resources";
+
+    public String getNhResourceListLabelText() {
+        return nhResourceListLabelText;
+    }
+
+    public void setNhResourceListLabelText(String text) {
+        nhResourceListLabelText = text;
+    }
+
+    private String nhResourceCategoryLabelText = "Category";
+
+    public String getNhResourceCategoryLabelText() {
+        return nhResourceCategoryLabelText;
+    }
+
+    public void setNhResourceCategoryLabelText(String text) {
+        nhResourceCategoryLabelText = text;
+    }
+
+
     public void resetPageDefaults(ApplicationBean.PageRef page) {
         switch (page) {
             case participantData :
-                setEditedParticipant((Participant) null);
+                setEditedParticipantToNull();
                 setActiveResourceAttributeTab(null);
                 setAddParticipantMode(false);
                 setAddedParticipant(null);                
@@ -1742,6 +1956,30 @@ public class SessionBean extends AbstractSessionBean {
 
     public void setAddInstanceHeader(String taskID) {
         addInstanceHeader = "Create a New Workitem Instance of Task '" + taskID + "'";
+    }
+
+    //////
+
+    private boolean delayTimeRBSelected = true;
+    private boolean delayDateRBSelected = false;
+    private boolean delayDurationRBSelected = false;
+
+    public boolean isDelayTimeRBSelected() { return delayTimeRBSelected; }
+
+    public void setDelayTimeRBSelected(boolean selected) {
+        delayTimeRBSelected = selected;
+    }
+
+    public boolean isDelayDateRBSelected() { return delayDateRBSelected; }
+
+    public void setDelayDateRBSelected(boolean selected) {
+        delayDateRBSelected = selected;
+    }
+
+    public boolean isDelayDurationRBSelected() { return delayDurationRBSelected; }
+
+    public void setDelayDurationRBSelected(boolean selected) {
+        delayDurationRBSelected = selected;
     }
 
     //////
@@ -1817,17 +2055,51 @@ public class SessionBean extends AbstractSessionBean {
         orgDataUploadPanelVisible = visible;
     }
 
-    public String getFooterPanelStyle() {
-        String style = "top: %dpx; height:100%%; width:100%%; position:relative;";
-        int top = 80;
-        if (messagePanel.isVisible()) {
-            int overhang =  (messagePanel.getHeight() + 60) - getOuterPanelHeight();
-            if (overhang > 0) {
-                top += overhang;
-            }
-        }
-        return String.format(style, top);
+
+    private boolean delayedLaunchPanelVisible = false;
+
+    public boolean isDelayedLaunchPanelVisible() {
+        return delayedLaunchPanelVisible;
     }
+
+    public void setDelayedLaunchPanelVisible(boolean visible) {
+        delayedLaunchPanelVisible = visible;
+    }
+
+
+    private long delaySeconds = -1;
+    private Date delayDate = null;
+    private Duration delayDuration = null;
+
+    public void resetDelayValues() {
+        delaySeconds = -1;
+        delayDate = null;
+        delayDuration = null;
+    }
+
+    public long getDelaySeconds() { return delaySeconds; }
+
+    public void setDelaySeconds(long seconds) { delaySeconds = seconds; }
+
+    public Date getDelayDate() { return delayDate; }
+
+    public void setDelayDate(Date date) { delayDate = date; }
+
+    public Duration getDelayDuration() { return delayDuration; }
+
+    public void setDelayDuration(Duration duration) { delayDuration = duration; }
+
+    public boolean hasDelayValueSet() {
+        return (delaySeconds > -1) || (delayDate != null) || (delayDuration != null);
+    }
+
+
+    private String delayValueError = "";
+
+    public String getDelayValueError() { return delayValueError; }
+
+    public void setDelayValueError(String error) { delayValueError = error; }
+
 
     private boolean visualiserReferred = false;
 
@@ -1849,14 +2121,14 @@ public class SessionBean extends AbstractSessionBean {
         visualiserEditedWIR = wir;
     }
 
-    private boolean rssAlreadyLoggedOn = false;
+    private boolean rssUserAlreadyLoggedOn = false;
 
-    public boolean isRssAlreadyLoggedOn() {
-        return rssAlreadyLoggedOn;
+    public boolean isRssUserAlreadyLoggedOn() {
+        return rssUserAlreadyLoggedOn;
     }
 
-    public void setRssAlreadyLoggedOn(boolean loggedOn) {
-        rssAlreadyLoggedOn = loggedOn;
+    public void setRssUserAlreadyLoggedOn(boolean loggedOn) {
+        rssUserAlreadyLoggedOn = loggedOn;
     }
 
     private FormViewer formViewerInstance = null ;
@@ -1883,6 +2155,7 @@ public class SessionBean extends AbstractSessionBean {
         setFormViewerInstance(null);
         setRssFormWIR(null);
         setRssFormDisplay(false);
+        setRssUserAlreadyLoggedOn(true);
         setWirEdit(false);
         setCompleteAfterEdit(false);
         setCustomFormPost(false);
@@ -1899,47 +2172,505 @@ public class SessionBean extends AbstractSessionBean {
         rssFormDisplay = display;
     }
 
+
+    private boolean rssFormCloseAttempted = false;
+
+    public boolean isRssFormCloseAttempted() {
+        return rssFormCloseAttempted;
+    }
+
+    public void setRssFormCloseAttempted(boolean attempted) {
+        rssFormCloseAttempted = attempted;
+    }
+
+    /******************************************************************************/
+    /** Client Apps Page **********************************************************/
+    /******************************************************************************/
+
+    // true if currently adding a client
     private boolean addClientAccountMode = true ;
 
-    public boolean isAddClientAccountMode() {
-        return addClientAccountMode;
-    }
+    public boolean isAddClientAccountMode() { return addClientAccountMode; }
 
-    public void setAddClientAccountMode(boolean mode) {
-        addClientAccountMode = mode;
-    }
+    public void setAddClientAccountMode(boolean mode) { addClientAccountMode = mode; }
 
 
+    /******************************************************************************/
+    /** Org Mgt Page **************************************************************/
+    /******************************************************************************/
+
+    // list of resources in a selected grouping - fills the members combo
     private Option[] orgDataMembers;
 
-    public Option[] getOrgDataMembers() {
-        return orgDataMembers;
-    }
+    public Option[] getOrgDataMembers() { return orgDataMembers; }
 
     public int setOrgDataMembers(AbstractResourceAttribute attribute) {
         int membership = 0;
         if (attribute != null) {
-            orgDataMembers = new Option[attribute.getResources().size()];
+            membership = attribute.getResources().size();
+            orgDataMembers = new Option[membership];
             int i = 0;
             for (AbstractResource resource : attribute.getResources()) {
                 Participant p = (Participant) resource;
                 orgDataMembers[i++] = new Option(p.getID(), p.getFullName()) ;
             }
-            membership = orgDataMembers.length;
         }
-        else {
-            orgDataMembers = null;
-        }
+        else orgDataMembers = null;
+
         return membership;
     }
 
 
+    /******************************************************************************/
+    /** Dyn Form ******************************************************************/
+    /******************************************************************************/
+
+    // if false, top YAWL banner is hidden - set from dyn form's attributes
     private boolean showYAWLBanner = true;
 
     public boolean isShowYAWLBanner() { return showYAWLBanner; }
 
     public void setShowYAWLBanner(boolean show) { showYAWLBanner = show; }
+
+
+    /******************************************************************************/
+    /** Assets Page (Non-Human Resources ******************************************/
+    /******************************************************************************/
+
+    // true if currently adding a sub-category
+    private boolean subCatAddMode = false;
+
+    public boolean isSubCatAddMode() { return subCatAddMode; }
+
+    public void setSubCatAddMode(boolean adding) { subCatAddMode = adding; }
+
+
+    // list of resources in a selected category - fills the members combo on category tab
+    private Option[] categoryMembers;
+
+    public Option[] getCategoryMembers() { return categoryMembers; }
+
+    public int setCategoryMembers(NonHumanCategory category) {
+        int membership = 0;
+        if (category != null) {
+            membership = category.getResources().size();
+            categoryMembers = new Option[membership];
+            int i = 0;
+            for (NonHumanResource r : category.getResources()) {
+                categoryMembers[i++] = new Option(r.getID(), r.getName()) ;
+            }
+        }
+        else categoryMembers = null;
+        
+        return membership;
+    }
+
+
+    // a clone of the currently selected resource
+    private NonHumanResource selectedNonHumanResource = null;
+
+    public NonHumanResource getSelectedNonHumanResource() {
+        return selectedNonHumanResource;
+    }
+
+    // cloned for editing
+    public void setSelectedNonHumanResource(NonHumanResource resource, boolean editing)
+            throws CloneNotSupportedException {
+        if ((selectedNonHumanResource != null) && editing) {
+            selectedNonHumanResource.clearCategory();
+        }
+
+        if (resource != null) {
+
+            // an id of _TEMP_ means a new resource (in add mode), so don't clone it
+            selectedNonHumanResource = (! resource.getID().equals("_TEMP_")) ?
+                    resource.clone() : resource;
+        }
+        else selectedNonHumanResource = null;
+    }
+
+
+    /******************************************************************************/
+    /** All Pages *****************************************************************/
+    /******************************************************************************/
+
+    // nbr of menu bars: 1 if 'admin' or non-admin user, 2 if admin-level user
+    private int menuBarCount = 1;
+
+    public int getMenuBarCount() { return menuBarCount; }
+
+    public void setMenuBarCount(int count) { menuBarCount = count; }
+
+
+    // sets the 'top' of each page's main panel based on the nbr of menubars on view
+    public String getOuterPanelTop() {
+        return String.format("top: %dpx;", (menuBarCount * 30) + 20);
+    }
+
+
+    // adjusts to 'top' of each page's footer text to allow for long msg panels
+    public String getFooterPanelStyle() {
+        String style = "top: %dpx; height:100%%; width:100%%; position:relative;";
+        int top = 80;
+        if (messagePanel.isVisible()) {
+            int overhang =  (messagePanel.getHeight() + 60) - getOuterPanelHeight();
+            if (overhang > 0) {
+                top += overhang;
+            }
+        }
+        return String.format(style, top);
+    }
+
+
+    // returns the width in pixels of the active page's outermost panel
+    private int getOuterPanelWidth() {
+        switch (activePage) {
+            case adminQueues     : return 798;
+            case caseMgt         : return 602;
+            case customServices  : return 666;
+            case Login           : return 238;
+            case orgDataMgt      : return 698;
+            case nonHumanMgt     : return 698;
+            case participantData : return 670;
+            case userWorkQueues  : return 798;
+            case viewProfile     : return 538;
+            case addInstance     : return 306;
+            case teamQueues      : return 796;
+            case externalClients : return 666;
+            case calendarMgt     : return 600;
+            case secResMgt       : return 800;
+            case dynForm         : return getDynFormFactoryInstance().getFormWidth();
+            default: return -1;
+        }
+    }
+
+
+    // returns the height in pixels of the active page's outermost panel
+    private int getOuterPanelHeight() {
+        switch (activePage) {
+            case adminQueues     : return 378;
+            case caseMgt         : return 590;
+            case customServices  : return 515;
+            case orgDataMgt      : return 328;
+            case nonHumanMgt     : return 328;
+            case participantData : return 543;
+            case userWorkQueues  : return 378;
+            case viewProfile     : return 377;
+            case addInstance     : return 370;
+            case teamQueues      : return 370;
+            case externalClients : return 485;
+            case calendarMgt     : return 648;
+            case secResMgt       : return 600;
+            case dynForm         : return getDynFormFactoryInstance().getFormHeight();
+            default: return -1;
+        }
+    }
+
+
+    /******************************************************************************/
+    /** Calendar Page *************************************************************/
+    /******************************************************************************/
+
+    private List<CalendarRow> calendarRows = new ArrayList<CalendarRow>();
+
+    public List<CalendarRow> getCalendarRows() { return calendarRows; }
+
+    public int getCalendarRowCount() { return calendarRows.size(); }
+
+    public void refreshCalendarRows() {
+        calendarRows.clear();
+        long from = selectedCalMgtDate.getTime();
+        long to = from + 86400000;      // msecs in 1 day
+        List rawRows = getEntriesForSelection(from, to);
+        for (Object o : rawRows) {
+            CalendarRow row = new CalendarRow((CalendarEntry) o);
+            row.setName(getNameForCalendarID(row.getResourceID()));
+            row.setBaseDate(selectedCalMgtDate);
+            calendarRows.add(row);
+        }
+        Collections.sort(calendarRows, new CalendarRowComparator());
+    }
+
+
+    private List getEntriesForSelection(long from, long to) {
+        String id = getSelectedCalendarID();
+        if (id != null) {
+            if (calFilterSelection.startsWith("All")) {
+                return _rm.getCalendar().getEntries(getSelectedResourceGroup(), from, to, true);
+            }
+            else if (calFilterSelection.startsWith("Selected")) {
+                AbstractResource resource = _rm.getOrgDataSet().getResource(id);
+                return _rm.getCalendar().getEntries(resource, from, to, true);
+            }    
+        }
+        return _rm.getCalendar().getEntries(id, from, to, true);
+    }
+
+
+    public String removeCalendarRow(int index) {
+        CalendarRow row = getSelectedCalendarRow(index);
+        if (row != null) {
+            if (row.getStatus().equals("busy")) {
+                return "<failure>Entries with 'busy' status cannot be removed.</failure>"; 
+            }
+            try {
+                _rm.getCalendar().makeAvailable(row.getEntryID());
+                return "<success/>";
+            }
+            catch (CalendarException ce) {
+                return "<failure>" + ce.getMessage() + "</failure>";
+            }
+        }
+        return "<failure>Could not remove row.</failure>";
+    }
+
+
+    private int selectedCalendarRowIndex = -1;
+
+    public CalendarRow getSelectedCalendarRow(int index) {
+        if (index < calendarRows.size()) {
+             selectedCalendarRowIndex = index;
+             return calendarRows.get(index);
+        }
+        return null;
+    }
+
+    public CalendarRow getSelectedCalendarRow() {
+        return (selectedCalendarRowIndex > -1) ?
+             calendarRows.get(selectedCalendarRowIndex) : null;
+    }
+
+
+    public CalendarEntry getSelectedEntry() {
+        CalendarRow row = getSelectedCalendarRow();
+        return (row != null) ? row.toCalendarEntry() : null;
+    }
+
+
+    public int getSelectedCalendarRowIndex() { return selectedCalendarRowIndex; }
+
+    public void setSelectedCalendarRowIndex(int index) { selectedCalendarRowIndex = index; }
+
+
+    // the currently selected date on the page - default to today midnight
+    private Date selectedCalMgtDate = DateUtils.truncate(new Date(), Calendar.DAY_OF_MONTH);
+
+    public Date getSelectedCalMgtDate() { return selectedCalMgtDate; }
+
+    public void setSelectedCalMgtDate(Date date) { selectedCalMgtDate = date; }
+
+
+    private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+    private Date calMgtMinDate = createDate("2010-01-01");
+
+    public Date getCalMgtMinDate() { return calMgtMinDate; }
+
+    public void setCalMgtMinDate(Date date) { calMgtMinDate = date; }
+
+
+    private Date calMgtMaxDate = createDate("2020-01-01");
+
+    public Date getCalMgtMaxDate() { return calMgtMaxDate; }
+
+    public void setCalMgtMaxDate(Date date) { calMgtMaxDate = date; }
+
+
+    private Date createDate(String s) {
+        try {
+            return sdf.parse(s);
+        }
+        catch (ParseException pe) {
+            return new Date();
+        }
+    }
+
+
+    private String calFilterSelection = "Unfiltered";
+
+    public String getCalFilterSelection() { return calFilterSelection; }
+
+    public void setCalFilterSelection(String selection) { calFilterSelection = selection; }
+
+
+    private String calResourceSelection = null;
+
+    public String getCalResourceSelection() { return calResourceSelection; }
+
+    public void setCalResourceSelection(String selection) { calResourceSelection = selection; }
+
+
+    public String getSelectedCalendarID() {
+        String result = null;
+        if (calFilterSelection.startsWith("All")) {
+            result = getSelectedResourceGroup().name();
+        }
+        else if (calFilterSelection.startsWith("Selected")) {
+            result = calResourceSelection;
+        }
+        return result;
+    }
+
+
+    public void addCalendarEntry(long startTime, long endTime, int workload, String comments)
+            throws CalendarException {
+        if (calFilterSelection.startsWith("All")) {
+            ResourceCalendar.ResourceGroup group = getSelectedResourceGroup();
+            long entryID = _rm.getCalendar().addEntry(group, startTime, endTime,
+                    ResourceCalendar.Status.unavailable, getUserid(), comments);
+            logCalendarEntry(entryID, group.name(), workload);
+        }
+        else if (calFilterSelection.startsWith("Selected")) {
+            AbstractResource resource = _rm.getOrgDataSet().getResource(calResourceSelection);
+            if (resource != null) {
+                CalendarEntry entry = new CalendarEntry(resource.getID(), startTime, endTime,
+                    ResourceCalendar.Status.unavailable, workload, getUserid(), comments);
+                if (! clashesWithCalendar(entry, true)) {
+                    long entryID = _rm.getCalendar().addEntry(entry);
+                    logCalendarEntry(entryID, resource.getID(), workload);
+                }
+                else throw new CalendarException(
+                        "Time(s) and/or workload clashes with an existing entry.");
+            }
+            else throw new CalendarException("Unknown resource.");
+        }
+    }
+
+
+    private final CalendarLogger _calLogger = new CalendarLogger();
+
+
+    public void logCalendarEntry(long entryID, String resourceID, int workload) {
+        CalendarLogEntry logEntry = new CalendarLogEntry(null, null, resourceID, -1,
+                ResourceCalendar.Status.unavailable.name(), entryID);
+        logEntry.setAgent(getUserid());
+        logEntry.setWorkload(workload);
+        _calLogger.log(logEntry, true);
+    }
+
+
+    private ResourceCalendar.ResourceGroup getSelectedResourceGroup() {
+        if (calFilterSelection.equals("All Resources")) {
+            return ResourceCalendar.ResourceGroup.AllResources;
+        }
+        else if (calFilterSelection.equals("All Participants")) {
+            return ResourceCalendar.ResourceGroup.HumanResources;
+        }
+        else if (calFilterSelection.equals("All Assets")) {
+            return ResourceCalendar.ResourceGroup.NonHumanResources;
+        }
+        return null;
+    }
+
+    private String getNameForCalendarID(String id) {
+        ResourceCalendar cal = _rm.getCalendar();
+        if (id == null) return "";
+        String result = "";
+        if (id.equals(cal.getEntryString(ResourceCalendar.ResourceGroup.AllResources))) {
+            result = "All Resources";
+        }
+        else if (id.equals(cal.getEntryString(ResourceCalendar.ResourceGroup.HumanResources))) {
+            result = "All Participants";
+        }
+        else if (id.equals(cal.getEntryString(ResourceCalendar.ResourceGroup.NonHumanResources))) {
+            result = "All Assets";
+        }
+        else if (id.length() > 0) {
+            AbstractResource resource = _rm.getOrgDataSet().getResource(id);
+            if (resource instanceof Participant) {
+                result = ((Participant) resource).getFullName();
+            }
+            else if (resource instanceof NonHumanResource) {
+                result = ((NonHumanResource) resource).getName();
+            }
+        }
+        return result;            
+    }
     
+
+    public Option[] getCalResourceOptions() {
+        Option[] options = null;
+        if (calFilterSelection.endsWith("Participant")) {
+            options = getOrgDataParticipantList();
+        }
+        else if (calFilterSelection.endsWith("Asset")) {
+            options = getNhResourcesList();
+        }
+
+        if (options != null) {
+            if ((options.length > 0) && StringUtil.isNullOrEmpty(getCalEditedResourceName())) {
+                setCalResourceSelection((String) options[0].getValue());
+                setCalEditedResourceName(options[0].getLabel());
+                refreshCalendarRows();
+            }
+            return options;
+        }
+        return new Option[0];
+    }
+
+
+    private Date selectedDurationDate;
+
+    public Date getSelectedDurationDate() { return selectedDurationDate; }
+
+    public void setSelectedDurationDate(Date date) { selectedDurationDate = date; }
+
+
+    private boolean addCalendarRowMode = true;
+
+    public boolean isAddCalendarRowMode() { return addCalendarRowMode; }
+
+    public void setAddCalendarRowMode(boolean mode) { addCalendarRowMode = mode; }
+
+
+    public String calEditedResourceName;
+
+    public String getCalEditedResourceName() { return calEditedResourceName; }
+
+    public void setCalEditedResourceName(String name) { calEditedResourceName = name; }
+
+
+    public boolean clashesWithCalendar(CalendarEntry entry, boolean add) {
+
+        // non-individual entries are 'unioned', so they may overlap
+        if (! calFilterSelection.startsWith("All")) {
+            for (CalendarRow row : calendarRows) {
+                if ((add || (row.getEntryID() != entry.getEntryID())) &&
+                    (row.getResourceID().equals(entry.getResourceID())) &&
+                    (row.getStartTime() < entry.getEndTime()) &&
+                    (row.getEndTime() > entry.getStartTime()) &&
+                    ((row.getWorkload() + entry.getWorkload()) > 100)) {
+
+                    return true;
+                }
+            }
+        }
+        return false;
+
+    }
+
+
+    public String getCalDataTableStyle() {
+        int height = 20 * (calendarRows.size() + 1);
+        return String.format("height: %dpx", Math.min(height, 330));
+    }
+    
+    /******************************************************************************/
+
+
+    public String getLblDocumentationStyle() {
+        boolean lower = (activeTab != null && activeTab.equals("tabWorklisted")) ||
+                         activePage == ApplicationBean.PageRef.teamQueues;
+        return String.format("top: %dpx",  (lower ? 300 : 256));
+    }
+
+    public String getTxtDocumentationStyle() {
+        boolean lower = (activeTab != null && activeTab.equals("tabWorklisted")) ||
+                         activePage == ApplicationBean.PageRef.teamQueues;
+        return String.format("height: %dpx; top: %dpx;",
+                (lower ? 44 : 84), (lower ? 314 : 274));
+    }    
+    
+    
+    public String getYawlVersion() { return getApplicationBean().getYawlVersion(); }
 }
-
-

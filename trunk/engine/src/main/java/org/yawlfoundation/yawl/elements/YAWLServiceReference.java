@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,17 +18,13 @@
 
 package org.yawlfoundation.yawl.elements;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.authentication.YClient;
 import org.yawlfoundation.yawl.engine.YEngine;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.XNode;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
+import org.yawlfoundation.yawl.util.XNodeParser;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 /**
  * Represents a server-side reference to a YAWL Custom Service.
@@ -125,23 +121,37 @@ public class YAWLServiceReference extends YClient implements YVerifiable {
 
     /***************************************************/
 
+    public boolean equals(Object other) {
+        return (other instanceof YAWLServiceReference) &&
+                ((getServiceID() != null) ?
+                getServiceID().equals(((YAWLServiceReference) other).getServiceID()) :
+                super.equals(other));
+    }
 
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
-        if (YEngine.isRunning()) {
-            YEngine engine = YEngine.getInstance();
-            YAWLServiceReference service = engine.getRegisteredYawlService(_yawlServiceID);
-            if (service == null) {
-                messages.add(new YVerificationMessage(
-                                this,
-                                "YAWL service[" + _yawlServiceID + "] " +
-                                 (_webServiceGateway != null
-                                     ? "at WSGateway[" + _webServiceGateway.getID() + "] "
-                                     : " ") + "is not registered with engine.",
-                                YVerificationMessage.WARNING_STATUS));
+    public int hashCode() {
+        return (getServiceID() != null) ? getServiceID().hashCode() : super.hashCode();
+    }
+    
+
+    public void verify(YVerificationHandler handler) {
+        try {
+            if (YEngine.isRunning()) {
+                YEngine engine = YEngine.getInstance();
+                YAWLServiceReference service = engine.getRegisteredYawlService(_yawlServiceID);
+                if (service == null) {
+                    handler.warn(this,
+                            "YAWL service [" + _yawlServiceID + "] " +
+                            (_webServiceGateway != null
+                                    ? "at WSGateway [" + _webServiceGateway.getID() + "] "
+                                    : " ") + "is not registered with engine.");
+                }
             }
         }
-        return messages;
+        catch (NoClassDefFoundError e) {
+            // may occur if called in standalone mode (eg. from the editor), caused by
+            // the call to a static YEngine which attempts to create a
+            // YPersistenceManager object - ok to ignore the verify check in these instances
+        }
     }
 
 
@@ -160,6 +170,18 @@ public class YAWLServiceReference extends YClient implements YVerifiable {
         return root.toString();
     }
 
+    
+    public void fromXML(String xml) {
+        XNode node = new XNodeParser().parse(xml);
+        if (node != null) {
+            _yawlServiceID = node.getAttributeValue("id");
+            _documentation = node.getChildText("documentation");
+            _userName = node.getChildText("servicename");
+            _password = node.getChildText("servicepassword");
+            String assignStr = node.getChildText("assignable");
+            _assignable = (assignStr != null) && assignStr.equalsIgnoreCase("true");
+        }
+    }
 
     private XNode toBasicXNode() {
         XNode root = new XNode("yawlService");
@@ -203,12 +225,7 @@ public class YAWLServiceReference extends YClient implements YVerifiable {
      * @return  The scheme component of the URI
      */
     public String getScheme() {
-        try {
-            URI uri = new URI(getURI());
-            return uri.getScheme();
-        }
-        catch (URISyntaxException e) {
-            return null;
-        }
+        int pos = _yawlServiceID.indexOf(':');
+        return pos > -1 ? _yawlServiceID.substring(0, pos) : null;
     }
 }

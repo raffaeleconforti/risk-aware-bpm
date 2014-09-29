@@ -8,6 +8,7 @@ import org.yawlfoundation.yawl.editor.net.NetElementSummary;
 import org.yawlfoundation.yawl.editor.net.NetGraphModel;
 import org.yawlfoundation.yawl.editor.specification.SpecificationModel;
 import org.yawlfoundation.yawl.elements.YSpecification;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 import org.yawlfoundation.yawl.util.YVerificationMessage;
 
 import java.util.*;
@@ -36,7 +37,9 @@ public class EngineSpecificationValidator {
   }
   
   public static List<String> getValidationResults(YSpecification specification) {
-    return createProblemListFrom(specification.verify());
+      YVerificationHandler ywh = new YVerificationHandler();
+      specification.verify(ywh);
+    return createProblemListFrom(ywh.getErrors());
   }
   
   private static List<String> createProblemListFrom(List verificationList) {

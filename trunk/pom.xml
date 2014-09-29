@@ -28,7 +28,7 @@
 
         <library.version>1.0</library.version>
 
-        <!--<jdom.version>1.1</jdom.version>-->
+        <jdom.version>2.0.2</jdom.version>
         <!--<log4j.version>1.2.14</log4j.version>-->
         <!--<javax.servlet.version>2.4</javax.servlet.version>-->
         <!--<hibernate.version>3.5.2-Final</hibernate.version>-->
@@ -259,12 +259,6 @@
             <dependency>
                 <groupId>yawl.libraries.engine</groupId>
                 <artifactId>jcommon</artifactId>
-                <version>${library.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>yawl.libraries.engine</groupId>
-                <artifactId>jdom</artifactId>
                 <version>${library.version}</version>
             </dependency>
 
@@ -526,6 +520,24 @@
                 <version>${library.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jung-algorithm</artifactId>
+                <version>2.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>jung-visualization</artifactId>
+                <version>2.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>yawl.libraries.engine</groupId>
+                <artifactId>common-collection-generic</artifactId>
+                <version>4.0.1</version>
+            </dependency>
+
             <!--Editor Dependencies-->
 
             <dependency>
@@ -698,7 +710,11 @@
                 <version>1.2.0</version>
             </dependency>
 
-
+            <dependency>
+                <groupId>org.jdom</groupId>
+                <artifactId>jdom</artifactId>
+                <version>2.0.2</version>
+            </dependency>
 
 
 

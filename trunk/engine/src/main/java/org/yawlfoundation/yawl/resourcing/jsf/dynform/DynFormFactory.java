@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -23,7 +23,7 @@ package org.yawlfoundation.yawl.resourcing.jsf.dynform;
  *
  * Author: Michael Adams
  * Creation Date: 19/01/2008
- * Refactored 10/08/2008 - 04/2010
+ * Refactored 10/08/2008 - 04/2010 - 09/2014
  */
 
 import com.sun.rave.web.ui.appbase.AbstractSessionBean;
@@ -34,10 +34,14 @@ import com.sun.rave.web.ui.component.*;
 import com.sun.rave.web.ui.component.Label;
 import com.sun.rave.web.ui.component.TextArea;
 import com.sun.rave.web.ui.component.TextField;
-import org.jdom.Element;
+import org.apache.log4j.Logger;
+import org.jdom2.Element;
+import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.resourcing.DynamicForm;
 import org.yawlfoundation.yawl.resourcing.jsf.ApplicationBean;
 import org.yawlfoundation.yawl.resourcing.jsf.FontUtil;
+import org.yawlfoundation.yawl.resourcing.jsf.MessagePanel;
 import org.yawlfoundation.yawl.resourcing.jsf.SessionBean;
 import org.yawlfoundation.yawl.resourcing.jsf.dynform.dynattributes.DynAttributeFactory;
 import org.yawlfoundation.yawl.util.JDOMUtil;
@@ -52,14 +56,14 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
-public class DynFormFactory extends AbstractSessionBean {
+public class DynFormFactory extends AbstractSessionBean implements DynamicForm {
 
     // required JSF member and method
     private int __placeholder;
 
     private void _init() throws Exception { }
 
-    /****************************************************************************/
+    /**************************************************************************/
 
     // components & settings of the dynamic form that are managed by this factory object
 
@@ -74,31 +78,31 @@ public class DynFormFactory extends AbstractSessionBean {
 
     public String getHeaderText() { return headerText; }
 
-    public void setHeaderText(String text) { headerText = text ; }
+    public void setHeaderText(String text) { headerText = text; }
 
 
-    private String containerStyle ;
+    private String containerStyle;
 
     public String getContainerStyle() { return containerStyle; }
 
     public void setContainerStyle(String style) { containerStyle = style; }
 
 
-    private String btnOKStyle ;
+    private String btnOKStyle;
 
     public String getBtnOKStyle() { return btnOKStyle; }
 
     public void setBtnOKStyle(String style) { btnOKStyle = style; }
 
 
-    private String btnCancelStyle ;
+    private String btnCancelStyle;
 
     public String getBtnCancelStyle() { return btnCancelStyle; }
 
     public void setBtnCancelStyle(String style) { btnCancelStyle = style; }
 
 
-    private String btnCompleteStyle ;
+    private String btnCompleteStyle;
 
     public String getBtnCompleteStyle() { return btnCompleteStyle; }
 
@@ -119,53 +123,63 @@ public class DynFormFactory extends AbstractSessionBean {
     public void setBottomPanelStyle(String style) { bottomPanelStyle = style; }
 
 
-    private String title ;
+    private String title;
 
     public String getTitle() { return title; }
 
     public void setTitle(String s) { title = s; }
 
 
-    private String focus ;
+    private String focus;
 
     public String getFocus() { return focus; }
 
     public void setFocus(String s) { focus = s; }
 
-    
-    /****************************************************************************/
 
-    // a running set of component id's - used to ensure id uniqueness
-    private Set<String> _usedIDs = new HashSet<String>();
+    /***************************************************************************/
 
     // the set of generated subpanels on the current form
-    private Hashtable<String, SubPanelController> _subPanelTable =
-            new Hashtable<String, SubPanelController>();
+    private Map<String, SubPanelController> _subPanelTable =
+            new HashMap<String, SubPanelController>();
 
     // a map of inputs to the textfields they generated (required for validation)
-    private Hashtable<UIComponent, DynFormField> _componentFieldTable;
+    private Map<UIComponent, DynFormField> _componentFieldTable;
 
     // a map of the non-SubPanel components of the outermost panel and their y-coords
-    private Hashtable<UIComponent, Integer> _outermostTops =
-            new Hashtable<UIComponent, Integer>();
+    private Map<UIComponent, Integer> _outermostTops = new HashMap<UIComponent, Integer>();
 
-    // used to maintain the 'status' of the component add process
-    protected enum ComponentType { nil, panel, field, radio, line, textblock, image }
+    // a reference to the sessionbean
+    private SessionBean _sb = (SessionBean) getBean("SessionBean");
+
+    // the workitem's extended attributes (decomposition level) *
+    private DynFormUserAttributes _userAttributes;
+
+    // the object that manufactures the form's fields *
+    private DynFormFieldAssembler _fieldAssembler;
+
+    // the wir currently populating the form
+    private WorkItemRecord _displayedWIR;
+
+    // user defined fonts store
+    private DynFormFont _formFonts;
+
+    // overall height in pixels of the generated form
+    private int _overallHeight;
 
     // some constants for layout arithmetic
-    static final int Y_DEF_INCREMENT = 10 ;     // default gap between components
+    static final int Y_DEF_INCREMENT = 10;          // default gap between components
     static final int Y_CHOICE_DECREMENT = 20;   // dec of y coord for choice container top
-    static final int SUBPANEL_INSET = 10 ;      // gap between panel side walls
+    static final int SUBPANEL_INSET = 10;           // gap between panel side walls
     static final int OUTER_PANEL_TO_BUTTONS = 20;   // gap from panel bottom to buttons
-    static final int OUTER_PANEL_TOP = 80;      // top (y) coord of outer panel
-    static final int OUTER_PANEL_LEFT = 0;      // left (x) coord of outer panel
-    static final int FORM_BUTTON_WIDTH = 76;    // buttons under outer panel
+    static final int OUTER_PANEL_LEFT = 0;          // left (x) coord of outer panel
+    static final int FORM_BUTTON_WIDTH = 76;        // buttons under outer panel
     static final int FORM_BUTTON_HEIGHT = 30;
-    static final int FORM_BUTTON_GAP = 15;      // ... and the gap between them
+    static final int FORM_BUTTON_GAP = 15;          // ... and the gap between them
     static final int BOTTOM_PANEL_HEIGHT = 20;
     static final int X_LABEL_OFFSET = 10;
     static final int DEFAULT_FIELD_OFFSET = 125;
-    static final int DEFAULT_PANEL_BASE_WIDTH = 250;         // width of innermost panel
+    static final int DEFAULT_PANEL_BASE_WIDTH = 250;       // width of innermost panel
     static final int DEFAULT_FIELD_WIDTH = 145;
     static final int DEFAULT_LABEL_FIELD_GAP = 20;
     static final int CHECKBOX_FIELD_WIDTH = 10;
@@ -178,121 +192,225 @@ public class DynFormFactory extends AbstractSessionBean {
     static int FIELD_WIDTH = DEFAULT_FIELD_WIDTH;
 
 
-    /*********************************************************************************/
+    /*******************************************************************************/
+    // INTERFACE METHOD IMPLEMENTATIONS
 
-    /**  a reference to the sessionbean */
-    private SessionBean _sb = (SessionBean) getBean("SessionBean") ;
-
-    /** the workitem's extended attributes (decomposition level) **/
-    private DynFormUserAttributes _userAttributes ;
-
-    /** the object that manufactures the form's fields **/
-    private DynFormFieldAssembler _fieldAssembler;
-
-    // the wir currently populating the form
-    private WorkItemRecord _displayedWIR;
-
-    // user defined fonts store
-    private DynFormFont _formFonts;
-
-    public WorkItemRecord getDisplayedWIR() { return _displayedWIR; }
-
-    public void setDisplayedWIR(WorkItemRecord wir) { _displayedWIR = wir; }
+    /**
+     * Build and show a form to capture the work item's output data values.
+     *
+     * @param title  The form's title
+     * @param header A header text for the form top
+     * @param schema An XSD schema of the data types and attributes to display
+     * @param wir    the work item record
+     * @return true if form creation is successful
+     */
+    public boolean makeForm(String title, String header, String schema, WorkItemRecord wir) {
+        reset();
+        _userAttributes = new DynFormUserAttributes(wir.getAttributeTable());
+        _displayedWIR = wir;
+        setShowBanner();
+        return buildForm(title, header, schema, getWorkItemData(wir), getParamInfo(wir));
+     }
 
 
     /**
-     * Initialises a new dynamic form
-     * @param title the page title
-     * @return true if form is successfully initialised
+     * Build and show a form to capture the input data values on a case start.
+     *
+     * @param title      The form's title
+     * @param header     A header text for the form top
+     * @param schema     An XSD schema of the data types and attributes to display
+     * @param parameters a list of the root net's input parameters
+     * @return true if form creation is successful
      */
-    public boolean initDynForm(String title) {
-        setTitle(title);
+    public boolean makeForm(String title, String header, String schema,
+                            List<YParameter> parameters) {
+        reset();
+        return buildForm(title, header, schema, null, getCaseParamMap(parameters));
+    }
 
-        // start with a clean form
+
+    /**
+     * Gets the form's data list on completion of the form. The data list must be
+     * a well-formed XML string representing the expected data structure for the work
+     * item or case start. The opening and closing tag must be the name of task of which
+     * the work item is an instance, or of the root net name of the case instance.
+     *
+     * @return A well-formed XML String of the work item's output data values
+     */
+    public String getDataList() {
+        return new DataListGenerator(this).generate(compPanel, _fieldAssembler.getFieldList());
+    }
+
+
+    public List<Long> getDocComponentIDs() {
+        List<Long> ids = new ArrayList<Long>();
+        for (Object o : compPanel.getChildren()) {
+            if (o instanceof DocComponent) {
+                DocComponent docComponent = (DocComponent) o;
+                ids.add(docComponent.getID());
+            }
+        }
+        return ids;
+    }
+
+
+    /***********************************************************************************/
+
+    public void processOccursAction(SubPanel panel, String btnType) {
+        if (btnType.equals("+"))
+            addSubPanel(panel);
+        else
+            removeSubPanel(panel);
+
+        // resize outermost panel
+        sizeAndPositionContent(compPanel);
+    }
+
+
+    public int getFormWidth() {
+        int btnCount = getNumberOfVisibleButtons();
+        int btnBlockWidth = (btnCount * FORM_BUTTON_WIDTH) + (FORM_BUTTON_GAP * (btnCount - 1));
+        return Math.max(btnBlockWidth, getOuterPanelWidth());
+    }
+
+
+    public int getFormHeight() { return _overallHeight; }
+
+
+    public void resetFormHeight() { _overallHeight = -1; }
+
+
+    public boolean validateInputs(boolean reportErrors) {
+        MessagePanel msgPanel = reportErrors ? _sb.getMessagePanel() : null;
+        return new DynFormValidator().validate(compPanel, _componentFieldTable, msgPanel);
+    }
+
+
+    protected Button makeOccursButton(String name, String text) {
+        Button button = new Button();
+        button.setId(createUniqueID("btn" + name));
+        button.setText(text);
+        button.setNoTextPadding(true);
+        button.setMini(true);
+        button.setEscape(false);
+        button.setStyleClass("dynformOccursButton");
+        button.setImmediate(true);
+        button.setActionListener(bindOccursButtonListener());
+        if (text.equals("+"))
+            button.setToolTip("Add another content set to this panel");
+        else {
+            button.setToolTip("Remove a content set from this panel");
+            button.setDisabled(true);         // can't have less than one panel instance
+        }
+        return button;
+    }
+
+
+    protected String getDefaultFormName() { return _fieldAssembler.getFormName(); }
+
+
+    protected DynFormField getFieldForComponent(UIComponent component) {
+        return (component != null) ? _componentFieldTable.get(component) : null;
+    }
+
+
+    protected void addSubPanelControllerMap(Map<String, SubPanelController> map) {
+        for (SubPanelController controller : map.values()) {
+            _subPanelTable.put(createUniqueID("clonedGroup"), controller);
+        }
+    }
+
+
+    protected void addClonedFieldToTable(TextField orig, TextField clone) {
+        DynFormField field = _componentFieldTable.get(orig);
+        if (field != null) {
+            _componentFieldTable.put(clone, field);
+        }
+    }
+
+
+    protected String enspace(String text) { return replaceInternalChars(text, '_', ' '); }
+
+
+    protected String despace(String text) { return replaceInternalChars(text, ' ', '_'); }
+
+
+    private void reset() {
+        IdGenerator.clear();
         compPanel.getChildren().clear();
-        _usedIDs.clear();
         _subPanelTable.clear();
         _outermostTops.clear();
+        _displayedWIR = null;
+        _userAttributes = null;
 
-        // reset default widths 
+        // reset default widths
         X_FIELD_OFFSET = DEFAULT_FIELD_OFFSET;
         PANEL_BASE_WIDTH = DEFAULT_PANEL_BASE_WIDTH;
         FIELD_WIDTH = DEFAULT_FIELD_WIDTH;
-        
-        // get schema and data for case/workitem
+    }
+
+
+    private boolean buildForm(String title, String header, String schema, String data,
+                              Map<String, FormParameter> paramMap) {
         try {
-            String schema = getSchema();
-            if (schema != null) {
-                String data = getInstanceData(schema) ;
-                _userAttributes = getUserAttributes();
-                _fieldAssembler = new DynFormFieldAssembler(schema, data, getParamInfo());
-                setFormFonts();
-                setTitleAndBanner();
-                buildForm();
-            }
-            return (schema != null);
+            _fieldAssembler = new DynFormFieldAssembler(schema, data, paramMap);
         }
-        catch (Exception e) {
-            e.printStackTrace();
+        catch (DynFormException dfe) {
+            Logger.getLogger(this.getClass()).error("Failed to build dynamic form", dfe);
             return false;
         }
+        setFormFonts();
+        setTitle(title);
+        setHeader(header);
+        buildForm();
+        return true;
     }
 
 
-    /** @return the data schema for the case/item to be displayed */
-    private String getSchema() {
-        if (_sb.getDynFormType() == ApplicationBean.DynFormType.netlevel)
-            return _sb.getCaseSchema() ;
-        else
-            return _sb.getTaskSchema(_displayedWIR);
+    /**
+     * @return a map of case or workitem parameters [param name, param] *
+     */
+    private Map<String, FormParameter> getParamInfo(WorkItemRecord wir) {
+        return ((ApplicationBean) getBean("ApplicationBean")).getWorkItemParams(wir);
     }
 
 
-    /** @return the instance data for the currently displayed case/workitem */
-    private String getInstanceData(String schema) {
-        if (_sb.getDynFormType() == ApplicationBean.DynFormType.netlevel)
-            return _sb.getInstanceData(schema) ;
-        else {
-            return getWorkItemData();
+    private Map<String, FormParameter> getCaseParamMap(List<YParameter> paramList) {
+        Map<String, FormParameter> map = new HashMap<String, FormParameter>();
+        if (paramList != null) {
+            for (YParameter param : paramList) {
+                 map.put(param.getName(), new FormParameter(param));
+            }
         }
+        return map;
     }
 
+    /**
+     * @return the decomposition-level extended attributes *
+     */
+    private DynFormUserAttributes getUserAttributes() { return _userAttributes; }
 
-    /** @return a map of case or workitem parameters [param name, param] **/
-    private Map<String, FormParameter> getParamInfo() {
-        if (_sb.getDynFormType() == ApplicationBean.DynFormType.netlevel)
-           return _sb.getCaseParams();
-        else
-            return ((ApplicationBean) getBean("ApplicationBean")).getWorkItemParams(_displayedWIR);
-    }
-
-
-    /** @return the decomposition-level extended attributes **/
-    private DynFormUserAttributes getUserAttributes() {
-        if (_sb.getDynFormType() == ApplicationBean.DynFormType.netlevel)
-            return null;
-        else
-            return new DynFormUserAttributes(_displayedWIR.getAttributeTable());
-    }
+    /**
+     * @return the data of the displayed workitem *
+     */
+    protected String getWorkItemData() { return getWorkItemData(_displayedWIR); }
 
 
-    /** @return the data of the displayed workitem **/
-    public String getWorkItemData() {
-        if (_displayedWIR == null) return null;
-        Element data = (_displayedWIR.getUpdatedData() != null) ?
-                        _displayedWIR.getUpdatedData() :
-                        _displayedWIR.getDataList();
+    private String getWorkItemData(WorkItemRecord wir) {
+        if (wir == null) return null;
+        Element data = wir.getUpdatedData() != null ? wir.getUpdatedData() :
+                wir.getDataList();
         return JDOMUtil.elementToStringDump(data);
     }
 
 
-    public DynFormFont getFormFonts() {
+    protected DynFormFont getFormFonts() {
         return _formFonts;
     }
-    
+
 
     private void setFormFonts() {
-        _formFonts = new DynFormFont() ;
+        _formFonts = new DynFormFont();
         Font font = getFormFont();
         if (font != null) {
             _formFonts.setUserDefinedFormFont(font);
@@ -306,30 +424,34 @@ public class DynFormFactory extends AbstractSessionBean {
     }
 
 
-    private void setTitleAndBanner() {
-        if (getAttributes() != null) {                  // if case level, attrs are null
+    private void setHeader(String header) {
 
-            // set user defined title if any, or a default if not
-            String title = getAttributeValue("title");
-            if (title == null) title = "Edit Work Item: " + _displayedWIR.getCaseID();
-            setHeaderText(title);
-
-            // hide the banner if user requested
-            boolean hide = getAttributes().getBooleanValue("hideBanner");
-            _sb.setShowYAWLBanner(! hide);
+        // set user defined header if any, or a default if not
+        if (getAttributes() != null) {
+            if (header == null) header = getAttributeValue("title");
+            if (header == null) header = "Edit Work Item: " + _displayedWIR.getCaseID();
         }
+        setHeaderText(header);
     }
+
+
+    // hide the banner if user requested
+    private void setShowBanner() {
+        boolean hide = getAttributes() != null && getAttributes().getBooleanValue("hideBanner");
+        _sb.setShowYAWLBanner(!hide);
+    }
+
 
     private void buildForm() {
         DynFormComponentBuilder builder = new DynFormComponentBuilder(this);
         List<DynFormField> fieldList = _fieldAssembler.getFieldList();
         DynAttributeFactory.adjustFields(fieldList, _displayedWIR, _sb.getParticipant());   // 1st pass
-        compPanel.getChildren().add(builder.makeHeaderText(getTaskLabel(), _fieldAssembler.getFormName())) ;
-        compPanel.getChildren().addAll(buildInnerForm(null, builder, fieldList)) ;
+        compPanel.getChildren().add(builder.makeHeaderText(getTaskLabel(), _fieldAssembler.getFormName()));
+        compPanel.getChildren().addAll(buildInnerForm(null, builder, fieldList));
         DynAttributeFactory.applyAttributes(compPanel, _displayedWIR, _sb.getParticipant());  // 2nd pass
         _componentFieldTable = builder.getComponentFieldMap();
         setBaseWidths(builder);
-        sizeAndPositionContent(compPanel) ;
+        sizeAndPositionContent(compPanel);
     }
 
 
@@ -337,7 +459,7 @@ public class DynFormFactory extends AbstractSessionBean {
 
         // set the base width of all input fields
         FIELD_WIDTH = builder.hasOnlyCheckboxes() ? CHECKBOX_FIELD_WIDTH :
-                          Math.max(FIELD_WIDTH, builder.getMaxFieldWidth());
+                Math.max(FIELD_WIDTH, builder.getMaxFieldWidth());
 
         // find the left offset to position fields by getting the composite width of
         // longest label + offset of label start from panel side + the default gap
@@ -350,9 +472,8 @@ public class DynFormFactory extends AbstractSessionBean {
         PANEL_BASE_WIDTH = Math.max(builder.getMaxImageWidth(), X_FIELD_OFFSET + FIELD_WIDTH);
     }
 
-    
 
-    public int getStaticTextHeight(StaticText statText) {
+    private int getStaticTextHeight(StaticText statText) {
         Font font;
         if (statText instanceof StaticTextBlock)
             font = ((StaticTextBlock) statText).getFont();
@@ -363,7 +484,7 @@ public class DynFormFactory extends AbstractSessionBean {
 
         int parentWidth = getContainerWidth(statText);
         int lines = (int) Math.ceil(textBounds.getWidth() / (parentWidth - (SUBPANEL_INSET * 2)));
-        return lines * (int) textBounds.getHeight() ;
+        return lines * (int) textBounds.getHeight();
     }
 
 
@@ -381,6 +502,8 @@ public class DynFormFactory extends AbstractSessionBean {
             style = ((StaticText) component).getStyle();
         else if ((component instanceof ImageComponent))
             style = ((ImageComponent) component).getStyle();
+        else if ((component instanceof DocComponent))
+            style = ((DocComponent) component).getStyle();
         return style;
     }
 
@@ -389,8 +512,7 @@ public class DynFormFactory extends AbstractSessionBean {
         UIComponent parent = component.getParent();
         if ((parent != null) && (parent instanceof SubPanel)) {
             return ((SubPanel) parent).getWidth();
-        }
-        else return PANEL_BASE_WIDTH;
+        } else return PANEL_BASE_WIDTH;
     }
 
     private void setStyle(UIComponent component, String style) {
@@ -406,6 +528,8 @@ public class DynFormFactory extends AbstractSessionBean {
             ((StaticText) component).setStyle(style);
         else if ((component instanceof ImageComponent))
             ((ImageComponent) component).setStyle(style);
+        else if ((component instanceof DocComponent))
+            ((DocComponent) component).setStyle(style);
     }
 
 
@@ -422,16 +546,10 @@ public class DynFormFactory extends AbstractSessionBean {
     private String replaceTopInStyle(UIComponent component, int adjustment) {
         String style = getStyle(component);
         if (style != null) {
-            String topStyle = StringUtil.extract(style, "top:\\s*\\d+px") ;
+            String topStyle = StringUtil.extract(style, "top:\\s*\\d+px");
             if (topStyle != null) {
                 String value = StringUtil.extract(topStyle, "\\d+");
-                int top;
-                try {
-                    top = Integer.parseInt(value);
-                }
-                catch (NumberFormatException nfe) {
-                    top = -1;    
-                }
+                int top = StringUtil.strToInt(value, -1);
                 if (top > -1) {
                     String newTopStyle = String.format("top: %dpx", top + adjustment);
                     style = style.replace(topStyle, newTopStyle);
@@ -447,43 +565,42 @@ public class DynFormFactory extends AbstractSessionBean {
         for (Object o : content) {
             if (o instanceof SubPanel) {
                 adjustFieldOffsetsAndWidths(((SubPanel) o).getChildren());
-            }
-            else if (o instanceof TextField) {
+            } else if (o instanceof TextField) {
                 FieldBase field = (FieldBase) o;
                 field.setStyle(String.format(template, field.getStyle(),
-                                             X_FIELD_OFFSET, FIELD_WIDTH));
-            }
-            else if (o instanceof TextArea) {
+                        X_FIELD_OFFSET, FIELD_WIDTH));
+            } else if (o instanceof TextArea) {
                 TextArea field = (TextArea) o;
                 field.setStyle(String.format(template, field.getStyle(),
-                                             X_FIELD_OFFSET, FIELD_WIDTH + 6));
-            }
-            else if (o instanceof DropDown) {
+                        X_FIELD_OFFSET, FIELD_WIDTH + 6));
+            } else if (o instanceof DropDown) {
                 DropDown field = (DropDown) o;
                 field.setStyle(String.format(template, field.getStyle(),
-                                             X_FIELD_OFFSET, FIELD_WIDTH + 8));
-            }
-            else if (o instanceof Calendar) {
+                        X_FIELD_OFFSET, FIELD_WIDTH + 8));
+            } else if (o instanceof Calendar) {
                 Calendar field = (Calendar) o;
                 field.setStyle(String.format("%s; left:%dpx;", field.getStyle(),
-                                             X_FIELD_OFFSET));
-            }
-            else if (o instanceof Checkbox) {
+                        X_FIELD_OFFSET));
+            } else if (o instanceof Checkbox) {
                 Checkbox field = (Checkbox) o;
                 field.setStyle(String.format("%s; left:%dpx;", field.getStyle(),
-                                             X_FIELD_OFFSET));
-            }
-            else if (o instanceof FlatPanel) {
+                        X_FIELD_OFFSET));
+            } else if (o instanceof FlatPanel) {
                 FlatPanel field = (FlatPanel) o;
                 field.setStyle(String.format("%s; width:%dpx;", field.getStyle(),
-                                             getFormWidth() - 20));
-            }
-            else if (o instanceof StaticTextBlock) {
+                        getFormWidth() - 20));
+            } else if (o instanceof DocComponent) {
+                DocComponent field = (DocComponent) o;
+                field.setStyle(String.format(template, field.getStyle(),
+                        X_FIELD_OFFSET, FIELD_WIDTH));
+                field.setSubComponentStyles(FIELD_WIDTH);
+                field.setFormWidth(getFormWidth());
+                if (_displayedWIR != null) field.setCaseID(_displayedWIR.getRootCaseID());
+            } else if (o instanceof StaticTextBlock) {
                 StaticTextBlock field = (StaticTextBlock) o;
                 field.setStyle(String.format("%s; width:%dpx;", field.getStyle(),
-                                             getFormWidth() - 20));
-            }
-            else if (o instanceof ImageComponent) {
+                        getFormWidth() - 20));
+            } else if (o instanceof ImageComponent) {
                 ImageComponent field = (ImageComponent) o;
                 String align = field.getAlign();
                 int left = 10;
@@ -503,31 +620,27 @@ public class DynFormFactory extends AbstractSessionBean {
         int height = 0;
         if (component instanceof SubPanel) {
             height = ((SubPanel) component).getHeight();
-        }
-        else if (component instanceof StaticText) {
-           height = getStaticTextHeight((StaticText) component);
-        }
-        else if (component instanceof FlatPanel) {
-           height = ((FlatPanel) component).getHeight();
-        }
-        else if (component instanceof ImageComponent) {
+        } else if (component instanceof StaticText) {
+            height = getStaticTextHeight((StaticText) component);
+        } else if (component instanceof FlatPanel) {
+            height = ((FlatPanel) component).getHeight();
+        } else if (component instanceof ImageComponent) {
             height = ((ImageComponent) component).getHeight();
-        }
-        else if (component instanceof TextArea) {
-            height = getFieldHeight(component) * ((TextArea) component).getRows();
-        }
-        else {
+        } else if (component instanceof TextArea) {
+            height = getFieldHeight(component) * ((TextArea) component).getRows()
+                    + FIELD_VSPACE;
+        } else {
             height = getFieldHeight(component) + FIELD_VSPACE;
         }
         return height;
     }
 
-    protected int getFieldHeight(UIComponent component) {
+    private int getFieldHeight(UIComponent component) {
         DynFormField field = _componentFieldTable.get(component);
         return (field != null) ? getFieldHeight(field) : DEFAULT_FIELD_HEIGHT;
     }
 
-    protected int getFieldHeight(DynFormField field) {
+    private int getFieldHeight(DynFormField field) {
         Font font = field.getFont();
         if (font == null) font = _formFonts.getFormFont();
         return (int) Math.ceil(FontUtil.getFontMetrics("dummyText", font).getHeight());
@@ -538,12 +651,11 @@ public class DynFormFactory extends AbstractSessionBean {
         return (int) Math.ceil(FontUtil.getFontMetrics(s, font).getWidth());
     }
 
-    
     private void sizeAndPositionContent(PanelLayout panel) {
-        int maxLevel = -1 ;                          // -1 means no inner subpanels
+        int maxLevel = -1;                          // -1 means no inner subpanels
 
         // set the size and position of inner panels relative to their nested level
-        if (! _subPanelTable.isEmpty()) {
+        if (!_subPanelTable.isEmpty()) {
             maxLevel = getMaxDepthLevel();
             for (SubPanelController spc : _subPanelTable.values())
                 spc.assignStyleToSubPanels(maxLevel);
@@ -553,7 +665,7 @@ public class DynFormFactory extends AbstractSessionBean {
         adjustFieldOffsetsAndWidths(panel.getChildren());
 
         // calc and set height, width & top of outermost panel
-        int width = getFormWidth() ;
+        int width = getFormWidth();
         int height = setContentTops(panel);
         int outerPanelTop = getOuterPanelTop(width);
 
@@ -564,18 +676,24 @@ public class DynFormFactory extends AbstractSessionBean {
         positionButtons(width, height, outerPanelTop);
     }
 
-    
+
     private int getNumberOfVisibleButtons() {
         return (_sb.getDynFormType() == ApplicationBean.DynFormType.netlevel) ? 2 : 4;
     }
 
 
-    private void setPanelStyles(int width, int height, int top) {
+    private void setPanelStyles(int containerWidth, int height, int top) {
+        int outerPanelWidth = getOuterPanelWidth();
 
         // set the style of the outermost panel...
         String outerPanelStyle =
                 String.format("position: absolute; height: %dpx; width: %dpx; top: %dpx",
-                                      height, width, top);
+                        height, outerPanelWidth, top);
+
+        // ... and a left inset if the panel is narrower than the container ...
+        if (outerPanelWidth < containerWidth) {
+            outerPanelStyle += "; left: " + (containerWidth - outerPanelWidth) / 2 + "px";
+        }
 
         // ...and the user-defined background colour (if any)...
         String udBgColour = getFormBackgroundColour();
@@ -584,10 +702,10 @@ public class DynFormFactory extends AbstractSessionBean {
         }
         compPanel.setStyle(outerPanelStyle);
 
-        // ...and its container
+        // ...and finally its container
         containerStyle = String.format("position: relative; height: %dpx; top: 0; width: %dpx",
                 top + height + OUTER_PANEL_TO_BUTTONS + FORM_BUTTON_HEIGHT + BOTTOM_PANEL_HEIGHT,
-                width);
+                containerWidth);
     }
 
 
@@ -613,7 +731,8 @@ public class DynFormFactory extends AbstractSessionBean {
             int btnPredictTop = btnTop + FORM_BUTTON_HEIGHT + FORM_BUTTON_GAP;
             btnPredictStyle = String.format("left: %dpx; top: %dpx", btnPredictLeft, btnPredictTop);
         }
-        bottomPanelStyle = String.format("top: %dpx", btnTop + FORM_BUTTON_HEIGHT);
+        _overallHeight = btnTop + FORM_BUTTON_HEIGHT;
+        bottomPanelStyle = String.format("top: %dpx", _overallHeight);
     }
 
 
@@ -626,19 +745,16 @@ public class DynFormFactory extends AbstractSessionBean {
                 subPanel.setTop(top);
                 subPanel.assignStyle(getMaxDepthLevel());
                 top += subPanel.getHeight() + Y_DEF_INCREMENT;
-            }
-            else {
+            } else {
                 UIComponent component = (UIComponent) o;
-                if (! (component instanceof Button)) {
+                if (!(component instanceof Button)) {
                     if (component instanceof Label) {
                         top = Math.max(top, 25);                      // if no header
-                        String forID = ((Label) component).getFor();
-                        if (isComponentVisible(panel.findComponent(forID))) {
+                        if (isComponentVisible(getComponentForLabel(panel, (Label) component))) {
                             setTopStyle(component, top + LABEL_V_OFFSET);
                         }
-                    }
-                    else {
-                        if (! (component instanceof StaticText)) {
+                    } else {
+                        if (!(component instanceof StaticText)) {
                             top = Math.max(top, 15);                      // for radio
                         }
                         if (isComponentVisible(component)) {
@@ -652,6 +768,25 @@ public class DynFormFactory extends AbstractSessionBean {
         return top;
     }
 
+
+    private UIComponent getComponentForLabel(PanelLayout panel, Label label) {
+        String forID = label.getFor();
+        if (forID != null) {
+            return panel.findComponent(forID);
+        } else {          // must be a doc component
+            for (Object o : panel.getChildren()) {
+                if (o instanceof DocComponent) {
+                    DocComponent docComponent = (DocComponent) o;
+                    if (docComponent.getLabel().equals(label)) {
+                        return docComponent;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+
     private void setTopStyle(UIComponent component, int top) {
         String style = getStyle(component);
         if (style == null) style = "";
@@ -660,8 +795,7 @@ public class DynFormFactory extends AbstractSessionBean {
         Object panel = component.getParent();
         if (panel instanceof SubPanel) {
             ((SubPanel) panel).setContentTop(component, top);
-        }
-        else {
+        } else {
             _outermostTops.put(component, top);
         }
     }
@@ -671,7 +805,7 @@ public class DynFormFactory extends AbstractSessionBean {
         Font font = _formFonts.getFormTitleFont();
         Dimension bounds = FontUtil.getFontMetrics(headerText, font);
         int lines = (int) Math.ceil(bounds.getWidth() / width);
-        return lines * (int) (bounds.getHeight() + (font.getSize() / 2)) + 50 ;
+        return lines * (int) (bounds.getHeight() + (font.getSize() / 2)) + 50;
     }
 
 
@@ -689,14 +823,12 @@ public class DynFormFactory extends AbstractSessionBean {
 
                 // new complex type - recurse in a new sub-container
                 componentList.addAll(buildSubPanel(builder, field));
-            }
-            else  {  // create the field (inside a panel)
+            } else if (!field.isEmptyOptionalInputOnly()) {  // create the field (inside a panel)
 
                 // if min and/or max defined at the field level, enclose it in a subpanel
-                if (field.getGroupID() != null) {
+                if (field.isGroupedField()) {
                     componentList.addAll(buildSubPanel(builder, field));
-                }
-                else {
+                } else {
                     componentList.addAll(builder.makeInputField(field));
                 }
             }
@@ -706,12 +838,12 @@ public class DynFormFactory extends AbstractSessionBean {
 
 
     private DynFormComponentList buildChoiceSelector(SubPanel container,
-                             DynFormComponentBuilder builder, DynFormField field) {
+                                                     DynFormComponentBuilder builder, DynFormField field) {
         DynFormComponentList compList = new DynFormComponentList();
 
         RadioButton rButton = builder.makeRadioButton(field);
         rButton.setSelected((container == null) ||
-                  isFirstRadioGroupMember(container.getChildren(), rButton.getName()));
+                isFirstRadioGroupMember(container.getChildren(), rButton.getName()));
 
         compList.add(rButton);
         return compList;
@@ -719,16 +851,15 @@ public class DynFormFactory extends AbstractSessionBean {
 
 
     private DynFormComponentList buildSubPanel(DynFormComponentBuilder builder,
-                         DynFormField field) {
-        DynFormComponentList compList =  builder.makePeripheralComponents(field, true);
+                                               DynFormField field) {
+        DynFormComponentList compList = builder.makePeripheralComponents(field, true);
         SubPanelController spc = _subPanelTable.get(field.getGroupID());
         SubPanel subPanel = builder.makeSubPanel(field, spc);
         _subPanelTable.put(field.getGroupID(), subPanel.getController());
         DynFormComponentList innerContent;
         if (field.isFieldContainer()) {
             innerContent = buildInnerForm(subPanel, builder, field.getSubFieldList());
-        }
-        else {
+        } else {
             innerContent = builder.makeInputField(field);
             field.addSubField(field.clone());
         }
@@ -740,30 +871,10 @@ public class DynFormFactory extends AbstractSessionBean {
     }
 
 
-    public Button makeOccursButton(String name, String text) {
-        Button button = new Button();
-        button.setId(createUniqueID("btn" + name));
-        button.setText(text);
-        button.setNoTextPadding(true);
-        button.setMini(true);
-        button.setEscape(false);
-        button.setStyleClass("dynformOccursButton");
-        button.setImmediate(true);
-        button.setActionListener(bindOccursButtonListener());
-        if (text.equals("+"))
-            button.setToolTip("Add another content set to this panel");
-        else {
-            button.setToolTip("Remove a content set from this panel");
-            button.setDisabled(true);         // can't have less than one panel instance
-        }
-        return button ;
-    }
-
-
     private MethodBinding bindOccursButtonListener() {
         Application app = FacesContext.getCurrentInstance().getApplication();
         return app.createMethodBinding("#{dynForm.btnOccursAction}",
-                                                  new Class[]{ActionEvent.class});
+                new Class[]{ActionEvent.class});
     }
 
     private boolean isFirstRadioGroupMember(List content, String groupID) {
@@ -778,31 +889,20 @@ public class DynFormFactory extends AbstractSessionBean {
     }
 
 
-    public String createUniqueID(String id) {
-        int suffix = 0 ;
-        while (_usedIDs.contains(id + ++suffix)) ;
-        String result = id + suffix;
-        _usedIDs.add(result);
-        return result ;
-    }
-
-
-    public String getDefaultFormName() {
-        return _fieldAssembler.getFormName();
-    }
+    private String createUniqueID(String id) { return IdGenerator.uniquify(id); }
 
 
     private int getMaxDepthLevel() {
-        int result = -1 ;
+        int result = -1;
         for (SubPanelController spc : _subPanelTable.values())
             result = Math.max(result, spc.getDepthlevel());
 
-        return result ;
+        return result;
     }
 
 
     private void addSubPanel(SubPanel panel) {
-        SubPanel newPanel = new SubPanelCloner().clone(panel, this, createUniqueID("clone")) ;
+        SubPanel newPanel = new SubPanelCloner().clone(panel, this, createUniqueID("clone"));
 
         // get container of this panel
         UIComponent parent = panel.getParent();
@@ -820,7 +920,7 @@ public class DynFormFactory extends AbstractSessionBean {
     private void removeSubPanel(SubPanel panel) {
         SubPanel level0Container = panel.getController().removeSubPanel(panel);
         removeOrphanedControllers(panel);
-        int adjustment = - (panel.getHeight() + DynFormFactory.Y_DEF_INCREMENT);
+        int adjustment = -(panel.getHeight() + DynFormFactory.Y_DEF_INCREMENT);
         adjustLayouts(level0Container, adjustment);
 
         UIComponent parent = panel.getParent();
@@ -829,7 +929,7 @@ public class DynFormFactory extends AbstractSessionBean {
 
 
     private void adjustLayouts(SubPanel level0Container, int adjustment) {
-        repositionLevel0Panels(level0Container, adjustment, level0Container.getTop()) ;
+        repositionLevel0Panels(level0Container, adjustment, level0Container.getTop());
         repositionOutermostFields(level0Container.getTop(), adjustment);
     }
 
@@ -844,19 +944,7 @@ public class DynFormFactory extends AbstractSessionBean {
     }
 
 
-    public void addSubPanelController(SubPanel panel) {
-        _subPanelTable.put(panel.getName(), panel.getController());
-    }
-
-
-    public void addSubPanelControllerMap(Map<String, SubPanelController> map) {
-        for (SubPanelController controller : map.values()) {
-             _subPanelTable.put(createUniqueID("clonedGroup"), controller); 
-        }
-    }
-
-
-    public void removeSubPanelController(SubPanel panel) {
+    private void removeSubPanelController(SubPanel panel) {
         _subPanelTable.remove(panel.getName());
     }
 
@@ -872,14 +960,6 @@ public class DynFormFactory extends AbstractSessionBean {
     }
 
 
-    public void addClonedFieldToTable(TextField orig, TextField clone) {
-        DynFormField field = _componentFieldTable.get(orig);
-        if (field != null) {
-            _componentFieldTable.put(clone, field);
-        }
-    }
-
-
     private void repositionOutermostFields(int startingY, int adjustment) {
         for (UIComponent component : _outermostTops.keySet()) {
             int top = _outermostTops.get(component);
@@ -887,67 +967,33 @@ public class DynFormFactory extends AbstractSessionBean {
                 int newTop = top + adjustment;
                 replaceTopInStyle(component, newTop);
                 _outermostTops.put(component, newTop);
-            }    
+            }
         }
     }
 
 
-    public void processOccursAction(SubPanel panel, String btnType) {
-        if (btnType.equals("+"))
-            addSubPanel(panel);
-        else
-            removeSubPanel(panel);
-
-        // resize outermost panel
-        sizeAndPositionContent(compPanel) ;
-    }
-
-
-    public String getDataList() {
-        return new DataListGenerator(this).generate(compPanel, _fieldAssembler.getFieldList()) ;
-    }
-
-
-    public int getFormWidth() {
+    private int getOuterPanelWidth() {
         return PANEL_BASE_WIDTH + (SUBPANEL_INSET * 2 * (getMaxDepthLevel() + 2));
     }
 
 
-    public boolean validateInputs() {
-        return new DynFormValidator().validate(compPanel, _componentFieldTable,
-                                               _sb.getMessagePanel());
-    }
-
-
-    public DynFormUserAttributes getAttributes() {
-        return _userAttributes;
-    }
-
-
-    public String enspace(String text) {
-        return replaceInternalChars(text, '_', ' ');
-    }
-
-
-    public String despace(String text) {
-        return replaceInternalChars(text, ' ', '_');
-    }
+    private DynFormUserAttributes getAttributes() { return _userAttributes; }
 
 
     // replaces each internally occurring 'pre' char with a 'post' char
     private String replaceInternalChars(String text, char pre, char post) {
-        if ((text == null) || (text.length() < 3)) return text;
+        if ((text == null) || (text.length() < 3) || (text.indexOf(pre) < 0)) return text;
 
         char[] chars = text.toCharArray();
 
         // ignore leading and trailling underscores
-        for (int i = 1; i < chars.length - 2; i++) {
+        for (int i = 1; i < chars.length - 1; i++) {
             if (chars[i] == pre) chars[i] = post;
         }
         return new String(chars);
     }
 
-    
+
     // support for decomposition extended attributes
 
     public String getPageBackgroundURL() {
@@ -959,57 +1005,57 @@ public class DynFormFactory extends AbstractSessionBean {
     }
 
 
-    public String getFormBackgroundColour() {
+    protected String getFormBackgroundColour() {
         return getAttributeValue("background-color");
     }
 
 
-    public String getFormAltBackgroundColour() {
+    protected String getFormAltBackgroundColour() {
         return getAttributeValue("background-alt-color");
     }
 
 
-    public String getFormFontStyle() {
+    private String getFormFontStyle() {
         return (getUserAttributes() == null) ? null :
                 getUserAttributes().getUserDefinedFontStyle();
     }
 
 
-    public Font getFormFont() {
+    private Font getFormFont() {
         return (getUserAttributes() == null) ? null :
                 getUserAttributes().getUserDefinedFont();
     }
 
 
-    public Font getFormHeaderFont() {
+    private Font getFormHeaderFont() {
         return (getUserAttributes() == null) ? null :
                 getUserAttributes().getFormHeaderFont();
     }
 
 
-    public String getFormHeaderFontStyle() {
+    private String getFormHeaderFontStyle() {
         return (getUserAttributes() == null) ? null :
                 getUserAttributes().getFormHeaderFontStyle();
     }
 
 
-    public String getFormJustify() {
+    protected String getFormJustify() {
         return (getUserAttributes() == null) ? null :
-                getUserAttributes().getTextJustify();        
+                getUserAttributes().getTextJustify();
     }
 
 
-    public boolean isFormReadOnly() {
+    protected boolean isFormReadOnly() {
         return (getUserAttributes() != null) && getUserAttributes().isReadOnly();
     }
 
 
-    public String getTaskLabel() {
-        return getAttributeValue("label");        
+    private String getTaskLabel() {
+        return getAttributeValue("label");
     }
 
 
-    public String getAttributeValue(String key) {
+    private String getAttributeValue(String key) {
         return (getUserAttributes() == null) ? null :
                 getUserAttributes().getValue(key);
     }

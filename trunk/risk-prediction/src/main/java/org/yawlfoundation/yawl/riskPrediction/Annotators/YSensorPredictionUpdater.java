@@ -31,7 +31,7 @@ import net.sf.saxon.s9api.SaxonApiException;
 
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XLog;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.resourcing.rsInterface.WorkQueueGatewayClient;
 import org.yawlfoundation.yawl.riskPrediction.DatabaseInterface.CacheKey;

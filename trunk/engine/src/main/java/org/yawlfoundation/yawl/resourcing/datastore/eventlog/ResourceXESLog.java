@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,6 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing.datastore.eventlog;
 
+import org.yawlfoundation.yawl.logging.XESTimestampComparator;
 import org.yawlfoundation.yawl.logging.YXESBuilder;
 import org.yawlfoundation.yawl.util.XNode;
 import org.yawlfoundation.yawl.util.XNodeParser;
@@ -114,6 +115,7 @@ public class ResourceXESLog extends YXESBuilder {
         eventNode.addChild(stringNode("concept:name", yEvent.getChildText("taskname")));
         eventNode.addChild(stringNode("lifecycle:transition",
                 translateEvent(yEvent.getChildText("descriptor"))));
+        eventNode.addChild(stringNode("lifecycle:instance", yEvent.getChildText("instanceid")));
         eventNode.addChild(stringNode("org:resource", yEvent.getChildText("resource")));
         return eventNode;
     }
@@ -141,9 +143,10 @@ public class ResourceXESLog extends YXESBuilder {
             String caseID = trace.getChild("string").getAttributeValue("value");
             if (rsCaseMap.containsKey(caseID)) {
                 mergeTraces(trace, rsCaseMap.get(caseID));
+                trace.sort(new XESTimestampComparator());
             }
         }
-        engLog.addComment("and then merged with the Resource Service log");
+        engLog.insertComment(1, "and then merged with the Resource Service log");
         return engLog;
     }
 
@@ -152,7 +155,7 @@ public class ResourceXESLog extends YXESBuilder {
         Map<String, XNode> caseMap = new Hashtable<String, XNode>();
         for (XNode trace : logNode.getChildren()) {  // rs log has 'trace' children only
             String caseID = trace.getChild("string").getAttributeValue("value");
-            caseMap.put(caseID , trace);
+            caseMap.put(caseID, trace);
         }
         return caseMap;
     }
@@ -164,8 +167,11 @@ public class ResourceXESLog extends YXESBuilder {
             if (transition != null) {
 
                 // choose which event to use for duplicated events
-                if (slaveHasPrecedence(transition)) {
-                    removeEvent(master, getTaskName(event), transition);
+                if (mergeableEvent(transition)) {               // start or complete
+                    mergeEvent(master, event, transition);
+                }
+                else if (slaveHasPrecedence(transition)) {
+                    removeEvent(master, getTaskName(event), getInstanceID(event), transition);
                 }
 
                 // otherwise just add it
@@ -197,30 +203,70 @@ public class ResourceXESLog extends YXESBuilder {
     }
 
 
+    private String getInstanceID(XNode event) {
+        return getEventValue(event, "lifecycle:instance");
+    }
+
+
+    private String getOrgResource(XNode event) {
+        return getEventValue(event, "org:resource");
+    }
+
+
+    // These transitions appear in both logs, but each has relevant data, so they
+    // have to be merged by individual elements
+    private boolean mergeableEvent(String transition) {
+        return transition.equals("start") || transition.equals("complete");
+    }
+
+
     // These transitions appear in both logs - the resource service will take
     // precedence since it contains the resource that triggered the event
     private boolean slaveHasPrecedence(String transition) {
-        return transition.equals("start") || transition.equals("complete") ||
-               transition.equals("suspend") || transition.equals("resume");
+        return transition.equals("suspend") || transition.equals("resume");
     }
 
 
     // These transitions describe cancelled items, so the engine log is used
     // for completeness
     private boolean masterHasPrecedence(String transition) {
-        return transition.equals("ate_abort") || transition.equals("pi_abort") ;
+        return mergeableEvent(transition) ||
+                transition.equals("ate_abort") || transition.equals("pi_abort") ;
     }
 
 
-    private void removeEvent(XNode node, String taskName, String transition) {
+    private void removeEvent(XNode node, String taskName, String instanceID, String transition) {
         XNode toRemove = null;
         for (XNode event : node.getChildren("event")) {
-            if (getTransition(event).equals(transition) && getTaskName(event).equals(taskName)) {
+            if (getTransition(event).equals(transition) &&
+                    getInstanceID(event).equals(instanceID) &&
+                    getTaskName(event).equals(taskName)) {
                 toRemove = event;
                 break;
             }
         }
         if (toRemove != null) node.removeChild(toRemove);
+    }
+
+
+    private void mergeEvent(XNode node, XNode rsEvent, String transition) {
+        String instanceID = getInstanceID(rsEvent);
+        String taskName = getTaskName(rsEvent);
+        String orgResource = getOrgResource(rsEvent);
+        if (orgResource == null) return;
+
+        for (XNode event : node.getChildren("event")) {
+            if (getTransition(event).equals(transition) &&
+                    getInstanceID(event).equals(instanceID) &&
+                    getTaskName(event).equals(taskName)) {
+                int pos = event.posChildWithAttribute("key", "lifecycle:instance");
+                if (pos > -1) {
+                    event.insertChild(pos + 1, stringNode("org:resource", orgResource));
+                }
+                else event.addChild(stringNode("org:resource", orgResource));
+                break;
+            }
+        }
     }
 
 }

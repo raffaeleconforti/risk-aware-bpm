@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -90,7 +90,7 @@ public class RoundRobinByTime extends AbstractAllocator {
         Iterator itr = events.iterator();
         while (itr.hasNext()) {
             ResourceEvent event = (ResourceEvent) itr.next();
-            if (event.get_participantID().equals(p.getID()) &&
+            if (event.get_resourceID().equals(p.getID()) &&
                (event.get_timeStamp() < result))
                  result = event.get_timeStamp();
         }

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -19,23 +19,23 @@
 
 <!DOCTYPE hibernate-mapping
 	PUBLIC "-//Hibernate/Hibernate Mapping DTD//EN"
-	"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+	"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping>
 
-	<class name="org.yawlfoundation.yawl.elements.org.yawlfoundation.yawl.risk.state.YIdentifier" table="YIdentifiers" lazy="false">
+	<class name="org.yawlfoundation.yawl.elements.state.YIdentifier" table="YIdentifiers">
 
 	    <id name="_idString" column="idString" type="string">
     		<generator class="assigned"/>
     	</id>
    	
-      <list name="_children" lazy="false">
+      <list name="_children">
     		<key column="parent"/>
     		<index column="ix"/>
-	    	<one-to-many class="org.yawlfoundation.yawl.elements.org.yawlfoundation.yawl.risk.state.YIdentifier"/>
+	    	<one-to-many class="org.yawlfoundation.yawl.elements.state.YIdentifier"/>
 	    </list>
 
-	    <list name="locationNames" table="YLOCATIONS" access="field" lazy="false">
+	    <list name="locationNames" table="YLOCATIONS" access="field">
 	      <key column="id_key"/>
 	      <index column="ix"/>
 	      <element column="loc_condition" type="string"/>

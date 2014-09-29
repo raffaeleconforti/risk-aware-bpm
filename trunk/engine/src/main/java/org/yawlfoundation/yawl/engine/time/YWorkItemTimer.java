@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,6 +19,7 @@
 package org.yawlfoundation.yawl.engine.time;
 
 import org.yawlfoundation.yawl.engine.YEngine;
+import org.yawlfoundation.yawl.engine.YPersistenceManager;
 import org.yawlfoundation.yawl.engine.YWorkItem;
 import org.yawlfoundation.yawl.engine.YWorkItemStatus;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
@@ -36,11 +37,11 @@ import java.util.Set;
 
 public class YWorkItemTimer implements YTimedObject {
 
-    public enum Trigger { OnEnabled, OnExecuting }
+    public enum Trigger { OnEnabled, OnExecuting, Never }
 
     public enum State { dormant, active, closed, expired }
 
-    private String _ownerID;
+    private String _ownerID;     // the owner work item - each can have at most one timer
     private long _endTime ;
     private boolean _persisting ;
 
@@ -50,7 +51,6 @@ public class YWorkItemTimer implements YTimedObject {
         _ownerID = workItemID ;
         _persisting = persisting ;
         _endTime = YTimer.getInstance().schedule(this, msec) ;
-        if (persisting) persistThis(true) ;
     }
 
 
@@ -58,7 +58,6 @@ public class YWorkItemTimer implements YTimedObject {
         _ownerID = workItemID ;
         _persisting = persisting ;
         _endTime = YTimer.getInstance().schedule(this, expiryTime) ;
-        if (persisting) persistThis(true) ;
     }
 
 
@@ -66,7 +65,6 @@ public class YWorkItemTimer implements YTimedObject {
         _ownerID = workItemID ;
         _persisting = persisting ;
         _endTime = YTimer.getInstance().schedule(this, duration) ;
-        if (persisting) persistThis(true) ;
     }
 
 
@@ -75,7 +73,6 @@ public class YWorkItemTimer implements YTimedObject {
         _ownerID = workItemID ;
         _persisting = persisting ;
         _endTime = YTimer.getInstance().schedule(this, units, interval);
-        if (persisting) persistThis(true) ;
     }
 
 
@@ -92,16 +89,31 @@ public class YWorkItemTimer implements YTimedObject {
 
     public void persistThis(boolean insert) {
         if (_persisting) {
-            try {
-                if (insert)
-                    YEngine.getInstance().storeObject(this);
-                else
-                    YEngine.getInstance().deleteObject(this);
-            }
-            catch (YPersistenceException ype) {
-                // handle exc.
-            }
+            YPersistenceManager pmgr = YEngine.getPersistenceManager();
+            if (pmgr != null) {
+                try {
+                    boolean localTransaction = pmgr.startTransaction();
+                    if (insert) pmgr.storeObjectFromExternal(this);
+                    else pmgr.deleteObjectFromExternal(this);
+                    if (localTransaction) pmgr.commit();
+                }
+                catch (YPersistenceException ype) {
+                    // handle exc.
+                }
+            }    
         }
+    }
+
+
+    public boolean equals(Object other) {
+        return (other instanceof YWorkItemTimer) &&
+                ((getOwnerID() != null) ?
+                 getOwnerID().equals(((YWorkItemTimer) other).getOwnerID()) :
+                 super.equals(other));
+    }
+
+    public int hashCode() {
+        return (getOwnerID() != null) ? getOwnerID().hashCode() : super.hashCode();
     }
 
             
@@ -130,7 +142,8 @@ public class YWorkItemTimer implements YTimedObject {
                 }
                 else if (item.hasUnfinishedStatus()) {
                     if (item.requiresManualResourcing())              // not an autotask
-                        engine.completeWorkItem(item, item.getDataString(), null, true) ;
+                        engine.completeWorkItem(item, item.getDataString(), null,
+                                YEngine.WorkItemCompletion.Force) ;
                     engine.getAnnouncer().announceTimerExpiryEvent(item);
                 }
             }
@@ -144,7 +157,7 @@ public class YWorkItemTimer implements YTimedObject {
 
     // unpersist this timer when the workitem is cancelled
     public void cancel() {
-        persistThis(false) ;                                
+        persistThis(false) ;
     }
 
 }

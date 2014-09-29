@@ -38,7 +38,7 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.editor.actions.sensor.SensorDialog;
 import org.yawlfoundation.yawl.editor.actions.sensor.TaskConfiguration;
 import org.yawlfoundation.yawl.editor.actions.sensor.VarTaskConfiguration;

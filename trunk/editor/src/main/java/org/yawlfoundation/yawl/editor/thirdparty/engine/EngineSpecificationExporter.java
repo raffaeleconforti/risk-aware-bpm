@@ -53,6 +53,7 @@ import org.yawlfoundation.yawl.resourcing.interactions.AbstractInteraction;
 import org.yawlfoundation.yawl.resourcing.interactions.AllocateInteraction;
 import org.yawlfoundation.yawl.resourcing.interactions.OfferInteraction;
 import org.yawlfoundation.yawl.resourcing.interactions.StartInteraction;
+import org.yawlfoundation.yawl.schema.YSchemaVersion;
 import org.yawlfoundation.yawl.unmarshal.YMarshal;
 import org.yawlfoundation.yawl.unmarshal.YMetaData;
 import org.yawlfoundation.yawl.util.JDOMUtil;
@@ -276,7 +277,7 @@ public class EngineSpecificationExporter extends EngineEditorInterpretor {
   private static void generateEngineMetaData(SpecificationModel editorSpec, 
                                              YSpecification engineSpec) {
     
-    engineSpec.setVersion(YSpecification.Version2_1);
+    engineSpec.setVersion(YSchemaVersion.DEFAULT_VERSION);
     
     YMetaData metaData = new YMetaData();
 
@@ -360,7 +361,7 @@ public class EngineSpecificationExporter extends EngineEditorInterpretor {
       
       YNet engineSubNet = 
         generateEngineNet(engineSpec, editorNet);
-      engineSpec.setDecomposition(engineSubNet);
+      engineSpec.addDecomposition(engineSubNet);
 
       editorToEngineNetMap.put(editorNet, engineSubNet);
     }
@@ -638,29 +639,30 @@ public class EngineSpecificationExporter extends EngineEditorInterpretor {
       } catch (Exception e) {}
       
       if (duration != null) {
-        engineTask.setTimerParameters(
+        engineTask.setTimerParameters(new YTimerParameters(
             getEngineTimerTriggerForEditorTrigger(
               editorAtomicTask.getTimeoutDetail().getTrigger()
             ),
-            duration
+            duration)
         );
       }
     }
     
     if (editorAtomicTask.getTimeoutDetail().getTimeoutDate() != null) {
-      engineTask.setTimerParameters(
+      engineTask.setTimerParameters(new YTimerParameters(
           getEngineTimerTriggerForEditorTrigger(
             editorAtomicTask.getTimeoutDetail().getTrigger()
           ),
           editorAtomicTask.getTimeoutDetail().getTimeoutDate()
+          )
       );
     }
     
     if (editorAtomicTask.getTimeoutDetail().getTimeoutVariable() != null) {
       // How come I can't set a trigger for the net variable?
       // Answer: specified in the variable. must be a complex type, known by the editor.
-      engineTask.setTimerParameters(
-        editorAtomicTask.getTimeoutDetail().getTimeoutVariable().getName()    
+      engineTask.setTimerParameters(new YTimerParameters(
+        editorAtomicTask.getTimeoutDetail().getTimeoutVariable().getName())
       );
     }
   }
@@ -701,7 +703,7 @@ public class EngineSpecificationExporter extends EngineEditorInterpretor {
       engineDecomposition.setYawlService(engineService);
     }
     
-    engineSpec.setDecomposition(engineDecomposition);
+    engineSpec.addDecomposition(engineDecomposition);
     
     return engineDecomposition;
   }
@@ -1576,13 +1578,13 @@ public class EngineSpecificationExporter extends EngineEditorInterpretor {
   private static String editorToEngineMultiInstanceMode(YAWLMultipleInstanceTask task) {
     switch(task.getInstanceCreationType()) {
       case YAWLMultipleInstanceTask.STATIC_INSTANCE_CREATION: {
-        return YMultiInstanceAttributes._creationModeStatic;
+        return YMultiInstanceAttributes.CREATION_MODE_STATIC;
       }
       case YAWLMultipleInstanceTask.DYNAMIC_INSTANCE_CREATION: {
-        return YMultiInstanceAttributes._creationModeDynamic;
+        return YMultiInstanceAttributes.CREATION_MODE_DYNAMIC;
       }
       default: {
-        return YMultiInstanceAttributes._creationModeStatic;
+        return YMultiInstanceAttributes.CREATION_MODE_STATIC;
       }
     } 
   }

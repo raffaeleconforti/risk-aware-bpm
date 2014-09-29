@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,22 +20,21 @@ package org.yawlfoundation.yawl.engine.interfce.interfaceB;
 
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.*;
 import org.yawlfoundation.yawl.exceptions.YAWLException;
 import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.util.StringUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -61,10 +60,9 @@ public abstract class InterfaceBWebsideController {
     protected static final String XSD_NCNAME_TYPE = "NCName";
     protected static final String XSD_NAMESPACE = "http://www.w3.org/2001/XMLSchema";
 
-    protected static final String DEFAULT_ENGINE_USERNAME = "admin";
-    protected static final String DEFAULT_ENGINE_PASSWORD = "YAWL";
+    protected String engineLogonName = "admin";
+    protected String engineLogonPassword = "YAWL";
     protected Category _logger = Logger.getLogger(getClass());
-    protected SAXBuilder _builder = new SAXBuilder();
 
 
     /**
@@ -77,8 +75,8 @@ public abstract class InterfaceBWebsideController {
 
     
     /**
-     * Provided that you set up the web.xml file according to the YAWL doumentation
-     * you do not need to call this method.  It allows implementors to set up
+     * Provided that you set up the web.xml file according to the YAWL documentation
+     * you do not need to call this method.  It allows implementers to set up
      * their webapp so that it has the right objects, and correctly addressed
      * pointers to the engine.
      * @param backEndURI the uri of the engine.
@@ -116,6 +114,26 @@ public abstract class InterfaceBWebsideController {
 
 
     /**
+     * Receives notification from the engine that an active case has become
+     * deadlocked.  Override this method to take any necessary action.
+     * @param caseID the id of the case that has been cancelled
+     * @param tasks the list of deadlocked task ids
+     */
+    public void handleDeadlockedCaseEvent(String caseID, String tasks) { }
+
+
+    /**
+     * Receives notification from the engine that a case has been started. By overriding
+     * this method a service can process case start events as required.
+     * @param specID the specification id of the started case
+     * @param caseID the id of the case
+     * @param launchingService the uri (String) of the service that started the case
+     * @param delayed true if this is a delayed case start, false if immediate
+     */
+    public void handleStartCaseEvent(YSpecificationID specID, String caseID,
+                                         String launchingService, boolean delayed) { }
+
+    /**
      * Receives notification from the engine that an active case has been
      * completed. By overriding this method a service can process case completion
      * events as required.
@@ -135,7 +153,7 @@ public abstract class InterfaceBWebsideController {
 
     /**
      * Receives notification from the engine that it has finished startup
-     * initialisation and is now in a running org.yawlfoundation.yawl.risk.state. Override this method to
+     * initialisation and is now in a running state. Override this method to
      * handle final service initialisation tasks that require a running engine
      */
     public void handleEngineInitialisationCompletedEvent() { }
@@ -145,9 +163,43 @@ public abstract class InterfaceBWebsideController {
      * Receives notification from the engine that the status of a workitem has been
      * modified. Override this method to handle any effects a status change might have
      * on a custom service
+     * @param workItem the work item that has had its status modified
+     * @param oldStatus the work item's previous status
+     * @param newStatus the work item's new status
      */
     public void handleWorkItemStatusChangeEvent(WorkItemRecord workItem, 
                                                 String oldStatus, String newStatus) { }
+
+
+    /**
+     * Receives notification from the engine that an active case has been
+     * cancelled.  Override this method to take any necessary action.
+     * @param caseID the id of the case that has been cancelled
+     */
+    public void handleCaseSuspendingEvent(String caseID) { }
+
+
+    /**
+     * Receives notification from the engine that an active case has been
+     * cancelled.  Override this method to take any necessary action.
+     * @param caseID the id of the case that has been cancelled
+     */
+    public void handleCaseSuspendedEvent(String caseID) { }
+
+
+    /**
+     * Receives notification from the engine that an active case has been
+     * cancelled.  Override this method to take any necessary action.
+     * @param caseID the id of the case that has been cancelled
+     */
+    public void handleCaseResumedEvent(String caseID) { }
+
+
+    /**
+     * Receives notification when the environment is being shutdown. Override this
+     * method to take any necessary finalisation action.
+     */
+    public void destroy() { }
 
 
     /**
@@ -176,8 +228,17 @@ public abstract class InterfaceBWebsideController {
      */
     public void setRemoteAuthenticationDetails(String userName, String password,
                                                String httpProxyHost, String proxyPort) {
-        _authConfig4WS.setProxyAuthentication(
-                userName, password, httpProxyHost, proxyPort);
+        _authConfig4WS.setProxyAuthentication(userName, password, httpProxyHost, proxyPort);
+    }
+
+
+    protected void setEngineLogonName(String logonName) {
+        engineLogonName = logonName;
+    }
+
+
+    protected void setEngineLogonPassword(String logonPassword) {
+        engineLogonPassword = logonPassword;
     }
 
 
@@ -227,7 +288,7 @@ public abstract class InterfaceBWebsideController {
 
     /**
      * Creates a session with the engine.  A session is automatically disconnected
-     * after 60 minutes of inactivty (although this value can be changed via config
+     * after 60 minutes of inactivity (although this value can be changed via config
      * value in the web.xml file).
      * @param userID the userID
      * @param password the password.
@@ -249,27 +310,21 @@ public abstract class InterfaceBWebsideController {
      */
     public WorkItemRecord checkOut(String workItemID, String sessionHandle)
             throws IOException, YAWLException {
-        WorkItemRecord resultItem = null;
+        WorkItemRecord resultItem;
         String msg = _interfaceBClient.checkOutWorkItem(workItemID, sessionHandle);
         if (successful(msg)) {
-            try {
-                Document doc = _builder.build(new StringReader(msg));
-                Element workItemElem = doc.getRootElement().getChild("workItem");
-                resultItem = Marshaller.unmarshalWorkItem(workItemElem);
-                _ibCache.addWorkItem(resultItem);
-            } catch (JDOMException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            throw new YAWLException(msg);
+            msg = _interfaceBClient.stripOuterElement(msg);
+            resultItem = Marshaller.unmarshalWorkItem(msg);
+            _ibCache.addWorkItem(resultItem);
         }
+        else throw new YAWLException(msg);
+
         return resultItem;
     }
 
 
     /**
+     * @deprecated since 2.1 - use checkInWorkItem(String, Element, Element, String, String)
      * Checks a work item back into the engine.
      * @param workItemID the work item id.
      * @param inputData the input data.
@@ -278,32 +333,12 @@ public abstract class InterfaceBWebsideController {
      * @return a diagnostic result of the action - in XML.
      * @throws IOException if there is a problem contacting the engine.
      * @throws JDOMException if there is a problem parsing XML of input or output data
-     * @deprecated replaced by checkInWorkItem(String workItemID, Element inputData, Element outputData, String sessionHandle)
      */
-    public String checkInWorkItem(String workItemID, String inputData, String outputData, String sessionHandle) throws IOException, JDOMException {
-        Element inputDataEl = null;
-        Element outputDataEl = null;
-
-        SAXBuilder builder = new SAXBuilder();
-        try {
-            Document inputDataDoc =
-                    builder.build(
-                            new StringReader(inputData)
-                    );
-            inputDataEl = inputDataDoc.getRootElement();
-
-            Document outputDataDoc =
-                    builder.build(
-                            new StringReader(outputData)
-                    );
-            outputDataEl = outputDataDoc.getRootElement();
-        } catch (JDOMException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return checkInWorkItem(workItemID, inputDataEl, outputDataEl, sessionHandle);
+    public String checkInWorkItem(String workItemID, String inputData, String outputData,
+                                  String sessionHandle) throws IOException, JDOMException {
+        Element inputDataEl = JDOMUtil.stringToElement(inputData);
+        Element outputDataEl = JDOMUtil.stringToElement(outputData);
+        return checkInWorkItem(workItemID, inputDataEl, outputDataEl, null, sessionHandle);
     }
 
 
@@ -329,7 +364,8 @@ public abstract class InterfaceBWebsideController {
      * @param workItemID the work item id.
      * @param inputData the input data as an XML String.
      * @param outputData the output data as an XML String
-     * @param logPredicate a configurable logging string to be logged when the item completes
+     * @param logPredicate a configurable logging string to be logged when the item
+     * completes. May be a simple string or an xml'd YLogDataItemList object.
      * @param sessionHandle a valid session handle
      * @return a diagnostic result of the action - in XML.
      * @throws IOException if there is a problem contacting the engine.
@@ -339,28 +375,33 @@ public abstract class InterfaceBWebsideController {
                                   Element outputData, String logPredicate, String sessionHandle)
             throws IOException, JDOMException {
 
-        // first merge the input and output data together
-        String mergedlOutputData = Marshaller.getMergedOutputData(inputData, outputData);
-        String filteredOutputData;
+        // first, get workitem record from local cache; if not there, check the engine
+        // for it; if not there, fail
+        WorkItemRecord workitem = getCachedWorkItem(workItemID);
+        if (workitem == null) workitem = getEngineStoredWorkItem(workItemID, sessionHandle);
+        if (workitem == null) {
+            return "<failure>Unknown workitem: '" + workItemID + "'.</failure>";
+        }
 
-        WorkItemRecord workitem = this.getCachedWorkItem(workItemID);
-        YSpecificationID specID = new YSpecificationID(workitem.getSpecIdentifier(),
-                                                       workitem.getSpecVersion(),
-                                                       workitem.getSpecURI());
-        SpecificationData specData = getSpecificationData(specID, sessionHandle);
+        // merge the input and output data together
+        String mergedOutputData = Marshaller.getMergedOutputData(inputData, outputData);
+        String filteredOutputData;        
 
         // Now if this is beta4 or greater then remove all those input only bits of data
         // by first preparing a list of output params to iterate over.
-        if (!(specData.usesSimpleRootData())) {
+        YSpecificationID specID = new YSpecificationID(workitem);
+        SpecificationData specData = getSpecificationData(specID, sessionHandle);
+        if (! specData.usesSimpleRootData()) {
             TaskInformation taskInfo = getTaskInformation(specID, workitem.getTaskID(),
                                                           sessionHandle);
             List<YParameter> outputParams = taskInfo.getParamSchema().getOutputParams();
             filteredOutputData = Marshaller.filterDataAgainstOutputParams(
-                                                    mergedlOutputData, outputParams);
+                                                    mergedOutputData, outputParams);
         }
         else {
-            filteredOutputData = mergedlOutputData;
+            filteredOutputData = mergedOutputData;
         }
+
         String result = _interfaceBClient.checkInWorkItem(workItemID, filteredOutputData,
                                                           logPredicate, sessionHandle);
         _ibCache.removeRemotelyCachedWorkItem(workItemID);
@@ -384,17 +425,17 @@ public abstract class InterfaceBWebsideController {
      * @param sessionHandle a valid sesion handle
      * @return a remote (to the custom service) cached copy of the workitem.
      * @throws IOException if there is a problem contacting the engine.
-     * @throws JDOMException if there is a problem parsing the XML result
      */
     public WorkItemRecord getEngineStoredWorkItem(String workItemID, String sessionHandle)
-            throws JDOMException, IOException {
-        List<WorkItemRecord> items = _interfaceBClient.getCompleteListOfLiveWorkItems(sessionHandle);
-        for (WorkItemRecord record : items) {
-            if (record.getID().equals(workItemID)) {
-                return record;
-            }
+            throws IOException {
+        String itemXML = _interfaceBClient.getWorkItem(workItemID, sessionHandle);
+        if (successful(itemXML)) {
+            WorkItemRecord wir = Marshaller.unmarshalWorkItem(
+                    _interfaceBClient.stripOuterElement(itemXML));
+            _ibCache.addWorkItem(wir);
+            return wir;
         }
-        return null;
+        else throw new IOException(StringUtil.unwrap(itemXML));
     }
 
 
@@ -535,19 +576,23 @@ public abstract class InterfaceBWebsideController {
      */
     public SpecificationData getSpecificationData(YSpecificationID specID, String sessionHandle)
             throws IOException {
-        List<SpecificationData> specs = _interfaceBClient.getSpecificationList(sessionHandle);
-        for (SpecificationData data : specs) {
-            if (data.getID().getKey().equals(specID.getKey())) {
-                String specAsXML = data.getAsXML();
-                if (specAsXML == null) {
-                    specAsXML = _interfaceBClient.getSpecification(specID, sessionHandle);
-                    data.setSpecAsXML(specAsXML);
-                    _ibCache.setSpecificationData(data);
+        SpecificationData specData = _ibCache.getSpecificationData(specID);
+        if (specData == null) {
+            List<SpecificationData> specs =
+                    _interfaceBClient.getSpecificationList(sessionHandle);
+            for (SpecificationData data : specs) {
+                if (data.getID().equals(specID)) {
+                    if (data.getAsXML() == null) {
+                        data.setSpecAsXML(
+                                _interfaceBClient.getSpecification(specID, sessionHandle));
+                    }
+                    _ibCache.addSpecificationData(data);
+                    specData = data;
+                    break;
                 }
-                return data;
             }
         }
-        return null;
+        return specData;
     }
 
 
@@ -570,9 +615,11 @@ public abstract class InterfaceBWebsideController {
         if (!enabledWorkItem.getStatus().equals(WorkItemRecord.statusEnabled))
             throw new IllegalArgumentException("Param enabledWorkItem must be enabled.");
 
+        List<WorkItemRecord> instances = new ArrayList<WorkItemRecord>();
+
         // first of all checkout an enabled work item
         WorkItemRecord result = checkOut(enabledWorkItem.getID(), sessionHandle);
-
+        if (result != null) instances.add(result);
         _logger.debug("Result of item [" + enabledWorkItem.getID() +
                 "] checkout is : " + result);
 
@@ -580,12 +627,13 @@ public abstract class InterfaceBWebsideController {
         List<WorkItemRecord> mixedChildren = getChildren(enabledWorkItem.getID(), sessionHandle);
         for (WorkItemRecord itemRecord : mixedChildren) {
             if (WorkItemRecord.statusFired.equals(itemRecord.getStatus())) {
+                WorkItemRecord firedItem = checkOut(itemRecord.getID(), sessionHandle);
+                if (firedItem != null) instances.add(firedItem);
                 _logger.debug("Result of item [" +
-                        itemRecord.getID() + "] checkout is : " +
-                        checkOut(itemRecord.getID(), sessionHandle));
+                        itemRecord.getID() + "] checkout is : " + firedItem);
             }
         }
-        return getChildren(enabledWorkItem.getID(), sessionHandle);
+        return instances;
     }
 
 
@@ -600,25 +648,11 @@ public abstract class InterfaceBWebsideController {
      */
     protected Element prepareReplyRootElement(WorkItemRecord enabledWorkItem, String sessionHandle)
             throws IOException {
-        Element replyToEngineRootDataElement;
-        YSpecificationID specID = new YSpecificationID(enabledWorkItem.getSpecIdentifier(),
-                                                       enabledWorkItem.getSpecVersion(),
-                                                       enabledWorkItem.getSpecURI());
-
-        //prepare reply root element.
+        YSpecificationID specID = new YSpecificationID(enabledWorkItem);
         SpecificationData sdata = getSpecificationData(specID, sessionHandle);
-
-        TaskInformation taskInfo = getTaskInformation(specID,
-                enabledWorkItem.getTaskID(),
-                sessionHandle);
-
-        String decompID = taskInfo.getDecompositionID();
-        if (sdata.usesSimpleRootData()) {
-            replyToEngineRootDataElement = new Element("data");
-        } else {
-            replyToEngineRootDataElement = new Element(decompID);
-        }
-        return replyToEngineRootDataElement;
+        String rootName = sdata.usesSimpleRootData() ? "data" :
+                enabledWorkItem.getTaskName().replaceAll(" ", "_");
+        return new Element(rootName);
     }
 
 
@@ -633,9 +667,9 @@ public abstract class InterfaceBWebsideController {
     protected Element getResourcingSpecs(YSpecificationID specID, String taskID,
                                          String sessionHandle) throws IOException {
         String result = _interfaceBClient.getResourcingSpecs(specID, taskID, sessionHandle) ;
-        if ((result != null) && (! result.equals("")) && (! result.equals("null")))
+        if (! ((result == null) || result.equals("") || result.equals("null"))) {
             return JDOMUtil.stringToElement(result);
-        else
-            return null ;
+        }
+        else return null;
     }
 }

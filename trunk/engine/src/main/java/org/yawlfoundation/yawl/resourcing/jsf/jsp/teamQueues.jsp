@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -28,7 +28,7 @@
         <ui:page binding="#{teamQueues.page1}" id="page1">
             <ui:html binding="#{teamQueues.html1}" id="html1">
                 <ui:head binding="#{teamQueues.head1}" id="head1"
-                         title="YAWL 2.1: View Team Queues">
+                         title="YAWL #{ApplicationBean.yawlVersion}: View Team Queues">
 
                     <ui:link binding="#{teamQueues.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
@@ -51,6 +51,7 @@
                         <center>
                         <ui:panelLayout binding="#{customServices.pnlContainer}"
                                         id="pnlAQContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="teamQueuesContainerPanel">
 
                             <ui:panelLayout binding="#{teamQueues.lpQueues}"

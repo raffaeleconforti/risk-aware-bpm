@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,22 +18,18 @@
 
 package org.yawlfoundation.yawl.unmarshal;
 
-import org.eclipse.xsd.util.XSDConstants;
-import org.jdom.Attribute;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Attribute;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.elements.*;
-import org.yawlfoundation.yawl.exceptions.YSchemaBuildingException;
 import org.yawlfoundation.yawl.exceptions.YSyntaxException;
+import org.yawlfoundation.yawl.schema.YSchemaVersion;
 import org.yawlfoundation.yawl.sensors.YSensorsEditor;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
+import javax.xml.XMLConstants;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -48,8 +44,9 @@ class YSpecificationParser {
     private YDecompositionParser[] _decompositionParser;
     private Map<String, String> _decompAndTypeMap = new HashMap<String, String>();
     private Namespace _yawlNS;
+    private List<String> _emptyComplexTypeFlagTypes = new ArrayList<String>();
 
-    private static final String _schema4SchemaURI = XSDConstants.SCHEMA_FOR_SCHEMA_URI_2001;
+    private static final String _schema4SchemaURI = XMLConstants.W3C_XML_SCHEMA_NS_URI;
     private static final String _defaultSchema =
                            "<xs:schema xmlns:xs=\"" + _schema4SchemaURI + "\"/>";
 
@@ -60,9 +57,9 @@ class YSpecificationParser {
      * @param specificationElem the specification part of an XMl document
      * @param version the version of the XML representation (i.e. beta2 or beta3).
      * @throws YSyntaxException
-     * @throws YSchemaBuildingException
      */
-    public YSpecificationParser(Element specificationElem, String version) throws YSyntaxException, YSchemaBuildingException {
+    public YSpecificationParser(Element specificationElem, YSchemaVersion version)
+            throws YSyntaxException {
         _yawlNS = specificationElem.getNamespace();
 
         parseSpecification(specificationElem, version);
@@ -70,17 +67,15 @@ class YSpecificationParser {
     }
 
 
-    private void parseSpecification(Element specificationElem, String version)
-            throws YSyntaxException, YSchemaBuildingException {
-        List decompositionElems = specificationElem.getChildren("decomposition", _yawlNS);
-        for (int i = 0; i < decompositionElems.size(); i++) {
-            Element decompositionElem = (Element) decompositionElems.get(i);
+    private void parseSpecification(Element specificationElem, YSchemaVersion version)
+            throws YSyntaxException {
+        List<Element> decompositionElems =
+                specificationElem.getChildren("decomposition", _yawlNS);
+        for (Element decompositionElem : decompositionElems) {
             Namespace xsiNameSpc = decompositionElem.getNamespace("xsi");
             String decompID = decompositionElem.getAttributeValue("id");
             Attribute type = decompositionElem.getAttribute("type", xsiNameSpc);
             if (type != null) {
-                //todo  fix it so when you load a spec with an empty decompostion JDOM doesn't
-                //todo  throw a null pointer exception.
                 String decompType = type.getValue();
                 _decompAndTypeMap.put(decompID, decompType);
             }
@@ -92,10 +87,19 @@ class YSpecificationParser {
         String name = specificationElem.getChildText("name", _yawlNS);
         String documentation = specificationElem.getChildText("documentation", _yawlNS);
 
+         // if name and doco fields missing from spec, see if they are in metadata
+        if (name == null)
+            name = _specification.getMetaData().getTitle();
+        if (documentation == null)
+            documentation = _specification.getMetaData().getDescription();
+        _specification.setName(name);
+        _specification.setDocumentation(documentation);
+
         Namespace schema4SchemaNS = Namespace.getNamespace(_schema4SchemaURI);
-        Element schemElem = specificationElem.getChild("schema", schema4SchemaNS);
-        if (null != schemElem) {
-            _specification.setSchema(JDOMUtil.elementToString(schemElem));
+        Element schemaElem = specificationElem.getChild("schema", schema4SchemaNS);
+        if (null != schemaElem) {
+            extractEmptyComplexTypeFlagTypeNames(schemaElem);
+            _specification.setSchema(JDOMUtil.elementToString(schemaElem));
         }
         else {
 
@@ -104,18 +108,7 @@ class YSpecificationParser {
             _specification.setSchema(_defaultSchema);
         }
 
-        // if name and doco fields missing from spec, see if they are in metadata
-        if (name == null)
-            name = _specification.getMetaData().getTitle();
-        if (documentation == null)
-            documentation = _specification.getMetaData().getDescription();
-
-        _specification.setName(name);
-        _specification.setDocumentation(documentation);
-
-        //If is version beta2 we loop through the decompositions
-        //in a slightly different way.  Rather than be tricky i think it is easier to just copy the
-        //code with minor changes.
+        //If is version beta2 we loop through in a slightly different way.
         if (isBeta2Version()) {
             _decompositionParser = new YDecompositionParser[decompositionElems.size() + 1];
             Element rootNetElem = specificationElem.getChild("rootNet", _yawlNS);
@@ -127,24 +120,25 @@ class YSpecificationParser {
             _specification.setRootNet(rootNet);
 
             for (int i = 1; i <= decompositionElems.size(); i++) {
-                Element decompositionElem = (Element) decompositionElems.get(i - 1);
+                Element decompositionElem = decompositionElems.get(i - 1);
                 _decompositionParser[i] = new YDecompositionParser(
                         decompositionElem,
                         this,
                         _specification.getSchemaVersion());
                 YDecomposition decomposition = _decompositionParser[i].getDecomposition();
-                _specification.setDecomposition(decomposition);
+                _specification.addDecomposition(decomposition);
             }
-        } else {//must be beta3 or greater
+        }
+        else {//must be beta3 or greater
             _decompositionParser = new YDecompositionParser[decompositionElems.size()];
             for (int i = 0; i < decompositionElems.size(); i++) {
-                Element decompositionElem = (Element) decompositionElems.get(i);
+                Element decompositionElem = decompositionElems.get(i);
                 _decompositionParser[i] = new YDecompositionParser(
                         decompositionElem,
                         this,
                         _specification.getSchemaVersion());
                 YDecomposition decomposition = _decompositionParser[i].getDecomposition();
-                _specification.setDecomposition(decomposition);
+                _specification.addDecomposition(decomposition);
             }
         }
         
@@ -205,23 +199,17 @@ class YSpecificationParser {
 
         metaData.setTitle(metaDataElem.getChildText("title", _yawlNS));
 
-        List creators = metaDataElem.getChildren("creator", _yawlNS);
-        for (Object o : creators) {
-            Element creatorElem = (Element) o;
+        for (Element creatorElem : metaDataElem.getChildren("creator", _yawlNS)) {
             metaData.addCreator(creatorElem.getText());
         }
 
-        List subjects = metaDataElem.getChildren("subject", _yawlNS);
-        for (Object o : subjects) {
-            Element subjectElem = (Element) o;
+        for (Element subjectElem : metaDataElem.getChildren("subject", _yawlNS)) {
             metaData.addSubject(subjectElem.getText());
         }
 
         metaData.setDescription(metaDataElem.getChildText("description", _yawlNS));
 
-        List contributors = metaDataElem.getChildren("contributor", _yawlNS);
-        for (Object o : contributors) {
-            Element contributor = (Element) o;
+        for (Element contributor : metaDataElem.getChildren("contributor", _yawlNS)) {
             metaData.addContributor(contributor.getText());
         }
 
@@ -289,8 +277,8 @@ class YSpecificationParser {
      * @return whether this is a a beta 2 specification version or not.
      */
     private boolean isBeta2Version() {
-        return _specification.getBetaVersion().equals(YSpecification.Beta2);
-    }
+        return _specification.getSchemaVersion().isBeta2();
+    }    
 
 
     /**
@@ -301,24 +289,30 @@ class YSpecificationParser {
 
         Element schemaElem = specificationElem.getChild("schema");
         if (schemaElem != null) {
-            try {
-                _specification.setSchema(JDOMUtil.elementToString(schemaElem));
-            } catch (YSchemaBuildingException e) {
-                YSyntaxException f = new YSyntaxException(e.getMessage());
-                f.setStackTrace(e.getStackTrace());
-                throw f;
-            }
+            _specification.setSchema(JDOMUtil.elementToString(schemaElem));
         }
     }
 
 
+    private void extractEmptyComplexTypeFlagTypeNames(Element schemaElem) {
+        if (schemaElem != null) {
+            for (Element elem : schemaElem.getChildren()) {
+                if (elem.getName().equals("complexType") && elem.getChildren().isEmpty()) {
+                    _emptyComplexTypeFlagTypes.add(elem.getAttributeValue("name"));
+                }
+            }
+        }
+    }
+
+    protected List<String> getEmptyComplexTypeFlagTypeNames() {
+        return _emptyComplexTypeFlagTypes;
+    }
+
     private void linkDecompositions() {
-        for (int i = 0; i < _decompositionParser.length; i++) {
-            Map decomposesToIDs = _decompositionParser[i].getDecomposesToIDs();
-            Iterator compTasksIter = decomposesToIDs.keySet().iterator();
-            while (compTasksIter.hasNext()) {
-                YTask task = (YTask) compTasksIter.next();
-                String decompID = (String) decomposesToIDs.get(task);
+        for (YDecompositionParser parser : _decompositionParser) {
+            Map<YTask, String> decomposesToIDs = parser.getDecomposesToIDs();
+            for (YTask task : decomposesToIDs.keySet()) {
+                String decompID = decomposesToIDs.get(task);
                 YDecomposition implementation = _specification.getDecomposition(decompID);
                 task.setDecompositionPrototype(implementation);
             }

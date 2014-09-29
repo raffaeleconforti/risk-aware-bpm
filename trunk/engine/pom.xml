@@ -502,22 +502,6 @@
                     </execution>
 
                     <execution>
-                        <id>install31</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>install-file</goal>
-                        </goals>
-                        <configuration>
-                            <file>${basedir}/build/3rdParty/lib/jdom.jar</file>
-                            <groupId>yawl.libraries.engine</groupId>
-                            <artifactId>jdom</artifactId>
-                            <version>${library.version}</version>
-                            <packaging>jar</packaging>
-                            <generatePom>true</generatePom>
-                        </configuration>
-                    </execution>
-
-                    <execution>
                         <id>install32</id>
                         <phase>validate</phase>
                         <goals>
@@ -1411,11 +1395,6 @@
 
         <dependency>
             <groupId>yawl.libraries.engine</groupId>
-            <artifactId>jdom</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>yawl.libraries.engine</groupId>
             <artifactId>jfreechart</artifactId>
         </dependency>
 
@@ -1629,6 +1608,21 @@
             <artifactId>xsd-resources</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jung-algorithm</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>jung-visualization</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>yawl.libraries.engine</groupId>
+            <artifactId>common-collection-generic</artifactId>
+        </dependency>
+
         <!--From Editor-->
 
         <dependency>
@@ -1649,6 +1643,17 @@
         <dependency>
             <groupId>yawl.libraries.editor</groupId>
             <artifactId>browserLauncher</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jdom</groupId>
+            <artifactId>jdom</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>com.springsource.org.apache.tools.ant</artifactId>
+            <version>1.8.3</version>
         </dependency>
 
     </dependencies>

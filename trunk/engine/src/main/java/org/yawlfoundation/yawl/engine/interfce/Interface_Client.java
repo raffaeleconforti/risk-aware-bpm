@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -37,6 +37,10 @@ import java.util.Map;
  */
 
 public class Interface_Client {
+
+    // allows the prevention of socket reads from blocking indefinitely
+    private static int READ_TIMEOUT = 0;              // default: wait indefinitely
+
 
     /**
      * Executes a HTTP POST request on the url specified.
@@ -83,6 +87,16 @@ public class Interface_Client {
 
 
     /**
+     * Set the read timeout value for future connections
+     * @param timeout the timeout value in milliseconds. A value of -1 (the default)
+     *                means a read will wait indefinitely.
+     */
+    protected void setReadTimeout(int timeout) {
+        READ_TIMEOUT = timeout;
+    }
+
+
+    /**
      * Removes the outermost set of xml tags from a string, if any
      * @param xml the xml string to strip
      * @return the stripped xml string
@@ -118,7 +132,7 @@ public class Interface_Client {
     /**
      * Sends data to the specified url via a HTTP POST, and returns the reply
      * @param urlStr the url to connect to
-     * @param paramsMap a map of atttribute=value pairs representing the data to send
+     * @param paramsMap a map of attribute=value pairs representing the data to send
      * @param post true if this was originally a POST request, false if a GET request
      * @return the response from the url
      * @throws IOException when there's some kind of communication problem
@@ -151,7 +165,12 @@ public class Interface_Client {
         URL url = new URL(urlStr);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setDoOutput(true);
-        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Accept-Charset", "UTF-8");
+        connection.setReadTimeout(READ_TIMEOUT);
+
+        // required to ensure the connection is not reused. When not set, spurious
+        // intermittent problems (double posts, missing posts) occur under heavy load.
+        connection.setRequestProperty("Connection", "close");
         return connection ;
     }
 

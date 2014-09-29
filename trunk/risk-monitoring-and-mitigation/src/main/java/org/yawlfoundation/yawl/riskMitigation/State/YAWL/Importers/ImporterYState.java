@@ -7,8 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.risk.state.YAWL.Elements.Net;
 import org.yawlfoundation.yawl.risk.state.YAWL.Elements.Place;
 import org.yawlfoundation.yawl.risk.state.YAWL.Elements.Task;

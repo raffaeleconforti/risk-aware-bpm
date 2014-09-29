@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,11 +20,14 @@ package org.yawlfoundation.yawl.engine.interfce;
 
 import org.yawlfoundation.yawl.engine.ObserverGateway;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
+import org.yawlfoundation.yawl.exceptions.YAWLException;
 
+import javax.xml.datatype.Duration;
+import java.io.InputStream;
 import java.net.URI;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.io.InputStream;
+import java.util.Date;
 
 /**
  /**
@@ -41,21 +44,25 @@ public interface EngineGateway extends Remote {
      *
      * @return boolean
      */
-    public boolean enginePersistenceFailure();
+    boolean enginePersistenceFailure();
 
-    public void registerObserverGateway(ObserverGateway gateway);
+    void registerObserverGateway(ObserverGateway gateway) throws YAWLException;
 
-    public void setDefaultWorklist(String url);
+    void setDefaultWorklist(String url);
 
-    public void setAllowAdminID(boolean allow);
+    void setAllowAdminID(boolean allow);
 
-    public void shutdown();
+    void disableLogging();
 
-    public void initBuildProperties(InputStream stream);
+    void setHibernateStatisticsEnabled(boolean enable);
 
-    public void notifyServletInitialisationComplete();
+    void shutdown();
+
+    void initBuildProperties(InputStream stream);
+
+    void notifyServletInitialisationComplete(int maxWaitSeconds);
     
-    public void setActualFilePath(String path);
+    void setActualFilePath(String path);
 
     /**
      *
@@ -63,7 +70,7 @@ public interface EngineGateway extends Remote {
      * @return the ids of all currently active workitems
      * @throws RemoteException
      */
-    public String getAvailableWorkItemIDs(String sessionHandle) throws RemoteException;
+    String getAvailableWorkItemIDs(String sessionHandle) throws RemoteException;
 
     /**
      *
@@ -72,7 +79,10 @@ public interface EngineGateway extends Remote {
      * @return the full workitem record matching the id passed
      * @throws RemoteException
      */
-    public String getWorkItemDetails(String workItemID, String sessionHandle) throws RemoteException;
+    String getWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+
+    String getWorkItemExpiryTime(String workItemID, String sessionHandle)
+            throws RemoteException;
 
     /**
      *
@@ -81,116 +91,137 @@ public interface EngineGateway extends Remote {
      * @return the specification matching the id passed
      * @throws RemoteException
      */
-    public String getProcessDefinition(YSpecificationID specID, String sessionHandle) throws RemoteException;
+    String getProcessDefinition(YSpecificationID specID, String sessionHandle) throws RemoteException;
 
-    public String suspendWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+    String suspendWorkItem(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String unsuspendWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+    String unsuspendWorkItem(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String rollbackWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+    String rollbackWorkItem(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String completeWorkItem(String workItemID, String data, String logPredicate, boolean force, String sessionHandle) throws RemoteException;
+    String completeWorkItem(String workItemID, String data, String logPredicate, boolean force, String sessionHandle) throws RemoteException;
 
-    public String startWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+    String startWorkItem(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String skipWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+    String skipWorkItem(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String createNewInstance(String workItemID, String paramValueForMICreation, String sessionHandle) throws RemoteException;
+    String getStartingDataSnapshot(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String describeAllWorkItems(String sessionHandle) throws RemoteException;
+    String createNewInstance(String workItemID, String paramValueForMICreation, String sessionHandle) throws RemoteException;
 
-    public String getWorkItemsWithIdentifier(String idType, String itemID, String sessionHandle) throws RemoteException;
+    String describeAllWorkItems(String sessionHandle) throws RemoteException;
 
-    public String connect(String userID, String password, long timeOutSeconds) throws RemoteException;
+    String getWorkItemsWithIdentifier(String idType, String itemID, String sessionHandle) throws RemoteException;
 
-    public String checkConnection(String sessionHandle) throws RemoteException;
+    String getWorkItemsForService(String serviceURI, String sessionHandle) throws RemoteException;
 
-    public String checkConnectionForAdmin(String sessionHandle) throws RemoteException;
+    String connect(String userID, String password, long timeOutSeconds) throws RemoteException;
 
-    public String getTaskInformation(YSpecificationID specificationID, String taskID, String sessionHandle) throws RemoteException;
+    String checkConnection(String sessionHandle) throws RemoteException;
 
-    public String checkElegibilityToAddInstances(String workItemID, String sessionHandle) throws RemoteException;
+    String disconnect(String sessionHandle) throws RemoteException;
 
-    public String getSpecificationList(String sessionHandle) throws RemoteException;
+    String checkConnectionForAdmin(String sessionHandle) throws RemoteException;
 
-    public String getSpecificationDataSchema(YSpecificationID specID, String sessionHandle)
+    String getTaskInformation(YSpecificationID specificationID, String taskID, String sessionHandle) throws RemoteException;
+
+    String checkElegibilityToAddInstances(String workItemID, String sessionHandle) throws RemoteException;
+
+    String getSpecificationList(String sessionHandle) throws RemoteException;
+
+    String getSpecificationDataSchema(YSpecificationID specID, String sessionHandle)
                                                    throws RemoteException ;
 
 
-//	MLR (02/11/07) code merge: added method launchCase which also accepts caseID as second-last param, to comply with the new YEngine (which features two methods launchCase). 
-    public String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String caseID, String logDataStr, String sessionHandle) throws RemoteException;
+    String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String caseID, String logDataStr, String sessionHandle) throws RemoteException;
     
-    public String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String logDataStr, String sessionHandle) throws RemoteException;
+    String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String logDataStr, String sessionHandle) throws RemoteException;
 
-    public String getCasesForSpecification(YSpecificationID specID, String sessionHandle) throws RemoteException;
+    String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String logDataStr, long mSec, String sessionHandle) throws RemoteException;
 
-    public String getCaseState(String caseID, String sessionHandle) throws RemoteException;
+    String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String logDataStr, Date expiry, String sessionHandle) throws RemoteException;
+ 
+    String launchCase(YSpecificationID specID, String caseParams, URI completionObserverURI, String logDataStr, Duration duration, String sessionHandle) throws RemoteException;
+  
+    String getCasesForSpecification(YSpecificationID specID, String sessionHandle) throws RemoteException;
 
-    public String cancelCase(String caseID, String sessionHandle) throws RemoteException;
+    String getSpecificationForCase(String caseID, String sessionHandle) throws RemoteException;
 
-    public String getChildrenOfWorkItem(String workItemID, String sessionHandle) throws RemoteException;
+    String getAllRunningCases(String sessionHandle) throws RemoteException;
 
-    public String getWorkItemOptions(String workItemID, String thisURL, String sessionHandle) throws RemoteException;
+    String getCaseState(String caseID, String sessionHandle) throws RemoteException;
 
-    public String loadSpecification(String specification, String sessionHandle) throws RemoteException;
+    String cancelCase(String caseID, String sessionHandle) throws RemoteException;
 
-    public String unloadSpecification(YSpecificationID specID, String sessionHandle) throws RemoteException;
+    String getChildrenOfWorkItem(String workItemID, String sessionHandle) throws RemoteException;
 
-    public String createAccount(String userName, String password, String doco, String sessionHandle) throws RemoteException;
+    String getWorkItemOptions(String workItemID, String thisURL, String sessionHandle) throws RemoteException;
 
-    public String updateAccount(String userName, String password, String doco, String sessionHandle) throws RemoteException;
+    String loadSpecification(String specification, String sessionHandle) throws RemoteException;
 
-    public String getAccounts(String sessionHandle) throws RemoteException;
+    String unloadSpecification(YSpecificationID specID, String sessionHandle) throws RemoteException;
 
-    public String getBuildProperties(String sessionHandle) throws RemoteException;
+    String createAccount(String userName, String password, String doco, String sessionHandle) throws RemoteException;
 
-    public String getYAWLServices(String sessionHandle) throws RemoteException;
+    String updateAccount(String userName, String password, String doco, String sessionHandle) throws RemoteException;
 
-    public String getYAWLServiceDocumentation(String yawlServiceURI, String sessionHandle) throws RemoteException;
+    String getAccounts(String sessionHandle) throws RemoteException;
 
-    public String addYAWLService(String serviceStr, String sessionHandle) throws RemoteException;
+    String getBuildProperties(String sessionHandle) throws RemoteException;
 
-    public String removeYAWLService(String serviceURI, String sessionHandle);
+    String getYAWLServices(String sessionHandle) throws RemoteException;
 
-    public String deleteAccount(String userName, String sessionHandle) throws RemoteException;
+    String getYAWLServiceDocumentation(String yawlServiceURI, String sessionHandle) throws RemoteException;
 
-    public String changePassword(String password, String sessionHandle) throws RemoteException;
+    String addYAWLService(String serviceStr, String sessionHandle) throws RemoteException;
 
-    public String getClientAccount(String userID, String sessionHandle) throws RemoteException;
+    String removeYAWLService(String serviceURI, String sessionHandle);
 
-    public String getClientPassword(String userID, String sessionHandle) throws RemoteException;
+    String deleteAccount(String userName, String sessionHandle) throws RemoteException;
 
-    public String addInterfaceXListener(String observerURI) ;
+    String changePassword(String password, String sessionHandle) throws RemoteException;
 
-    public String removeInterfaceXListener(String observerURI) ;
+    String getClientAccount(String userID, String sessionHandle) throws RemoteException;
 
-    public String updateWorkItemData(String workItemID, String data, String sessionHandle);
+    String getClientPassword(String userID, String sessionHandle) throws RemoteException;
 
-    public String updateCaseData(String idStr, String data, String sessionHandle) ;
+    String addInterfaceXListener(String observerURI) ;
 
-    public String restartWorkItem(String workItemID, String sessionHandle) throws RemoteException ;
+    String removeInterfaceXListener(String observerURI) ;
 
-    public String cancelWorkItem(String id, String fail, String sessionHandle) throws RemoteException ;
+    String updateWorkItemData(String workItemID, String data, String sessionHandle);
 
-    public String getLatestSpecVersion(String id, String sessionHandle) throws RemoteException ;
+    String updateCaseData(String idStr, String data, String sessionHandle) ;
 
-    public String getMITaskAttributes(YSpecificationID specificationID, String taskID,
+    String restartWorkItem(String workItemID, String sessionHandle) throws RemoteException ;
+
+    String cancelWorkItem(String id, String data, String fail, String sessionHandle) throws RemoteException ;
+
+    String getLatestSpecVersion(String id, String sessionHandle) throws RemoteException ;
+
+    String getMITaskAttributes(YSpecificationID specificationID, String taskID,
                                       String sessionHandle) throws RemoteException ;
 
-    public String getResourcingSpecs(YSpecificationID specificationID, String taskID,
+    String getResourcingSpecs(YSpecificationID specificationID, String taskID,
                                      String sessionHandle) throws RemoteException ;
 
-    public String getCaseData(String caseID, String sessionHandle) throws RemoteException;
+    String getCaseData(String caseID, String sessionHandle) throws RemoteException;
 
-    public String getCaseInstanceSummary(String sessionHandle) throws RemoteException;
+    String getCaseInstanceSummary(String sessionHandle) throws RemoteException;
 
-    public String getWorkItemInstanceSummary(String caseID, String sessionHandle)
+    String getWorkItemInstanceSummary(String caseID, String sessionHandle)
             throws RemoteException;
 
-    public String getParameterInstanceSummary(String caseID, String itemID, String sessionHandle)
+    String getParameterInstanceSummary(String caseID, String itemID, String sessionHandle)
             throws RemoteException ;
 
-    public String rejectAnnouncedEnabledTask(String itemID, String sessionHandle) throws RemoteException ;
+    String rejectAnnouncedEnabledTask(String itemID, String sessionHandle) throws RemoteException ;
 
-    public String getExternalDBGateways(String sessionHandle) throws RemoteException ;
+    String getExternalDBGateways(String sessionHandle) throws RemoteException ;
+
+    String setHibernateStatisticsEnabled(boolean enabled, String sessionHandle);
+
+    String isHibernateStatisticsEnabled(String sessionHandle);
+
+    String getHibernateStatistics(String sessionHandle);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,8 +19,10 @@
 package org.yawlfoundation.yawl.resourcing.datastore.orgdata;
 
 import org.yawlfoundation.yawl.resourcing.datastore.HibernateEngine;
-import org.yawlfoundation.yawl.exceptions.YAuthenticationException;
 import org.yawlfoundation.yawl.resourcing.resource.*;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanResource;
+import org.yawlfoundation.yawl.resourcing.resource.nonhuman.NonHumanCategory;
+import org.yawlfoundation.yawl.exceptions.YAuthenticationException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +50,8 @@ public class HibernateImpl extends DataSource {
     private final String _position = Position.class.getName();
     private final String _orgGroup = OrgGroup.class.getName();
     private final String _nonHumanResource = NonHumanResource.class.getName();
-    
+    private final String _nonHumanResourceCategory = NonHumanCategory.class.getName();
+
     // the constructor
     public HibernateImpl() {
         _db = HibernateEngine.getInstance(true) ;
@@ -69,17 +72,19 @@ public class HibernateImpl extends DataSource {
         else if (obj instanceof Role) prefix = "RO" ;
         else if (obj instanceof Participant) prefix = "PA";
         else if (obj instanceof NonHumanResource) prefix = "NH";
+        else if (obj instanceof NonHumanCategory) prefix = "NC";
 
         return getNextID(prefix);
     }
 
 
-    /** these 5 methods load resource entity sets individually */
+    /** these methods load resource entity sets individually */
 
     public HashMap<String,Capability> loadCapabilities() {
         HashMap<String,Capability> capMap = new HashMap<String,Capability>();
         List<Capability> cList = _db.getObjectsForClass(_capability) ;
         for (Capability c : cList) capMap.put(c.getID(), c) ;
+        _db.commit();
         return capMap ;
     }
 
@@ -87,6 +92,7 @@ public class HibernateImpl extends DataSource {
         HashMap<String,Role> roleMap = new HashMap<String,Role>() ;
         List<Role> roleList = _db.getObjectsForClass(_role) ;
         for (Role r : roleList) roleMap.put(r.getID(), r) ;
+        _db.commit();
         return roleMap ;
     }
 
@@ -94,6 +100,7 @@ public class HibernateImpl extends DataSource {
         HashMap<String,Position> posMap = new HashMap<String,Position>();
         List<Position> posList = _db.getObjectsForClass(_position) ;
         for (Position p : posList) posMap.put(p.getID(), p) ;
+        _db.commit();
         return posMap ;
     }
 
@@ -101,6 +108,7 @@ public class HibernateImpl extends DataSource {
         HashMap<String,OrgGroup> orgMap = new HashMap<String,OrgGroup>();
         List<OrgGroup> ogList = _db.getObjectsForClass(_orgGroup) ;
         for (OrgGroup o : ogList) orgMap.put(o.getID(), o) ;
+        _db.commit();
         return orgMap ;
     }             
 
@@ -108,7 +116,17 @@ public class HibernateImpl extends DataSource {
         HashMap<String,NonHumanResource> nhMap = new HashMap<String,NonHumanResource>();
         List<NonHumanResource> nhList = _db.getObjectsForClass(_nonHumanResource) ;
         for (NonHumanResource r : nhList) nhMap.put(r.getID(), r) ;
+        _db.commit();
         return nhMap ;
+    }
+
+    public HashMap<String, NonHumanCategory> loadNonHumanCategories() {
+        HashMap<String, NonHumanCategory> nhCategoryMap =
+                new HashMap<String, NonHumanCategory>();
+        List<NonHumanCategory> nhList = _db.getObjectsForClass(_nonHumanResourceCategory) ;
+        for (NonHumanCategory r : nhList) nhCategoryMap.put(r.getID(), r) ;
+        _db.commit();
+        return nhCategoryMap ;
     }
 
 
@@ -122,22 +140,26 @@ public class HibernateImpl extends DataSource {
        ResourceDataSet ds = new ResourceDataSet(this) ;
 
        List<Capability> cList = _db.getObjectsForClass(_capability) ;
-       for (Capability c : cList) ds.putCapability(c) ;
+       if (cList != null) for (Capability c : cList) ds.putCapability(c) ;
 
        List<OrgGroup> ogList = _db.getObjectsForClass(_orgGroup) ;
-       for (OrgGroup o : ogList) ds.putOrgGroup(o) ;
+       if (ogList != null) for (OrgGroup o : ogList) ds.putOrgGroup(o) ;
 
        List<Position> posList = _db.getObjectsForClass(_position) ;
-       for (Position p : posList) ds.putPosition(p) ;
+       if (posList != null) for (Position p : posList) ds.putPosition(p) ;
 
        List<Role> roleList = _db.getObjectsForClass(_role) ;
-       for (Role r : roleList) ds.putRole(r) ;
+       if (roleList != null) for (Role r : roleList) ds.putRole(r) ;
 
        List<Participant> pList = _db.getObjectsForClass(_participant) ;
-       for (Participant par : pList) ds.putParticipant(par) ;
+       if (pList != null) for (Participant par : pList) ds.putParticipant(par) ;
 
        List<NonHumanResource> resList = _db.getObjectsForClass(_nonHumanResource) ;
-       for (NonHumanResource res : resList) ds.putNonHumanResource(res) ;
+       if (resList != null) for (NonHumanResource res : resList) ds.putNonHumanResource(res) ;
+
+       List<NonHumanCategory> catList = _db.getObjectsForClass(_nonHumanResourceCategory) ;
+       if (catList != null) for (NonHumanCategory cat : catList)
+           ds.putNonHumanCategory(cat) ;
 
        return ds ;
     }
@@ -146,7 +168,7 @@ public class HibernateImpl extends DataSource {
     public void update(Object obj) { _db.exec(obj, _UPDATE); }
 
 
-    public void delete(Object obj) { _db.exec(obj, _DELETE); }
+    public boolean delete(Object obj) { return _db.exec(obj, _DELETE); }
 
 
     public String insert(Object obj) {
@@ -161,8 +183,12 @@ public class HibernateImpl extends DataSource {
                 _db.exec(((Participant) obj).getUserPrivileges(), _INSERT);
             }
         }
-        else ((AbstractResourceAttribute) obj).setID(id);
-
+        else if (obj instanceof AbstractResourceAttribute) {
+            ((AbstractResourceAttribute) obj).setID(id);
+        }
+        else {
+            ((NonHumanCategory) obj).setID(id);
+        }
         _db.exec(obj, _INSERT);
 
         return id ;

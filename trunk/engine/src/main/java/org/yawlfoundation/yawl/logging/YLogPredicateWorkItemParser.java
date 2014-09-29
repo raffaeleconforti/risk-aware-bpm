@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -89,7 +89,7 @@ public class YLogPredicateWorkItemParser extends YPredicateParser {
             s = _workItem.getStatus().toString();
         }
         else if (s.equals("${task:doco}")) {
-            s = _workItem.getTask().getDocumentation();
+            s = _workItem.getTask().getDocumentationPreParsed();
         }
         else if (s.equals("${task:decomposition:name}")) {
             s = _workItem.getTask().getDecompositionPrototype().getName();

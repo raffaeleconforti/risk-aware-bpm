@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -31,8 +31,8 @@ public class YTimer extends Timer {
     public enum TimeUnit { YEAR, MONTH, WEEK, DAY, HOUR, MIN, SEC, MSEC }
 
     private static YTimer _me;
+    private final Hashtable<String, TimeKeeper> _runners;
 
-    private Hashtable<String, TimeKeeper> _runners;
 
     private YTimer() {
         super(true) ;
@@ -75,7 +75,24 @@ public class YTimer extends Timer {
     }
 
 
-    // both methods return a long value of the date/time stamp representing
+    public void cancelAll() {
+
+        // avoid concurrency issues
+        Set<String> timedIDs = new HashSet<String>(_runners.keySet());
+        for (String id : timedIDs) {
+            cancelTimerTask(id);
+        }
+    }
+
+
+    public void shutdown() {
+        for (TimeKeeper timer : _runners.values()) {
+            timer.cancel();
+        }
+    }
+
+
+    // all 'schedule' methods return a long value of the date/time stamp representing
     // the expiry time
 
     public long schedule(YTimedObject timee, long durationAsMilliseconds) {
@@ -125,12 +142,8 @@ public class YTimer extends Timer {
         private YTimedObject _owner ;
 
         protected TimeKeeper(YTimedObject owner) {
-            _owner = owner ;
-
-            if (owner instanceof YWorkItemTimer) {
-                String id = ((YWorkItemTimer) owner).getOwnerID();
-                _runners.put(id, this);
-            }
+            _owner = owner;
+            _runners.put(owner.getOwnerID(), this);
         }
 
 
@@ -138,9 +151,8 @@ public class YTimer extends Timer {
 
 
         public synchronized void run() {
-            String id = ((YWorkItemTimer) _owner).getOwnerID();
             _owner.handleTimerExpiry();
-            _runners.remove(id);
+            _runners.remove(_owner.getOwnerID());
         }
     }
 }

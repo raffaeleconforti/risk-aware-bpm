@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
     
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -29,7 +29,7 @@
         <ui:page binding="#{rssFormViewer.page}" id="page1">
             <ui:html binding="#{rssFormViewer.html}" id="html1">
                 <ui:head binding="#{rssFormViewer.head}" id="head1"
-                         title="YAWL 2.1: RSS Form Handler">
+                         title="YAWL #{ApplicationBean.yawlVersion}: RSS Form Handler">
                     <ui:link binding="#{rssFormViewer.link}" id="link1"
                              url="/resources/stylesheet.css"/>
                     <ui:link binding="#{ApplicationBean.favIcon}" id="lnkFavIcon"
@@ -62,7 +62,7 @@
                                            id="btnClose"
                                            primary="true"
                                            styleClass="rssCloseButton"
-                                           onClick="return window.close();"
+                                           onClick="return window.open('', '_self', '');window.close();"
                                            text="Close Window"/>
 
                             </ui:panelLayout>

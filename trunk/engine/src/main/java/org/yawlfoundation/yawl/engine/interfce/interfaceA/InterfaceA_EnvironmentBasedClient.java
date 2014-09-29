@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,8 +19,8 @@
 package org.yawlfoundation.yawl.engine.interfce.interfaceA;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.authentication.YExternalClient;
 import org.yawlfoundation.yawl.elements.YAWLServiceReference;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
@@ -32,7 +32,6 @@ import org.yawlfoundation.yawl.util.StringUtil;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -93,6 +92,15 @@ public class InterfaceA_EnvironmentBasedClient extends Interface_Client {
                           prepareParamMap("checkConnection", sessionHandle));
     }
 
+    /**
+     * Disconnects an external entity from the engine
+     * @param handle the sessionHandle to disconnect
+     * @throws IOException if the engine can't be reached
+     */
+    public String disconnect(String handle) throws IOException {
+        return executePost(_backEndURIStr, prepareParamMap("disconnect", handle));
+    }
+
 
     /******* SERVICES *************************************************************/
 
@@ -124,6 +132,21 @@ public class InterfaceA_EnvironmentBasedClient extends Interface_Client {
         params.put("serviceURI", serviceURI);
         return executePost(_backEndURIStr, params);
     }
+    
+    
+    public YAWLServiceReference getYAWLService(String serviceURI, String sessionHandle) 
+            throws IOException {
+        Map<String, String> params = prepareParamMap("getYAWLService", sessionHandle);
+        params.put("serviceURI", serviceURI);
+        String xml = executePost(_backEndURIStr, params);
+        if (xml != null && successful(xml)) {
+            YAWLServiceReference service = new YAWLServiceReference();
+            service.fromXML(xml);
+            return service;
+        }
+        return null;
+    }
+    
 
 
     /**
@@ -138,8 +161,7 @@ public class InterfaceA_EnvironmentBasedClient extends Interface_Client {
             if (xml != null && successful(xml)) {
                 Document doc = JDOMUtil.stringToDocument(xml);
 
-                for (Object o : doc.getRootElement().getChildren()) {
-                    Element service = (Element) o;
+                for (Element service : doc.getRootElement().getChildren()) {
                     result.add(YAWLServiceReference.unmarshal(JDOMUtil.elementToString(service)));
                 }
             }
@@ -292,9 +314,8 @@ public class InterfaceA_EnvironmentBasedClient extends Interface_Client {
         if (successful(result)) {
             Document doc = JDOMUtil.stringToDocument(result);
             if (doc != null) {
-                List children = doc.getRootElement().getChildren();
-                for (Object o : children) {
-                    accounts.add(new YExternalClient((Element) o));
+                for (Element e : doc.getRootElement().getChildren()) {
+                    accounts.add(new YExternalClient(e));
                 }
             }
         }
@@ -363,6 +384,24 @@ public class InterfaceA_EnvironmentBasedClient extends Interface_Client {
         return executeGet(_backEndURIStr, params);
     }
 
+
+    public String setHibernateStatisticsEnabled(boolean enabled, String sessionHandle)
+            throws IOException {
+        Map<String, String> params = prepareParamMap("setHibernateStatisticsEnabled", sessionHandle);
+        params.put("enabled", String.valueOf(enabled));
+        return executePost(_backEndURIStr, params);
+    }
+
+    public String isHibernateStatisticsEnabled(String sessionHandle)
+            throws IOException {
+        Map<String, String> params = prepareParamMap("isHibernateStatisticsEnabled", sessionHandle);
+        return executeGet(_backEndURIStr, params);
+    }
+
+    public String getHibernateStatistics(String sessionHandle) throws IOException {
+        Map<String, String> params = prepareParamMap("getHibernateStatistics", sessionHandle);
+        return executeGet(_backEndURIStr, params);
+    }
 
 
 }

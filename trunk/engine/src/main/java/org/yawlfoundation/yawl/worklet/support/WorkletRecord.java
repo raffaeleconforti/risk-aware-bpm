@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,23 +19,18 @@
 package org.yawlfoundation.yawl.worklet.support;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.IllegalAddException;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.IllegalAddException;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.util.JDOMUtil;
-import org.yawlfoundation.yawl.worklet.WorkletService;
-import org.yawlfoundation.yawl.worklet.rdr.RdrNode;
-import org.yawlfoundation.yawl.worklet.rdr.RdrSet;
-import org.yawlfoundation.yawl.worklet.rdr.RdrTree;
+import org.yawlfoundation.yawl.worklet.rdr.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -54,8 +49,8 @@ public class WorkletRecord {
     protected CaseMap _runners = new CaseMap() ;  // executing caseid <==> name mapping
     protected WorkItemRecord _wir ;          // the child workitem
     protected Element _datalist ;            // data passed to this workitem
-    protected RdrNode[] _searchPair ;        // rule pair returned from search
-    protected int _reasonType ;              // why the worklet was raised
+    protected RdrPair _searchPair ;        // rule pair returned from search
+    protected RuleType _reasonType ;         // why the worklet was raised
     protected static Logger _log ;           // log file for debug messages
 
     protected String _persistID ;            // unique id field for persistence
@@ -92,14 +87,14 @@ public class WorkletRecord {
     }
 
 
-    public void setSearchPair(RdrNode[] pair) {
+    public void setSearchPair(RdrPair pair) {
         _searchPair = pair ;
         if (_hasPersisted) persistThis();
     }
 
 
-    public void setExType(int xType) {
-        _reasonType = xType ;
+    public void setExType(RuleType xType) {
+        _reasonType = xType;
         if (_hasPersisted) persistThis();
     }
 
@@ -150,7 +145,7 @@ public class WorkletRecord {
     }
 
 
-    public RdrNode[] getSearchPair() {
+    public RdrPair getSearchPair() {
         return _searchPair ;
     }
 
@@ -164,6 +159,18 @@ public class WorkletRecord {
         return _datalist ;
     }
 
+    public Element getSearchData() {
+        Element processData = _wir.getDataList().clone();
+
+        //convert the wir contents to an Element
+        Element wirElement = JDOMUtil.stringToElement(_wir.toXML()).detach();
+
+        Element eInfo = new Element("process_info");     // new Element for process data
+        eInfo.addContent(wirElement);
+        processData.addContent(eInfo);                     // add element to case data
+        return processData;
+    }
+
     public String getCaseID() {
         return _wir.getCaseID();            // the originating workitem's case id
     }
@@ -172,7 +179,7 @@ public class WorkletRecord {
         return new YSpecificationID(_wir);      // i.e. of the originating workitem
     }
 
-    public int getReasonType() {
+    public RuleType getReasonType() {
         return _reasonType ;
     }
 
@@ -215,7 +222,7 @@ public class WorkletRecord {
     }
 
     protected void set_reasonType(int i) {
-        _reasonType = i ;
+        _reasonType = RuleType.values()[i] ;
     }
 
     protected String get_runningWorkletStr() {
@@ -227,7 +234,7 @@ public class WorkletRecord {
     }
 
     protected int get_reasonType() {
-        return _reasonType ;
+        return _reasonType.ordinal() ;
     }
 
 
@@ -236,8 +243,7 @@ public class WorkletRecord {
     }
 
     public String get_searchPairStr() {
-        if (_searchPair != null)
-            _searchPairStr = SearchPairToString(_searchPair);
+        if (_searchPair != null) _searchPairStr = _searchPair.toString();
         return _searchPairStr ;
     }
 
@@ -253,18 +259,8 @@ public class WorkletRecord {
 
     public void rebuildSearchPair(YSpecificationID specID, String taskID) {
 
-        RdrSet ruleSet = new RdrSet(specID);                  // make a new set
-        RdrTree tree ;
-
-        switch (_reasonType) {
-            case WorkletService.XTYPE_CASE_PRE_CONSTRAINTS :
-            case WorkletService.XTYPE_CASE_POST_CONSTRAINTS :
-            case WorkletService.XTYPE_CASE_EXTERNAL_TRIGGER :
-                                tree = ruleSet.getTree(_reasonType) ; break ;
-            default :
-                                tree = ruleSet.getTree(_reasonType, taskID) ;
-        }
-
+        RdrSet ruleSet = new RdrSetLoader().load(specID);                  // make a new set
+        RdrTree tree = ruleSet.getTree(_reasonType, taskID);
         if (tree != null)
             _searchPair = RdrConversionTools.stringToSearchPair(_searchPairStr, tree);
     }
@@ -279,9 +275,7 @@ public class WorkletRecord {
 
 
     protected void persistThis() {
-        DBManager dbMgr = DBManager.getInstance(false);
-        if ((dbMgr != null) && dbMgr.isPersisting())
-             dbMgr.persist(this, DBManager.DB_UPDATE);
+        Persister.getInstance().update(this);
     }
 
 
@@ -313,11 +307,8 @@ public class WorkletRecord {
 
         try {
             // transfer the workitem's data items to the file
-            List dataItems = _datalist.getChildren() ;
-            Iterator itr = dataItems.iterator();
-            while (itr.hasNext()) {
-                Element e = (Element) itr.next() ;
-                eCaseData.addContent((Element) e.clone());
+            for (Element dataItem : _datalist.getChildren()) {
+                eCaseData.addContent(dataItem.clone());
             }
 
             //set values for the workitem identifiers
@@ -342,8 +333,8 @@ public class WorkletRecord {
             }
 
             // add the nodeids to the relevent elements
-            eSatisfied.setText(_searchPair[0].getNodeIdAsString()) ;
-            eTested.setText(_searchPair[1].getNodeIdAsString()) ;
+            eSatisfied.setText(_searchPair.getLastTrueNode().getNodeIdAsString()) ;
+            eTested.setText(_searchPair.getLastEvaluatedNode().getNodeIdAsString()) ;
             eLastNode.addContent(eSatisfied) ;
             eLastNode.addContent(eTested) ;
 
@@ -379,7 +370,7 @@ public class WorkletRecord {
            fos.close();
       }
       catch (IOException ioe){
-          _log.error("IO Exeception in saving Document to file", ioe) ;
+          _log.error("IO Exception in saving Document to file", ioe) ;
       }
    }
 
@@ -393,7 +384,7 @@ public class WorkletRecord {
         fName.append("_") ;
         fName.append(getSpecID()) ;                         // then spec id
         fName.append("_") ;
-        fName.append(WorkletService.getShortXTypeString(_reasonType));
+        fName.append(_reasonType.toString());
 
         // if item-level, add the task name also
         if (_wir != null) {
@@ -403,7 +394,7 @@ public class WorkletRecord {
 
         String result = fName.toString();
         while (Library.fileExists(result + counter + extn)) {
-            counter = "_" + String.valueOf(++i);
+            counter = "_" + ++i;
         }
 
         return (result + counter + extn);
@@ -434,8 +425,8 @@ public class WorkletRecord {
         s.append("SEARCH PAIR: ");
         if (_searchPair != null) {
             s.append(Library.newline);
-            Library.appendLine(s, "Last Satisfied Node", _searchPair[0].toXML());
-            Library.appendLine(s, "Last Tested Node", _searchPair[1].toXML());
+            Library.appendLine(s, "Last Satisfied Node", _searchPair.getLastTrueNode().toXML());
+            Library.appendLine(s, "Last Tested Node", _searchPair.getLastEvaluatedNode().toXML());
         }
         else s.append("null");
 

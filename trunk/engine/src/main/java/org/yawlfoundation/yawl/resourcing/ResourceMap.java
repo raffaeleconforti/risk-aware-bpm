@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,14 +19,15 @@
 package org.yawlfoundation.yawl.resourcing;
 
 import org.apache.log4j.Logger;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.allocators.ShortestQueue;
 import org.yawlfoundation.yawl.resourcing.datastore.persistence.Persister;
 import org.yawlfoundation.yawl.resourcing.interactions.*;
 import org.yawlfoundation.yawl.resourcing.resource.Participant;
+import org.yawlfoundation.yawl.resourcing.resource.SecondaryResources;
 import org.yawlfoundation.yawl.resourcing.util.TaggedStringList;
 
 import java.util.HashMap;
@@ -55,6 +56,8 @@ public class ResourceMap {
     // user-task privileges
     private TaskPrivileges _privileges ;
 
+    private SecondaryResources _secondary;
+
     private long _id ;                                             // hibernate pkey
     private String _taskID ;
     private YSpecificationID _specID ;
@@ -79,6 +82,7 @@ public class ResourceMap {
         _offer = new OfferInteraction(taskID) ;
         _allocate = new AllocateInteraction(taskID);
         _start = new StartInteraction(taskID) ;
+        _secondary = new SecondaryResources();
 
         _allocate.setAllocator(new ShortestQueue());               // default allocator
     }
@@ -110,6 +114,10 @@ public class ResourceMap {
        _start = si ;
     }
 
+    public void setSecondaryResources(SecondaryResources sr) {
+        _secondary = sr;
+    }
+
     public void setTaskPrivileges(TaskPrivileges tp) {
         _privileges = tp ;
     }
@@ -124,6 +132,10 @@ public class ResourceMap {
 
     public StartInteraction getStartInteraction() {
        return _start ;
+    }
+
+    public SecondaryResources getSecondaryResources() {
+        return _secondary;
     }
 
     public TaskPrivileges getTaskPrivileges() {
@@ -157,7 +169,7 @@ public class ResourceMap {
         if (! hasPiledResource()) {
             _piledResource = p;
             _piledResourceID = p.getID();
-            if (getPersisting()) _persister.insert(this);
+            if (isPersisting()) _persister.insert(this);
             if (rm.routePiledWorkItem(_piledResource, wir)) {
                 result = "Task successfully piled." ;
             }
@@ -173,19 +185,20 @@ public class ResourceMap {
     public void removePiledResource() {
         _piledResource = null ;
         _piledResourceID = null ;
-        if (getPersisting()) {
+        if (isPersisting()) {
 
             // have to get persisted map first, so we can delete it (since 'this' is not
             // the same object as the one persisted)
             ResourceMap map = getPersistedMap();
             if (map != null) _persister.delete(map);
+            _persister.commit();
         }
     }
 
     
     private ResourceMap getPersistedMap() {
         ResourceMap result = null;
-        if (getPersisting()) {
+        if (isPersisting()) {
             String where = String.format(
               "_specID.identifier='%s' and _specID.version.version='%s' and _taskID='%s'",
                   _specID.getIdentifier(), _specID.getVersionAsString(), _taskID);
@@ -218,7 +231,7 @@ public class ResourceMap {
             _persister = null;
     }
 
-    public boolean getPersisting() { return (_persister != null); }
+    public boolean isPersisting() { return (_persister != null); }
 
 
     public void ignore(WorkItemRecord wir, Participant p) {
@@ -246,10 +259,22 @@ public class ResourceMap {
         return _offered.get(itemID) ;
     }
 
-    /****************************************************************************/
+
+    public boolean equals(Object other) {
+        if (other instanceof ResourceMap) {
+            ResourceMap otherMap = (ResourceMap) other;
+            return getSpecID().equals(otherMap.getSpecID()) &&
+                   getTaskID().equals(otherMap.getTaskID());
+        }
+        return false;
+    }
 
     
+    public int hashCode() {
+        return getSpecID().hashCode() + getTaskID().hashCode();
+    }
 
+    /****************************************************************************/
     /****************************************************************************/
 
     public WorkItemRecord distribute(WorkItemRecord wir) {
@@ -302,7 +327,6 @@ public class ResourceMap {
     }
 
 
-
     private HashSet<Participant> doOffer(WorkItemRecord wir) {
         HashSet<Participant> offerSet = null;
         if (_offer.getInitiator() == AbstractInteraction.USER_INITIATED) {
@@ -314,7 +338,7 @@ public class ResourceMap {
            offerSet = (HashSet<Participant>) _offer.performOffer(wir);
            if (offerSet.isEmpty()) {
                _log.warn("Parse of resource specifications for workitem " + wir.getID() +
-                         " resulted in an empty distribution list. Workitem will be" +
+                         " resulted in an empty distribution set. The workitem will be" +
                          " passed to an administrator for manual distribution.");
 
                // put workitem in admin's unoffered queue & DONE
@@ -327,17 +351,17 @@ public class ResourceMap {
 
     private Participant doAllocate(HashSet<Participant> pSet, WorkItemRecord wir) {
         Participant chosenOne = null;
+        rm.getWorkItemCache().updateResourceStatus(wir, WorkItemRecord.statusResourceOffered);
         if (_allocate.getInitiator() == AbstractInteraction.USER_INITIATED) {
 
             // for each participant in set, place workitem on their offered queue
             for (Participant p : pSet) {
                 QueueSet qs = p.getWorkQueues() ;
-                if (qs == null) qs = p.createQueueSet(rm.getPersisting());
+                if (qs == null) qs = p.createQueueSet(rm.isPersisting());
                 qs.addToQueue(wir, WorkQueue.OFFERED);
                 rm.announceModifiedQueue(p.getID()) ;
             }
             _offered.put(wir.getID(), pSet) ;
-            rm.getWorkItemCache().updateResourceStatus(wir, WorkItemRecord.statusResourceOffered);
         }
         else {
             chosenOne = _allocate.performAllocation(pSet, wir);
@@ -355,7 +379,7 @@ public class ResourceMap {
     private void doStart(Participant p, WorkItemRecord wir) {
         boolean started = false ;
         QueueSet qs = p.getWorkQueues() ;
-        if (qs == null) qs = p.createQueueSet(rm.getPersisting());
+        if (qs == null) qs = p.createQueueSet(rm.isPersisting());
 
         if (_start.getInitiator() == AbstractInteraction.SYSTEM_INITIATED) {
             started = rm.startImmediate(p, wir) ;
@@ -398,9 +422,7 @@ public class ResourceMap {
     
     public void addToOfferedSet(WorkItemRecord wir, Participant p) {
         HashSet<Participant> pSet = _offered.get(wir.getID());
-        if (pSet == null)
-            pSet = new HashSet<Participant>();
-
+        if (pSet == null) pSet = new HashSet<Participant>();
         pSet.add(p);
         _offered.put(wir.getID(), pSet);
     }
@@ -418,6 +440,7 @@ public class ResourceMap {
                 _offer.parse(eleSpec.getChild("offer", nsYawl), nsYawl) ;
                 _allocate.parse(eleSpec.getChild("allocate", nsYawl), nsYawl) ;
                 _start.parse(eleSpec.getChild("start", nsYawl), nsYawl) ;
+                _secondary.parse(eleSpec.getChild("secondary", nsYawl), nsYawl);
                 _privileges.parse(eleSpec.getChild("privileges", nsYawl), nsYawl) ;
                 _log.info("Resourcing specification parse completed for task: " + _taskID);
             }
@@ -434,6 +457,7 @@ public class ResourceMap {
         xml.append(_offer.toXML()) ;
         xml.append(_allocate.toXML()) ;
         xml.append(_start.toXML()) ;
+        xml.append(_secondary.toXML());
         xml.append(_privileges.toXML()) ;
         xml.append("</resourcing>");
         return xml.toString() ;

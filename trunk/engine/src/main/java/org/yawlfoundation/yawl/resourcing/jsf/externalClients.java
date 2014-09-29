@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -333,8 +333,9 @@ public class externalClients extends AbstractPageBean {
 
     /********************************************************************************/
 
-    private SessionBean _sb = getSessionBean();
-    private MessagePanel msgPanel = _sb.getMessagePanel();
+    private final ApplicationBean _appbean = getApplicationBean();
+    private final SessionBean _sb = getSessionBean();
+    private final MessagePanel msgPanel = _sb.getMessagePanel();
 
     private enum Mode {Add, Edit}
 
@@ -344,7 +345,7 @@ public class externalClients extends AbstractPageBean {
     public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.externalClients);
-        _sb.showMessagePanel();
+        showMessagePanel();
 
         if (getMode() == Mode.Edit) {
             addPanelHeading = "Edit Client Application Account";
@@ -359,7 +360,7 @@ public class externalClients extends AbstractPageBean {
     public String btnRemove_action() {
         try {
             Integer selectedRowIndex = new Integer((String) hdnRowIndex.getValue());
-            String result = _sb.removeExternalClient(selectedRowIndex);
+            String result = _appbean.removeExternalClient(selectedRowIndex);
             if (result.startsWith("<fail")) {
                 msgPanel.error(result);
             }
@@ -384,10 +385,10 @@ public class externalClients extends AbstractPageBean {
         String result;
         if (inputsValid()) {
             if (getMode() == Mode.Edit) {
-                result = _sb.updateExternalClient(name, password, doco);
+                result = _appbean.updateExternalClient(name, password, doco);
             }
             else {
-                result = _sb.addExternalClient(name, password, doco);
+                result = _appbean.addExternalClient(name, password, doco);
             }
             if (result.startsWith("Cannot") || result.startsWith("Error")) {
                 msgPanel.error(result);
@@ -404,7 +405,7 @@ public class externalClients extends AbstractPageBean {
     public String btnEdit_action() {
         try {
             Integer selectedRowIndex = new Integer((String) hdnRowIndex.getValue());
-            YExternalClient client = _sb.getSelectedExternalClient(selectedRowIndex);
+            YExternalClient client = _appbean.getSelectedExternalClient(selectedRowIndex);
             if (client != null) {
                 addPanelHeading = "Edit Client Application Account";
                 btnAddText = "Save";
@@ -465,6 +466,9 @@ public class externalClients extends AbstractPageBean {
         return (errMsg == null);
     }
 
-
+    private void showMessagePanel() {
+        body1.setFocus(msgPanel.hasMessage() ? "form1:pfMsgPanel:btnOK001" : "form1:txtName");
+        _sb.showMessagePanel();
+    }    
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,16 +20,18 @@ package org.yawlfoundation.yawl.elements;
 
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.engine.*;
-import org.yawlfoundation.yawl.exceptions.*;
+import org.yawlfoundation.yawl.exceptions.YDataStateException;
+import org.yawlfoundation.yawl.exceptions.YPersistenceException;
+import org.yawlfoundation.yawl.exceptions.YQueryException;
+import org.yawlfoundation.yawl.exceptions.YStateException;
 import org.yawlfoundation.yawl.logging.YEventLogger;
 import org.yawlfoundation.yawl.logging.YLogDataItem;
 import org.yawlfoundation.yawl.logging.YLogDataItemList;
 import org.yawlfoundation.yawl.logging.YLogPredicate;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 /**
  * 
@@ -46,63 +48,35 @@ public final class YCompositeTask extends YTask {
     }
 
 
-    public List verify() {
-        List messages = new Vector();
-        messages.addAll(super.verify());
-        if (_decompositionPrototype == null) {
-            messages.add(new YVerificationMessage(this, this + " composite task must contain a net.", YVerificationMessage.ERROR_STATUS));
-        }
-        if (!(_decompositionPrototype instanceof YNet)) {
-            messages.add(new YVerificationMessage(this, this + " composite task may not decompose to other than a net.", YVerificationMessage.ERROR_STATUS));
-        }
-        return messages;
-    }
-
-
     public Object clone() throws CloneNotSupportedException {
         YNet copyContainer = _net.getCloneContainer();
         if (copyContainer.getNetElements().containsKey(this.getID())) {
             return copyContainer.getNetElement(this.getID());
         }
-        YCompositeTask copy = (YCompositeTask) super.clone();
-        return copy;
+        return super.clone();
     }
 
 
+    /****** EXECUTION ***************************************************/
+    
     /**
-     * @param pmgr
-     * @param id
+     * Starts this composite task.
+     * @param pmgr a valid persistence manager instance
+     * @param id the task identifier
      * @throws YDataStateException
-     * @throws YSchemaBuildingException
      */
     protected synchronized void startOne(YPersistenceManager pmgr, YIdentifier id)
-            throws YDataStateException, YSchemaBuildingException, YPersistenceException,
-            YQueryException, YStateException {
+            throws YDataStateException, YPersistenceException, YQueryException, YStateException {
+
+        // set token locations
         _mi_executing.add(pmgr, id);
         _mi_entered.removeOne(pmgr, id);
 
-        YNetRunner netRunner = new YNetRunner(pmgr,
-                (YNet) _decompositionPrototype,
-                this,
-                id,
-                getData(id));
-
-        // log sub-case start event
-        YSpecificationID specID =
-                _decompositionPrototype.getSpecification().getSpecificationID();
-
-        YLogPredicate logPredicate = _decompositionPrototype.getLogPredicate();
-        YLogDataItemList logData = null;
-        if (logPredicate != null) {
-            String predicate = logPredicate.getParsedStartPredicate(_decompositionPrototype);
-            if (predicate != null) {
-                logData = new YLogDataItemList(new YLogDataItem("Predicate",
-                             "OnStart", predicate, "string"));
-            }
-        }
-
-        YEventLogger.getInstance().logSubNetCreated(specID, netRunner, 
-                                                    this.getID(), logData);
+        // create a net runner for this task's contained subnet
+        YNetRunner netRunner = new YNetRunner(pmgr, (YNet) _decompositionPrototype,
+                this, id, getData(id));
+        getNetRunnerRepository().add(netRunner);
+        logTaskStart(pmgr, netRunner);
         netRunner.continueIfPossible(pmgr);
         netRunner.start(pmgr);
     }
@@ -112,22 +86,19 @@ public final class YCompositeTask extends YTask {
         List<YNetRunner> cancelledRunners = new ArrayList<YNetRunner>();
         YIdentifier thisI = _i;
         if (_i != null) {
-            List<YIdentifier> activeChildIdentifiers = _mi_active.getIdentifiers();
-            for (YIdentifier identifier : activeChildIdentifiers) {
-                YNetRunner netRunner = _workItemRepository.getNetRunner(identifier);
+            for (YIdentifier identifier : _mi_active.getIdentifiers()) {
+                YNetRunner netRunner = getNetRunnerRepository().get(identifier);
                 if (netRunner != null) {
-                    for (YWorkItem item : netRunner.cancel(pmgr)) {
+                    netRunner.cancel(pmgr);
+                    for (YWorkItem item : getWorkItemRepository().cancelNet(identifier)) {
                         item.cancel(pmgr);
-                        YEventLogger.getInstance().logWorkItemEvent(item,
+                        YEventLogger.getInstance().logWorkItemEvent(pmgr, item,
                                 YWorkItemStatus.statusDeleted, null);
-                        YEngine.getInstance().getAnnouncer().announceCancelledWorkItem(item);
-
                     }
                     cancelledRunners.add(netRunner);
                 }
             }
         }
-
         super.cancel(pmgr);
 
         for (YNetRunner runner : cancelledRunners) {
@@ -135,10 +106,43 @@ public final class YCompositeTask extends YTask {
         }
 
         if (thisI != null) {
-            YNetRunner parentRunner = _workItemRepository.getNetRunner(thisI);
+            YNetRunner parentRunner = getNetRunnerRepository().get(thisI);
             if (parentRunner != null) {
                 parentRunner.removeActiveTask(pmgr, this);
             }
         }
     }
+
+
+    // write the sub-net start event to the process log
+    private void logTaskStart(YPersistenceManager pmgr, YNetRunner netRunner) {
+        YSpecificationID specID =
+                _decompositionPrototype.getSpecification().getSpecificationID();
+        YLogPredicate logPredicate = _decompositionPrototype.getLogPredicate();
+        YLogDataItemList logData = null;
+        if (logPredicate != null) {
+            String predicate = logPredicate.getParsedStartPredicate(_decompositionPrototype);
+            if (predicate != null) {
+                logData = new YLogDataItemList(new YLogDataItem("Predicate",
+                             "OnStart", predicate, "string"));
+            }
+        }
+        YEventLogger.getInstance().logSubNetCreated(pmgr, specID, netRunner,
+                                                    this.getID(), logData);
+    }
+
+
+    /****** VERIFICATION ***************************************************/
+
+    public void verify(YVerificationHandler handler) {
+        super.verify(handler);   // check parent first
+        if (_decompositionPrototype == null) {
+            handler.error(this, this + " composite task must contain a net.");
+        }
+        if (!(_decompositionPrototype instanceof YNet)) {
+            handler.error(this,
+                    this + " composite task may not decompose to other than a net.");
+        }
+    }
+
 }

@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -29,7 +29,7 @@
         <ui:page binding="#{externalClients.page1}" id="page1">
             <ui:html binding="#{externalClients.html1}" id="html1">
                 <ui:head binding="#{externalClients.head1}" id="head1"
-                         title="YAWL 2.1 External Client Management">
+                         title="YAWL #{ApplicationBean.yawlVersion} External Client Management">
                     <ui:link binding="#{externalClients.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
 
@@ -42,8 +42,7 @@
 
                 </ui:head>
                 <ui:body binding="#{externalClients.body1}" id="body1"
-                         style="-rave-layout: grid"
-                         focus="form1:txtName">
+                         style="-rave-layout: grid">
 
                     <ui:form binding="#{externalClients.form1}" id="form1">
 
@@ -56,6 +55,7 @@
                         <center>
                         <ui:panelLayout binding="#{externalClients.pnlContainer}"
                                         id="pnlContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="externalClientsContainerPanel">
 
                         <!-- Registered Services Panel -->
@@ -83,7 +83,7 @@
                                                         dataTableScrollBarCol"
                                          cellpadding="3"
                                          styleClass="dataTable"
-                                         value="#{SessionBean.externalClients}"
+                                         value="#{ApplicationBean.externalClients}"
                                          var="currentRow"
                                          width="638">
 
@@ -166,7 +166,8 @@
 
                             <ui:textField binding="#{externalClients.txtName}"
                                           id="txtName"
-                                          style="left: 100px; top: 40px; width: 200px; position: absolute"/>
+                                          style="left: 100px; top: 40px; width: 200px; position: absolute"
+                                          onKeyPress="return disableEnterKey(event);"/>
  
                             <!--=====================================================-->
 
@@ -188,11 +189,13 @@
                             
                             <ui:passwordField binding="#{externalClients.txtPassword}"
                                           id="txtPassword"
-                                          style="left: 100px; top: 70px; width: 170px; position: absolute"/>
+                                          style="left: 100px; top: 70px; width: 170px; position: absolute"
+                                          onKeyPress="return disableEnterKey(event);"/>
 
                             <ui:passwordField binding="#{externalClients.txtConfirmPassword}"
                                            id="txtConfirmPassword"
-                                           style="left: 430px; top: 70px; width: 170px; position: absolute"/>
+                                           style="left: 430px; top: 70px; width: 170px; position: absolute"
+                                           onKeyPress="return disableEnterKey(event);"/>
 
                             <ui:textArea binding="#{externalClients.txtDescription}"
                                          id="txtDescription"

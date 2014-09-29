@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -472,16 +472,20 @@ public class viewProfile extends AbstractPageBean {
 
     /**************************************************************************/
 
-    private SessionBean _sb = getSessionBean();
-    private MessagePanel msgPanel = _sb.getMessagePanel() ;
-    private Participant participant = _sb.getParticipant();
-    private ResourceManager rm = getApplicationBean().getResourceManager();
+    private final SessionBean _sb = getSessionBean();
+    private final MessagePanel msgPanel = _sb.getMessagePanel() ;
+    private final Participant participant = _sb.getParticipant();
+    private final ResourceManager rm = getApplicationBean().getResourceManager();
 
 
     public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.viewProfile);
-        _sb.showMessagePanel();
+
+        // abort load if org data isn't currently available
+        if (_sb.orgDataIsRefreshing()) return;
+
+        showMessagePanel();
         populateFields(participant);
     }
 
@@ -509,13 +513,17 @@ public class viewProfile extends AbstractPageBean {
 
 
     public String btnUnpile_action() {
-        ResourceMap selected = (ResourceMap) lbxPiled.getSelected();
+        String selected = (String) lbxPiled.getSelected();
         if (selected != null) {
-            String result = rm.unpileTask(selected, participant) ;
-            showResult(result);
+            ResourceMap selectedMap = _sb.getResourceMapFromLabel(selected);
+            if (selectedMap != null) {
+                String result = rm.unpileTask(selectedMap, participant) ;
+                showResult(result);
+            }
+            else msgPanel.error("Failed to unpile task - could not load piled mappings.");
         }
         else msgPanel.warn("No task selected to unpile");
-       return null;
+        return null;
     }
 
     private void populateFields(Participant p) {
@@ -621,9 +629,11 @@ public class viewProfile extends AbstractPageBean {
         return result ;
     }
 
+
     private boolean hasText(PasswordField field) {
         return ((String) field.getPassword()).length() > 0 ;
     }
+
 
     private void showResult(String result) {
         if (result.startsWith("Cannot"))
@@ -634,4 +644,11 @@ public class viewProfile extends AbstractPageBean {
             msgPanel.info(result);            
     }
 
+
+    private void showMessagePanel() {
+        body1.setFocus(msgPanel.hasMessage() ? "form1:pfMsgPanel:btnOK001" :
+                "form1:txtNewPassword");
+        _sb.showMessagePanel();
+    }
+    
 }

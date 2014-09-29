@@ -5,7 +5,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -27,7 +27,7 @@
         <ui:page binding="#{caseMgt.page1}" id="page1">
             <ui:html binding="#{caseMgt.html1}" id="html1">
                 <ui:head binding="#{caseMgt.head1}" id="head1"
-                         title="YAWL 2.1 Case Management">
+                         title="YAWL #{ApplicationBean.yawlVersion} Case Management">
 
                     <ui:link binding="#{caseMgt.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
@@ -54,6 +54,7 @@
 
                         <ui:panelLayout binding="#{caseMgt.pnlContainer}"
                                         id="pnlContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="caseMgtContainerPanel">
 
                         <!-- Upload Panel -->
@@ -100,7 +101,7 @@
                                            id="staticText2"
                                            styleClass="pageSubheading"
                                            style="left: 12px; top: 12px"
-                                           text="Loaded Specifications"/>
+                                           text="#{SessionBean.loadedSpecsCaption}"/>
 
                             <ui:panelGroup binding="#{caseMgt.pnlGroup}"
                                             id="pnlGroup"
@@ -151,19 +152,33 @@
                             </h:dataTable>
                             </ui:panelGroup>
 
+                            <ui:button action="#{caseMgt.btnLaunchDelayed_action}"
+                                           binding="#{caseMgt.btnLaunchDelayed}"
+                                           id="btnLaunchDelayed"
+                                           styleClass="caseMgtButton"
+                                           style="left: 128px; top: 230px"
+                                           text="Launch Later"/>
+
                             <ui:button action="#{caseMgt.btnUnload_action}"
                                        binding="#{caseMgt.btnUnload}"
                                        id="btnUnload"
                                        styleClass="caseMgtButton"
-                                       style="left: 129px; top: 230px"
+                                       style="left: 245px; top: 230px"
                                        text="Unload Spec"/>
 
                             <ui:button action="#{caseMgt.btnGetInfo_action}"
                                        binding="#{caseMgt.btnGetInfo}"
                                        id="btnGetInfo"
                                        styleClass="caseMgtButton"
-                                       style="left: 247px; top: 230px"
+                                       style="left: 362px; top: 230px"
                                        text="Get Info"/>
+
+                            <ui:button action="#{caseMgt.btnDownloadLog_action}"
+                                       binding="#{caseMgt.btnDownloadLog}"
+                                       id="btnDownloadLog"
+                                       styleClass="caseMgtButton"
+                                       style="left: 479px; top: 230px"
+                                       text="Download Log"/>
                         </ui:panelLayout>
 
                         <!-- Running Cases Panel -->
@@ -215,13 +230,94 @@
                                         id="lbxRunningCases"
                                         items="#{SessionBean.runningCaseListOptions}"
                                         selected="#{SessionBean.runningCaseListChoice}"
+                                        onKeyPress="return disableEnterKey(event);"
                                         styleClass="caseMgtListbox"/>
 
                             <ui:staticText binding="#{caseMgt.staticText3}"
                                            id="staticText3"
                                            styleClass="pageSubheading"
                                            style="left: 12px; top: 12px"
-                                           text="Running Cases"/>
+                                           text="#{SessionBean.runningCasesCaption}"/>
+                        </ui:panelLayout>
+
+
+                        <!-- delayed launch popup panel -->
+                        <ui:panelLayout binding="#{SessionBean.pnlUploadBlockout}"
+                                        id="delayedBlockoutPanel"
+                                        styleClass="transPanel"
+                                        visible="#{SessionBean.delayedLaunchPanelVisible}" />
+
+                        <ui:panelLayout binding="#{caseMgt.pnlDelayed}"
+                                        id="pnlDelayed"
+                                        styleClass="delayedLaunchPanel"
+                                        style="position:absolute;"
+                                        visible="#{SessionBean.delayedLaunchPanelVisible}" >
+
+                            <ui:staticText binding="#{caseMgt.stDelayedHeader}"
+                                           id="delayedHeader"
+                                           styleClass="pageSubheading"
+                                           style="position:absolute; left: 12px; top: 12px"
+                                           text="Delay Case Launch Until:"/>
+
+                            <ui:radioButton binding="#{caseMgt.rbTime}"
+                                            id="rbTime"
+                                            name="rButtonGroup"
+                                            styleClass="delayedLaunchRadioButton"
+                                            style="top: 45px"
+                                            selected="#{SessionBean.delayTimeRBSelected}"
+                                            onClick="common_timeoutSubmitForm(this.form, 'rbTime');"
+                                            label="After a number of seconds" />
+
+                            <ui:radioButton binding="#{caseMgt.rbDuration}"
+                                               id="rbDuration"
+                                               name="rButtonGroup"
+                                               styleClass="delayedLaunchRadioButton"
+                                               style="top: 75px"
+                                               selected="#{SessionBean.delayDurationRBSelected}"
+                                               onClick="common_timeoutSubmitForm(this.form, 'rbDuration');"
+                                               label="After a duration" />
+
+                            <ui:radioButton binding="#{caseMgt.rbDate}"
+                                            id="rbDate"
+                                            name="rButtonGroup"
+                                            styleClass="delayedLaunchRadioButton"
+                                            style="top: 105px"
+                                            selected="#{SessionBean.delayDateRBSelected}"
+                                            onClick="common_timeoutSubmitForm(this.form, 'rbDate');"
+                                            label="At an exact date and time" />
+
+                            <ui:label binding="#{caseMgt.lblDelayValue}"
+                               for="txtDelayValue"
+                               id="lblDelayValue"
+                               style="left: 17px; top: 143px; position: absolute"
+                               text="#{caseMgt.lblValueText}"/>
+
+                            <ui:label binding="#{caseMgt.lblDelayValueError}"
+                               id="lblDelayValueError"
+                               styleClass="delayValueError"
+                               text="#{SessionBean.delayValueError}"/>
+
+                            <ui:textField binding="#{caseMgt.txtDelayValue}"
+                                   id="txtDelayValue"
+                                   styleClass="orgDataTextField"
+                                   style="left: 85px; top: 140px; width: 184px"
+                                   onKeyPress="return disableEnterKey(event);"
+                                   trim="false"/>
+
+                            <ui:button action="#{caseMgt.btnDelayOK_action}"
+                                       binding="#{caseMgt.btnDelayOK}"
+                                       id="btnDelayOK"
+                                       style="left: 35px; top: 195px"
+                                       styleClass="caseMgtButton"
+                                       text="OK"/>
+
+                            <ui:button action="#{caseMgt.btnDelayCancel_action}"
+                                       binding="#{caseMgt.btnDelayCancel}"
+                                       id="btnDelayCancel"
+                                       style="left: 155px; top: 195px"
+                                       styleClass="caseMgtButton"
+                                       text="Cancel"/>
+
                         </ui:panelLayout>
 
                             <div><jsp:include page="pfMsgPanel.jspf"/></div>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,7 +19,7 @@
 package org.yawlfoundation.yawl.resourcing.jsf.dynform;
 
 import net.sf.saxon.s9api.SaxonApiException;
-import org.jdom.Document;
+import org.jdom2.Document;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.SaxonUtil;
 
@@ -98,6 +98,10 @@ public class DynFormUserAttributes {
 
     public boolean isMandatory() {
         return getBooleanValue("mandatory");
+    }
+
+    public boolean isOptional() {
+        return getBooleanValue("optional");
     }
 
     public boolean hasHideIfQuery() {

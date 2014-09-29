@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,8 +19,8 @@
 package org.yawlfoundation.yawl.swingWorklist;
 
 import org.apache.log4j.Logger;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 import org.yawlfoundation.yawl.elements.YTask;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YEngine;
@@ -192,7 +192,7 @@ public class YWorklistModel {
     //######################################################################################
 
     // MUTATORS ############################################################################
-    public void applyForWorkItem(String caseID, String taskID) throws YSchemaBuildingException, YPersistenceException {
+    public void applyForWorkItem(String caseID, String taskID) throws YPersistenceException {
         Set workItems = _engineClient.getAvailableWorkItems();
         for (Iterator iterator = workItems.iterator(); iterator.hasNext();) {
             YWorkItem item = (YWorkItem) iterator.next();
@@ -274,8 +274,8 @@ public class YWorklistModel {
                     }
                     StringUtil.stringToFile(taskInputData.getAbsolutePath(), outputData);
 
-            //        _engineClient.completeWorkItem(item, outputData, inSequenceWorkitemIDs);
-                    _engineClient.completeWorkItem(item, outputData, null, false);
+                    _engineClient.completeWorkItem(item, outputData, null,
+                            YEngine.WorkItemCompletion.Normal);
                 } catch (YDataStateException e) {
                     String errors = e.getMessage();
                     if (errors.indexOf("FAILED TO VALIDATE AGAINST SCHEMA =") != -1) {
@@ -376,48 +376,31 @@ public class YWorklistModel {
         }
         //now update them
         updateSelf();
-//        _worklistManager.informRemotePartnerOfcurrentState(userName);
     }
 
     private void updateSelf() {
-        boolean inSequence = false;
-        Set availableWorkItems = _engineClient.getAvailableWorkItems();
-        for (Iterator iterator = availableWorkItems.iterator(); iterator.hasNext();) {
-            YWorkItem item = (YWorkItem) iterator.next();
+        boolean inSequence;
+        for (YWorkItem item : _engineClient.getAvailableWorkItems()) {
 
-            if (inSequenceWorkitemIDs.contains(item.getTaskID()))
-            {
-                inSequence = true;
-            }
-            else
-            {
-                inSequence = false;
-            }
+            inSequence = inSequenceWorkitemIDs.contains(item.getTaskID());
 
             if (item.getStatus().equals(YWorkItemStatus.statusEnabled)) {
                 addEnabledWorkItem(item, inSequence);
-            } else if (item.getStatus().equals(YWorkItemStatus.statusFired)) {
+            }
+            else if (item.getStatus().equals(YWorkItemStatus.statusFired)) {
                 addFiredWorkItem(item, inSequence);
             }
         }
-        Set allWorkItems = _engineClient.getAllWorkItems();
-        for (Iterator iterator = allWorkItems.iterator(); iterator.hasNext();) {
-            YWorkItem item = (YWorkItem) iterator.next();
+        for (YWorkItem item :_engineClient.getAllWorkItems()) {
 
-            if (inSequenceWorkitemIDs.contains(item.getTaskID()))
-            {
-                inSequence = true;
-            }
-            else
-            {
-                inSequence = false;
-            }
+            inSequence = inSequenceWorkitemIDs.contains(item.getTaskID());
 
             if (item.getStatus().equals(YWorkItemStatus.statusExecuting)) {
                     addStartedWorkItem(item, inSequence);
             }
             if (_paramsDefinitions.getParamsForTask(item.getTaskID()) == null) {
-                YTask task = _engineClient.getTaskDefinition(item.getSpecificationID(), item.getTaskID());
+                YTask task = _engineClient.getTaskDefinition(item.getSpecificationID(),
+                        item.getTaskID());
                 String paramsAsXML = task.getInformation();
                 TaskInformation taskInfo = Marshaller.unmarshalTaskInformation(paramsAsXML);
                 YParametersSchema paramsForTask = taskInfo.getParamSchema();

@@ -6,7 +6,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -29,7 +29,7 @@
         <ui:page binding="#{customServices.page1}" id="page1">
             <ui:html binding="#{customServices.html1}" id="html1">
                 <ui:head binding="#{customServices.head1}" id="head1"
-                         title="YAWL 2.1 Service Management">
+                         title="YAWL #{ApplicationBean.yawlVersion} Service Management">
                     <ui:link binding="#{customServices.link1}" id="link1"
                              url="/resources/stylesheet.css"/>
 
@@ -42,8 +42,7 @@
 
                 </ui:head>
                 <ui:body binding="#{customServices.body1}" id="body1"
-                         style="-rave-layout: grid"
-                         focus="form1:txtName">
+                         style="-rave-layout: grid">
 
                     <ui:form binding="#{customServices.form1}" id="form1">
 
@@ -56,6 +55,7 @@
                         <center>
                         <ui:panelLayout binding="#{customServices.pnlContainer}"
                                         id="pnlContainer"
+                                        style="#{SessionBean.outerPanelTop}"
                                         styleClass="servicesContainerPanel">
 
                         <!-- Registered Services Panel -->
@@ -84,7 +84,7 @@
                                                         dataTableScrollBarCol"
                                          cellpadding="3"
                                          styleClass="dataTable"
-                                         value="#{SessionBean.registeredServices}"
+                                         value="#{ApplicationBean.registeredServices}"
                                          var="currentRow"
                                          width="638">
 
@@ -173,7 +173,8 @@
 
                             <ui:textField binding="#{customServices.txtName}"
                                           id="txtName"
-                                          style="left: 100px; top: 40px; width: 200px; position: absolute"/>
+                                          style="left: 100px; top: 40px; width: 200px; position: absolute"
+                                          onKeyPress="return disableEnterKey(event);"/>
 
                             <!--=====================================================-->
 
@@ -195,15 +196,18 @@
 
                             <ui:passwordField binding="#{customServices.txtPassword}"
                                           id="txtPassword"
-                                          style="left: 100px; top: 70px; width: 170px; position: absolute"/>
+                                          style="left: 100px; top: 70px; width: 170px; position: absolute"
+                                          onKeyPress="return disableEnterKey(event);"/>
 
                             <ui:passwordField binding="#{customServices.txtConfirmPassword}"
                                           id="txtConfirmPassword"
-                                          style="left: 430px; top: 70px; width: 170px; position: absolute"/>
+                                          style="left: 430px; top: 70px; width: 170px; position: absolute"
+                                          onKeyPress="return disableEnterKey(event);"/>
 
                             <ui:textField binding="#{customServices.txtURL}"
                                           id="txtURL"
-                                          style="left: 100px; top: 100px; width: 500px; position: absolute"/>
+                                          style="left: 100px; top: 100px; width: 500px; position: absolute"
+                                          onKeyPress="return disableEnterKey(event);"/>
 
                             <ui:textArea binding="#{customServices.txtDescription}"
                                          id="txtDescription"

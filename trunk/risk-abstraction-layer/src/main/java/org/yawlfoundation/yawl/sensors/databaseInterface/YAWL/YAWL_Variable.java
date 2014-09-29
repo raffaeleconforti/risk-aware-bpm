@@ -1,7 +1,7 @@
 package org.yawlfoundation.yawl.sensors.databaseInterface.YAWL;
 
 import net.sf.saxon.s9api.SaxonApiException;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.interfaceB.InterfaceB_EnvironmentBasedClient;
 import org.yawlfoundation.yawl.sensors.databaseInterface.Variable;

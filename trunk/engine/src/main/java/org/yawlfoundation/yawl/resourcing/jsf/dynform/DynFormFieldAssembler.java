@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,9 +18,9 @@
 
 package org.yawlfoundation.yawl.resourcing.jsf.dynform;
 
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.elements.YAttributeMap;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
@@ -41,7 +41,7 @@ public class DynFormFieldAssembler {
     private int _uniqueSuffix = 0;
 
 
-    public DynFormFieldAssembler() { }
+    private DynFormFieldAssembler() { }
 
     public DynFormFieldAssembler(String schemaStr, String dataStr,
                            Map<String, FormParameter> params) throws DynFormException {
@@ -72,6 +72,7 @@ public class DynFormFieldAssembler {
             fieldList = createChoice(schema, data, ns, level);
         }
         else {
+            ns = schema.getNamespace();
             Element complex = schema.getChild("complexType", ns);
             if (complex == null) {
                 throw new DynFormException("Malformed data schema, at element: " +
@@ -100,8 +101,7 @@ public class DynFormFieldAssembler {
 
         List<DynFormField> fieldList = new ArrayList<DynFormField>();
 
-        for (Object o : sequence.getChildren()) {
-            Element eField = (Element) o;
+        for (Element eField : sequence.getChildren()) {
             List<DynFormField> result = createField(eField, data, ns, level);
             setOrderForListItems(result, fieldList.size());
             fieldList.addAll(result);
@@ -116,8 +116,7 @@ public class DynFormFieldAssembler {
         List<DynFormField> result;
         String choiceID = getNextChoiceID();
 
-        for (Object o : parent.getChildren()) {
-            Element eField = (Element) o;
+        for (Element eField : parent.getChildren()) {
             String eName = eField.getName();
             if (eName.equals("sequence") || eName.equals("all")) {
                 List<DynFormField> subList = createSequence(eField, data, ns, level + 1);
@@ -148,7 +147,7 @@ public class DynFormFieldAssembler {
      */
     private List<DynFormField> createField(Element eField, Element data,
                                      Namespace ns, int level) throws DynFormException {
-        DynFormField field = null;
+        DynFormField field;
         List<DynFormField> result = new ArrayList<DynFormField>() ;
 
         // get eField element's attributes
@@ -169,22 +168,34 @@ public class DynFormFieldAssembler {
                 result.add(field);
             }
             else {
-                // new complex type - recurse in a new field list
-                String groupID = getNextGroupID();                
-                List dataList = (data != null) ? data.getChildren(name) : null;
-                if ((dataList != null) && (! dataList.isEmpty())) {
-                    for (Object o : dataList) {
-                        field = addGroupField(name, eField, ns, (Element) o,
-                                              minOccurs, maxOccurs, level);
+                // check for empty complex type (flag defn)
+                Element complex = eField.getChild("complexType", ns);
+                if ((complex != null) && complex.getContentSize() == 0) {
+                    field = addField(name, null, data, minOccurs, maxOccurs, level);
+                    field.setEmptyComplexTypeFlag(true);
+                    if ((data != null) && (data.getChild(name) != null)) {
+                        field.setValue("true");
+                    }
+                    result.add(field);
+                }
+                else {
+                    // new populated complex type - recurse in a new field list
+                    String groupID = getNextGroupID();
+                    List<Element> dataList = (data != null) ? data.getChildren(name) : null;
+                    if ((dataList != null) && (! dataList.isEmpty())) {
+                        for (Element var : dataList) {
+                            field = addGroupField(name, eField, ns, var,
+                                    minOccurs, maxOccurs, level);
+                            field.setGroupID(groupID);
+                            result.add(field);
+                        }
+                    }
+                    else {
+                        field = addGroupField(name, eField, ns, null,
+                                minOccurs, maxOccurs, level);
                         field.setGroupID(groupID);
                         result.add(field);
                     }
-                }
-                else {
-                    field = addGroupField(name, eField, ns, null,
-                                          minOccurs, maxOccurs, level);
-                    field.setGroupID(groupID);
-                    result.add(field);
                 }
             }
         }
@@ -345,10 +356,10 @@ public class DynFormFieldAssembler {
     private Element getIteratedContent(Element data, int index, String name) {
         Element result = null ;
         if ((data != null) && (index < data.getContentSize())) {
-            List relevantChildren = data.getChildren(name);
+            List<Element> relevantChildren = data.getChildren(name);
             result = new Element(data.getName());
-            Element iteratedContent = (Element) relevantChildren.get(index);
-            result.addContent((Element) iteratedContent.clone());
+            Element iteratedContent = relevantChildren.get(index);
+            result.addContent(iteratedContent.clone());
         }
         return result ;
     }
@@ -369,16 +380,18 @@ public class DynFormFieldAssembler {
 
 
     private String getNextGroupID() {
-        return "group" + String.valueOf(_uniqueSuffix++);
+        return "group" + _uniqueSuffix++;
     }
     
     private String getNextChoiceID() {
-        return "choice" + String.valueOf(_uniqueSuffix++);
+        return "choice" + _uniqueSuffix++;
     }
 
     private YAttributeMap getAttributeMap(String name) {
+        YAttributeMap map = new YAttributeMap();
         FormParameter param = _params.get(name);
-        return (param != null) ? param.getAttributes() : new YAttributeMap();
+        if (param != null) map.set(param.getAttributes());
+        return map;
     }
 
     

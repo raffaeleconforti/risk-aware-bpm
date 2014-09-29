@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,27 +18,25 @@
 
 package org.yawlfoundation.yawl.engine.interfce.interfaceB;
 
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.JDOMException;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
-import org.yawlfoundation.yawl.engine.interfce.Interface_Client;
-import org.yawlfoundation.yawl.engine.interfce.Marshaller;
-import org.yawlfoundation.yawl.engine.interfce.SpecificationData;
-import org.yawlfoundation.yawl.engine.interfce.TaskInformation;
-import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.engine.interfce.*;
 import org.yawlfoundation.yawl.logging.YLogDataItemList;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.PasswordEncryptor;
 
+import javax.xml.datatype.Duration;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 /**
  * An API for custom services to call Engine functionalities regarding workitem
- * management, process progression and case org.yawlfoundation.yawl.risk.state.
+ * management, process progression and case state.
  *
  * @author Lachlan Aldred
  * @author Michael Adams (refactored for v2.0)
@@ -78,6 +76,16 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
 
 
     /**
+     * Disconnects an external entity from the engine
+     * @param handle the sessionHandle to disconnect
+     * @throws IOException if the engine can't be reached
+     */
+    public String disconnect(String handle) throws IOException {
+        return executePost(_backEndURIStr, prepareParamMap("disconnect", handle));
+    }
+
+
+    /**
      * Returns a list (of WorkItemRecord) of all the work items that are
      * currently active in the engine.
      * @see org.yawlfoundation.yawl.engine.interfce.WorkItemRecord
@@ -101,6 +109,39 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
                throws IOException {
         return executeGet(_backEndURIStr, prepareParamMap("getLiveItems", sessionHandle));
     }
+
+
+    /**
+     * Returns an XML string describing a current work item.
+     * @param itemID the workitem id
+     * @param sessionHandle the session handle
+     * @return an XML representation of the of workitem
+     * @throws IOException if engine can't be found.
+     */
+    public String getWorkItem(String itemID, String sessionHandle)
+               throws IOException {
+        Map<String, String> params = prepareParamMap("getWorkItem", sessionHandle);
+        params.put("workItemID", itemID) ;
+        return executeGet(_backEndURIStr, params);
+    }
+    
+    
+    /**
+     * Returns the expiry time of a work item's timer.
+     * @param itemID the workitem id
+     * @param sessionHandle the session handle
+     * @return a long value representing the moment the timer will expire, or 0 if
+     * the work item does not have a timer or does not exist
+     * @throws IOException if engine can't be found.
+     */
+    public long getWorkItemExpiryTime(String itemID, String sessionHandle)
+               throws IOException {
+        Map<String, String> params = prepareParamMap("getWorkItemExpiryTime", sessionHandle);
+        params.put("workItemID", itemID) ;
+        String expiryTime = stripOuterElement(executeGet(_backEndURIStr, params));
+        return (successful(expiryTime)) ? Long.valueOf(expiryTime) : 0;
+    }
+    
 
 
     /**
@@ -151,7 +192,6 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
     }
 
 
-
     /**
      * Retrieves a List of live workitems for the case or spec id passed
      * @param idType : "case" for a case's workitems, "spec" for a specification's,
@@ -174,6 +214,22 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
             return getWorkItemsForTask(id, sessionHandle);
         }
         else return null;
+    }
+
+
+    /**
+     * Returns the current set of active workitems that are associated with a specified
+     * custom service
+     * @param serviceURI the uri of the service in question
+     * @param sessionHandle the session handle
+     * @return a list of live workitems (as WorkItemRecords)
+     * @throws IOException if engine can't be found.
+     */
+    public List<WorkItemRecord> getWorkItemsForService(String serviceURI, String sessionHandle)
+            throws IOException {
+        Map<String, String> params = prepareParamMap("getWorkItemsForService", sessionHandle);
+        params.put("serviceuri", serviceURI) ;
+        return unPackWorkItemList(executeGet(_backEndURIStr, params));
     }
 
     
@@ -249,6 +305,22 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
 
 
     /**
+     * Gets an XML representation of a workflow specification for a specified, currently
+     * executing case.
+     * @param caseID the identifier of a currently executing case.
+     * @param sessionHandle the session handle
+     * @return the XML representation, or an XML diagnostic error message.
+     * @throws IOException if the engine can't be found.
+     */
+    public String getSpecificationForCase(String caseID, String sessionHandle)
+                                                                 throws IOException {
+        Map<String, String> params = prepareParamMap("getSpecificationForCase", sessionHandle);
+        params.put("caseID", caseID);
+        return stripOuterElement(executeGet(_backEndURIStr, params));
+    }
+
+
+    /**
      * Gets the user-defined data schema for a specification
      * @deprecated superseded by getSpecificationDataSchema(YSpecificationID, String)
      * @param specID the specification id
@@ -295,9 +367,34 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
     }
 
 
+    /**
+     * Rejects the announcement of an enabled work item to a service, and passes the
+     * the work item back to the engine for processing by the default work list
+     * @param workItemID the workitem id.
+     * @param sessionHandle the sessionhandle
+     * @return a success or error message
+     * @throws IOException if the engine can't be found.
+     */
     public String rejectAnnouncedEnabledTask(String workItemID, String sessionHandle) 
             throws IOException {
         Map<String, String> params = prepareParamMap("rejectAnnouncedEnabledTask", sessionHandle);
+        params.put("workItemID", workItemID);
+        return executePost(_backEndURIStr, params);
+    }
+
+
+    /**
+     * Gets a snapshot of data values that would be assigned to an enabled work item
+     * IF that work item was started at the moment the method is called. Note that
+     * the work item must have Enabled status only.
+     * @param workItemID the workitem id
+     * @param sessionHandle the sessionhandle
+     * @return an XML string of the data snapshot, or an error message.
+     * @throws IOException if the engine can't be found.
+     */
+    public String getStartingDataSnapshot(String workItemID, String sessionHandle)
+                throws IOException {
+        Map<String, String> params = prepareParamMap("getStartingDataSnapshot", sessionHandle);
         params.put("workItemID", workItemID);
         return executePost(_backEndURIStr, params);
     }
@@ -342,7 +439,7 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
      * Checks whether the connection with the engine is alive, authenticated
      * properly.
      * @param sessionHandle the session handle
-     * @return a diagnostic message indicating connection org.yawlfoundation.yawl.risk.state.
+     * @return a diagnostic message indicating connection state.
      * @throws IOException if engine cannot be found.
      */
     public String checkConnection(String sessionHandle) throws IOException {
@@ -526,6 +623,8 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
      *    &lt;/data&gt;
      * </pre>
      * If there are no case params then null should be passed.
+     * @param logData a list of log data items for logging when the case starts
+     *                (can be null)
      * @param sessionHandle the session handle
      * @return returns a diagnostic message in case of failure
      * @throws IOException if engine can't be found
@@ -566,6 +665,8 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
      * for the Case-Completion event
      * @param specID the specification id
      * @param caseParams the case params in XML.
+     * @param logData a list of log data items for logging when the case starts
+     *                (can be null)
      * @param sessionHandle the session handle
      * @param completionObserverURI the URI of the IB service that will listen
      *        for a case-completed event
@@ -576,13 +677,97 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
                              String sessionHandle, YLogDataItemList logData,
                              String completionObserverURI)
                                      throws IOException {
+        Map<String, String> params = buildLaunchCaseParamMap(specID, caseParams, 
+                sessionHandle, logData, completionObserverURI);
+        return executePost(_backEndURIStr, params);
+    }
+    
+    
+    /**
+     * Override of launchCase to provide the ability to delay the launch for
+     * a period
+     * @param specID the specification id
+     * @param caseParams the case params in XML.
+     * @param logData a list of log data items for logging when the case starts
+     *                (can be null)
+     * @param sessionHandle the session handle
+     * @param completionObserverURI the URI of the IB service that will listen
+     *        for a case-completed event
+     * @param mSec the number of milliseconds to wait before launching the case
+     * @return returns a diagnostic message in case of failure
+     * @throws IOException if engine can't be found
+     */
+    public String launchCase(YSpecificationID specID, String caseParams,
+                             String sessionHandle, YLogDataItemList logData,
+                             String completionObserverURI, long mSec) throws IOException {
+        Map<String, String> params = buildLaunchCaseParamMap(specID, caseParams, 
+                sessionHandle, logData, completionObserverURI);
+        params.put("mSec", String.valueOf(mSec));
+        return executePost(_backEndURIStr, params);
+    }
+
+
+    /**
+     * Override of launchCase to provide the ability to delay the launch until a
+     * specific date and time
+     * @param specID the specification id
+     * @param caseParams the case params in XML.
+     * @param logData a list of log data items for logging when the case starts
+     *                (can be null)
+     * @param sessionHandle the session handle
+     * @param completionObserverURI the URI of the IB service that will listen
+     *        for a case-completed event
+     * @param start the date and time when the case is to be launched
+     * @return returns a diagnostic message in case of failure
+     * @throws IOException if engine can't be found
+     */
+    public String launchCase(YSpecificationID specID, String caseParams,
+                             String sessionHandle, YLogDataItemList logData,
+                             String completionObserverURI, Date start) throws IOException {
+        Map<String, String> params = buildLaunchCaseParamMap(specID, caseParams,
+                sessionHandle, logData, completionObserverURI);
+        params.put("start", String.valueOf(start.getTime()));
+        return executePost(_backEndURIStr, params);
+    }
+
+
+    /**
+     * Override of launchCase to provide the ability to delay the launch for
+     * a period
+     * @param specID the specification id
+     * @param caseParams the case params in XML.
+     * @param logData a list of log data items for logging when the case starts
+     *                (can be null)
+     * @param sessionHandle the session handle
+     * @param completionObserverURI the URI of the IB service that will listen
+     *        for a case-completed event
+     * @param wait a Duration object that specifies a period to to wait before l
+     *             aunching the case
+     * @return returns a diagnostic message in case of failure
+     * @throws IOException if engine can't be found
+     */
+
+    public String launchCase(YSpecificationID specID, String caseParams,
+                             String sessionHandle, YLogDataItemList logData,
+                             String completionObserverURI, Duration wait) throws IOException {
+        Map<String, String> params = buildLaunchCaseParamMap(specID, caseParams,
+                sessionHandle, logData, completionObserverURI);
+        params.put("wait", wait.toString());
+        return executePost(_backEndURIStr, params);
+    }
+
+
+    // builds a parameter map for a launchCase call
+    private Map<String, String> buildLaunchCaseParamMap(YSpecificationID specID,
+                                 String caseParams, String sessionHandle,
+                                 YLogDataItemList logData, String completionObserverURI) {
         Map<String, String> params = prepareParamMap("launchCase", sessionHandle);
         params.putAll(specID.toMap());
         if (logData != null) params.put("logData", logData.toXML());
         if (caseParams != null) params.put("caseParams", caseParams);
         if (completionObserverURI != null)
             params.put("completionObserverURI", completionObserverURI);
-        return executePost(_backEndURIStr, params);
+        return params;
     }
 
 
@@ -618,10 +803,23 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
 
 
     /**
-     * Gets the org.yawlfoundation.yawl.risk.state description of the case
+     * Gets a complete list of all running case ids from the engine
+     * @param sessionHandle the session handle
+     * @return an XML list of case ids that are currently executing
+     * @throws IOException if engine cannot be found
+     */
+    public String getAllRunningCases(String sessionHandle) throws IOException {
+        Map<String, String> params = prepareParamMap("getAllRunningCases",
+                                                      sessionHandle);
+        return executeGet(_backEndURIStr, params);
+    }
+
+
+    /**
+     * Gets the state description of the case
      * @param caseID the case id.
      * @param sessionHandle the session handle
-     * @return An XML representation of the case org.yawlfoundation.yawl.risk.state, or a diagnostic error
+     * @return An XML representation of the case state, or a diagnostic error
      * message.
      * @throws IOException if engine cannot be found
      */
@@ -810,6 +1008,16 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
 
 
     /**
+     * Removes the outermost set of xml tags from a string, if any
+     * @param xml the xml string to strip
+     * @return the stripped xml string
+     */
+    public String stripOuterElement(String xml) {
+        return super.stripOuterElement(xml);
+    }
+
+
+    /**
      * Transforms an xml-string set of WorkItemRecords into a list 
      * @param xml the string describing the WorkItemRecords
      * @return a list of WorkItemRecord objects
@@ -819,8 +1027,7 @@ public class InterfaceB_EnvironmentBasedClient extends Interface_Client {
         if (xml != null && successful(xml)) {
             Document doc = JDOMUtil.stringToDocument(xml);
             if (doc != null) {
-                for (Object o : doc.getRootElement().getChildren()) {
-                    Element item = (Element) o;
+                for (Element item : doc.getRootElement().getChildren()) {
                     result.add(Marshaller.unmarshalWorkItem(item));
                 }
             }

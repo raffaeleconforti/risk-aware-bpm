@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,10 +19,10 @@
 package org.yawlfoundation.yawl.engine.interfce;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.authentication.*;
 import org.yawlfoundation.yawl.elements.YAWLServiceReference;
-import org.yawlfoundation.yawl.elements.YDecomposition;
 import org.yawlfoundation.yawl.elements.YSpecification;
 import org.yawlfoundation.yawl.elements.YTask;
 import org.yawlfoundation.yawl.elements.data.YParameter;
@@ -30,6 +30,7 @@ import org.yawlfoundation.yawl.elements.data.external.AbstractExternalDBGateway;
 import org.yawlfoundation.yawl.elements.data.external.ExternalDBGatewayFactory;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.engine.*;
+import org.yawlfoundation.yawl.engine.time.YLaunchDelayer;
 import org.yawlfoundation.yawl.exceptions.YAWLException;
 import org.yawlfoundation.yawl.exceptions.YEngineStateException;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
@@ -39,6 +40,7 @@ import org.yawlfoundation.yawl.unmarshal.YMarshal;
 import org.yawlfoundation.yawl.unmarshal.YMetaData;
 import org.yawlfoundation.yawl.util.*;
 
+import javax.xml.datatype.Duration;
 import java.io.InputStream;
 import java.net.URI;
 import java.rmi.RemoteException;
@@ -66,30 +68,48 @@ public class EngineGatewayImpl implements EngineGateway {
     private static final String OPEN_FAILURE = "<failure><reason>";
     private static final String CLOSE_FAILURE = "</reason></failure>";
     private static final String SUCCESS = "<success/>";
-    private static final String OPEN_SUCCESS = "<success>";
-    private static final String CLOSE_SUCCESS = "</success>";
+
 
     /**
      *  Constructor
+     *  @param persist true if a reference to a persisting engine is required
+     *  @throws YPersistenceException if persist is true and a persisting engine is
+     *  unavailable
      */
     public EngineGatewayImpl(boolean persist) throws YPersistenceException {
         _engine = YEngine.getInstance(persist);
         _sessionCache = _engine.getSessionCache();
     }
 
+    /**
+      *  Constructor
+      *  @param persist true if a reference to a persisting engine is required
+     *   @param gatherHbnStats true to turn on hibernate statistics gathering
+      *  @throws YPersistenceException if persist is true and a persisting engine is
+      *  unavailable
+      */
+    public EngineGatewayImpl(boolean persist, boolean gatherHbnStats) throws YPersistenceException {
+        _engine = YEngine.getInstance(persist, gatherHbnStats);
+        _sessionCache = _engine.getSessionCache();
+    }
+
+
+    /*******************************************************************************/
+
     // PRIVATE METHODS
 
-    /** encases a message in "<failure><reason>...</reason></failure>"
-     *
+    /**
+     * Encases a message in "<failure><reason>...</reason></failure>"
      * @param msg the text to encase
      * @return the encased message
      */
     private String failureMessage(String msg) {
-        return  StringUtil.wrap(StringUtil.wrap(msg, "reason"), "failure");
+        return StringUtil.wrap(StringUtil.wrap(msg, "reason"), "failure");
     }
 
-    /** encases a message in "<success>...</success>
-     *
+
+    /**
+     * Encases a message in "<success>...</success>"
      * @param msg the text to encase
      * @return the encased message
      */
@@ -98,25 +118,36 @@ public class EngineGatewayImpl implements EngineGateway {
     }
 
 
+    /**
+     * Checks that a session handle is currently active
+     * @param sessionHandle the handle to check
+     * @return true if the handle is valid and active
+     */
     private String checkSession(String sessionHandle) {
         return _sessionCache.checkConnection(sessionHandle) ? SUCCESS
                                : failureMessage("Invalid or expired session.");
     }
 
+
+    /**
+     * Checks whether a message is a failure message
+     * @param msg the message to check
+     * @return true if its a failure message
+     */
     private boolean isFailureMessage(String msg) {
         return msg.startsWith("<fail");
     }
 
-    //**************************************************//
+
+    /********************************************************************************/
     
 
     /**
-     * Indicates if the engine has encountered some form of persistence failure in its lifetime.<P>
-     *
-     * @return whether or not the engine failed to achieve persistence
+     * Indicates if the engine has encountered some form of persistence failure in
+     * its lifetime.
+     * @return whether or not the engine has failed to achieve persistence
      */
-    public boolean enginePersistenceFailure()
-    {
+    public boolean enginePersistenceFailure() {
         return enginePersistenceFailure;
     }
 
@@ -124,41 +155,81 @@ public class EngineGatewayImpl implements EngineGateway {
     /**
      * Registers an external observer gateway with the engine
      * @param gateway the gateway to register
+     * @throws YAWLException if the observerGateway has a null scheme value.
      */
-    public void registerObserverGateway(ObserverGateway gateway) {
+    public void registerObserverGateway(ObserverGateway gateway) throws YAWLException {
         _engine.registerInterfaceBObserverGateway(gateway);
     }
 
-    
+
+    /**
+     * Sets the URL for the 'default' worklist - i.e. the service that will receive
+     * task enabled notifications for those tasks that are not explicitly
+     * associated with a custom service
+     * @param url the URL of the service that will serve as the default worklist
+     */
     public void setDefaultWorklist(String url) {
         _engine.setDefaultWorklist(url);
     }
 
 
+    /**
+     * Enables or disables the use of the generic 'admin' user
+     * @param allow true to enable, false to disable
+     */
     public void setAllowAdminID(boolean allow) {
         _engine.setAllowAdminID(allow);
     }
 
 
+    /**
+     * Disables the recording of events in the process logs
+     */
+    public void disableLogging() {
+        _engine.disableProcessLogging();
+    }
+
+
+    /**
+     * Enables or disables the gathering of hibernate statistics
+     * @param enabled true to enable, false to disable
+     */
+    public void setHibernateStatisticsEnabled(boolean enabled) {
+        _engine.setHibernateStatisticsEnabled(enabled);
+    }
+
+
+    /**
+     * Loads build properties from the stream (build number, date, version)
+     * @param stream a stream of the file containing the build properties
+     */
     public void initBuildProperties(InputStream stream) {
         _engine.initBuildProperties(stream);
     }
 
 
+    /**
+     * Notifies the engine that its servlet is shutting down
+     */
     public void shutdown() {
         _engine.shutdown();
     }
-    
+
+
     /**
-     * Triggers the announcement that engine startup is complete
+     * Triggers the announcement that engine startup is complete.
      * Should only be called from InterfaceB_EngineBasedServer.init()
+     * @param maxWaitSeconds the maximum seconds to wait for services to be contactable
      */
-    public void notifyServletInitialisationComplete() {
-        _engine.initialised();
-        _engine.getAnnouncer().announceEngineInitialisationCompletion();
+    public void notifyServletInitialisationComplete(int maxWaitSeconds) {
+        _engine.initialised(maxWaitSeconds);
     }
 
-    
+
+    /**
+     * Sets the actual absolute file location which contains the engine's class file root
+     * @param path the file path
+     */
     public void setActualFilePath(String path) {
         path = path.replace('\\', '/' );             // switch slashes
         if (! path.endsWith("/")) path += "/";       // make sure it has ending slash
@@ -168,9 +239,9 @@ public class EngineGatewayImpl implements EngineGateway {
 
 
     /**
-     *
-     * @param sessionHandle
-     * @return a list of the ids of all currently active workitems
+     * Gets a list of the ids of all currently active workitems
+     * @param sessionHandle a valid session handle
+     * @return a list of the ids
      * @throws RemoteException
      */
     public String getAvailableWorkItemIDs(String sessionHandle) throws RemoteException {
@@ -195,20 +266,27 @@ public class EngineGatewayImpl implements EngineGateway {
      * @return the full work item record of the workitem with the id passed
      * @throws RemoteException
      */
-    public String getWorkItemDetails(String workItemID, String sessionHandle) throws RemoteException {
+    public String getWorkItem(String workItemID, String sessionHandle) throws RemoteException {
         String sessionMessage = checkSession(sessionHandle);
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
         YWorkItem workItem = _engine.getWorkItem(workItemID);
-        if (workItem != null) {
-            return workItem.toXML();
-        }
-        else {
-            return failureMessage("WorkItem with ID (" + workItemID + ") not found.");
-        }
+        return (workItem != null) ? workItem.toXML() :
+               failureMessage("WorkItem with ID '" + workItemID + "' not found.");
     }
 
-
+    
+    public String getWorkItemExpiryTime(String workItemID, String sessionHandle) 
+            throws RemoteException {
+         String sessionMessage = checkSession(sessionHandle);
+         if (isFailureMessage(sessionMessage)) return sessionMessage;
+ 
+         YWorkItem workItem = _engine.getWorkItem(workItemID);
+         return (workItem != null) ? String.valueOf(workItem.getTimerExpiry()) :
+                failureMessage("WorkItem with ID '" + workItemID + "' not found.");
+     }
+ 
+  
     /**
      *
      * @param specID the specification (process definition id)
@@ -224,11 +302,8 @@ public class EngineGatewayImpl implements EngineGateway {
         if (spec == null) {
             return failureMessage("Specification with ID (" + specID + ") not found.");
         }
-        List<YSpecification> specList = new Vector<YSpecification>();
-        specList.add(spec);
-        String version = spec.getSchemaVersion();
         try {
-            return YMarshal.marshal(specList, version);
+            return YMarshal.marshal(spec);
         }
         catch (Exception e) {
             logger.error("Failed to marshal a specification into XML.", e);
@@ -340,7 +415,9 @@ public class EngineGatewayImpl implements EngineGateway {
         try {
             YWorkItem workItem = _engine.getWorkItem(workItemID);
             if (workItem != null) {
-                _engine.completeWorkItem(workItem, data, logPredicate, force);
+                YEngine.WorkItemCompletion flag = force ?
+                     YEngine.WorkItemCompletion.Force : YEngine.WorkItemCompletion.Normal;
+                _engine.completeWorkItem(workItem, data, logPredicate, flag);
                 return SUCCESS;
             } else {
                 return failureMessage("WorkItem with ID [" + workItemID + "] not found.");
@@ -366,17 +443,8 @@ public class EngineGatewayImpl implements EngineGateway {
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
         try {
-            YWorkItem item = _engine.getWorkItem(workItemID);
-            if (item != null) {
-                YWorkItem child = _engine.startWorkItem(item, getClient(sessionHandle));
-                if( child == null ) {
-                	throw new YAWLException(
-                			"Engine failed to start work item " + item.toString() +
-                			". The engine returned no work items." );
-                }
-                return successMessage(child.toXML());
-            }
-            return failureMessage("No work item found with id = " + workItemID);
+            YWorkItem child = _engine.startWorkItem(workItemID, getClient(sessionHandle));
+            return successMessage(child.toXML());
         }
         catch (YAWLException e) {
             if (e instanceof YPersistenceException) {
@@ -387,7 +455,24 @@ public class EngineGatewayImpl implements EngineGateway {
     }
 
 
-        /**
+    public String getStartingDataSnapshot(String workItemID, String sessionHandle)
+            throws RemoteException {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        try {
+            Element data = _engine.getStartingDataSnapshot(workItemID);
+            if (data == null) {
+                return failureMessage("Work item has no decomposition");
+            }
+            return successMessage(JDOMUtil.elementToString(data));
+        }
+        catch (YAWLException e) {
+            return failureMessage(e.getMessage());
+        }
+    }
+
+    /**
      *
      * @param workItemID
      * @param sessionHandle
@@ -469,7 +554,18 @@ public class EngineGatewayImpl implements EngineGateway {
         String sessionMessage = checkSession(sessionHandle);
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
-        return describeWorkItems(_engine.getWorkItemsWithIdentifier(idType, itemID));
+        return describeWorkItems(
+                _engine.getWorkItemRepository().getWorkItemsWithIdentifier(idType, itemID));
+    }
+
+
+    public String getWorkItemsForService(String serviceURI, String sessionHandle)
+            throws RemoteException {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        return describeWorkItems(
+                _engine.getWorkItemRepository().getWorkItemsForService(serviceURI));
     }
 
 
@@ -496,6 +592,12 @@ public class EngineGatewayImpl implements EngineGateway {
      */
     public String checkConnection(String sessionHandle) throws RemoteException {
         return checkSession(sessionHandle);
+    }
+
+
+    public String disconnect(String sessionHandle) throws RemoteException {
+        _sessionCache.disconnect(sessionHandle);
+        return SUCCESS;
     }
 
 
@@ -559,7 +661,7 @@ public class EngineGatewayImpl implements EngineGateway {
         String sessionMessage = checkSession(sessionHandle);
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
-        Set<YSpecificationID> specIDs = _engine.getSpecIDs();
+        Set<YSpecificationID> specIDs = _engine.getLoadedSpecificationIDs();
         Set<YSpecification> specs = new HashSet<YSpecification>();
         for (YSpecificationID ySpecID : specIDs) {
             specs.add(_engine.getSpecification(ySpecID));
@@ -585,7 +687,7 @@ public class EngineGatewayImpl implements EngineGateway {
         try {
             YLogDataItemList logData = new YLogDataItemList(logDataStr);
             return _engine.launchCase(specID, caseParams, caseCompletionURI, caseID,
-                                      logData, sessionHandle);
+                                      logData, sessionHandle, false);
         } catch (YAWLException e) {
             if (e instanceof YPersistenceException) {
                 enginePersistenceFailure = true;
@@ -610,7 +712,8 @@ public class EngineGatewayImpl implements EngineGateway {
 
         try {
             YLogDataItemList logData = new YLogDataItemList(logDataStr);
-            return _engine.launchCase(specID, caseParams, caseCompletionURI, logData, sessionHandle);
+            return _engine.launchCase(specID, caseParams, caseCompletionURI, logData,
+                    sessionHandle);
         } catch (YAWLException e) {
             if (e instanceof YPersistenceException) {
                 enginePersistenceFailure = true;
@@ -618,7 +721,53 @@ public class EngineGatewayImpl implements EngineGateway {
             return failureMessage(e.getMessage());
         }
     }
-    
+
+    /**
+     * @param specID specID
+     * @param caseParams format &lt;data&gt;[InputParam]*&lt;/data&gt; where
+     * InputParam == &lt;varName&gt;var value&lt;/varName&gt;
+     * @param sessionHandle
+     * @return success
+     */
+    public String launchCase(YSpecificationID specID, String caseParams,
+                             URI caseCompletionURI, String logDataStr,
+                             long mSec, String sessionHandle) {
+        if (mSec < 100) {
+            return launchCase(specID, caseParams, caseCompletionURI, logDataStr, sessionHandle);
+        }
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+        new YLaunchDelayer(specID, caseParams, caseCompletionURI, null,
+                new YLogDataItemList(logDataStr), sessionHandle, mSec, true);
+        return successMessage("Case scheduled to start after a delay of " + mSec + " milliseconds");
+    }
+
+    public String launchCase(YSpecificationID specID, String caseParams,
+                             URI caseCompletionURI, String logDataStr,
+                             Date expiry, String sessionHandle) {
+        if (expiry == null || expiry.getTime() < System.currentTimeMillis() + 100) {
+            return launchCase(specID, caseParams, caseCompletionURI, logDataStr, sessionHandle);
+        }
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+        new YLaunchDelayer(specID, caseParams, caseCompletionURI, null,
+                new YLogDataItemList(logDataStr), sessionHandle, expiry, true);
+        return successMessage("Case scheduled to start at " + expiry.toString());
+    }
+
+    public String launchCase(YSpecificationID specID, String caseParams,
+                             URI caseCompletionURI, String logDataStr,
+                             Duration duration, String sessionHandle) {
+        if (duration == null) {
+            return launchCase(specID, caseParams, caseCompletionURI, logDataStr, sessionHandle);
+        }
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+        new YLaunchDelayer(specID, caseParams, caseCompletionURI, null,
+                new YLogDataItemList(logDataStr), sessionHandle, duration, true);
+        return successMessage("Case scheduled to start after a duration of " + duration.toString());
+    }
+
 
     /**
      * Given a process specification id return the cases that are its running
@@ -644,13 +793,58 @@ public class EngineGatewayImpl implements EngineGateway {
     }
 
 
+    public String getSpecificationForCase(String caseIDStr, String sessionHandle) {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        YIdentifier caseID = _engine.getCaseID(caseIDStr);
+        if (caseID != null) {
+            YSpecification spec = _engine.getSpecificationForCase(caseID);
+            if (spec != null) {
+                try {
+                    return YMarshal.marshal(spec);
+                }
+                catch (Exception e) {
+                    logger.error("Failed to marshal a specification into XML.", e);
+                    return failureMessage("Failed to marshal the specification into XML.");
+                }
+            }
+            else {
+                return failureMessage("Specification for case (" + caseIDStr + ") not found.");
+            }
+        }
+        else {
+            return failureMessage("Running case with id (" + caseIDStr + ") not found.");
+        }
+    }
+
+
+    public String getAllRunningCases(String sessionHandle) {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        Map<YSpecificationID, List<YIdentifier>> caseMap = _engine.getRunningCaseMap();
+        XNode node = new XNode("AllRunningCases");
+        for (YSpecificationID specID : caseMap.keySet()) {
+            XNode idNode = node.addChild("specificationID");
+            idNode.addAttribute("identifier", specID.getIdentifier());
+            idNode.addAttribute("version", specID.getVersionAsString());
+            idNode.addAttribute("uri", specID.getUri());
+            for (YIdentifier caseID : caseMap.get(specID)) {
+                idNode.addChild("caseID", caseID);
+            }
+        }
+        return node.toString();
+    }
+
+
     /**
-     * This method returns a complex XML message containing the org.yawlfoundation.yawl.risk.state of a particular
+     * This method returns a complex XML message containing the state of a particular
      * case.  i.e. every token (identifier) and its position in every
      * condition/ task/ and internal condition.
      * @param caseID case id string
      * @param sessionHandle sessionHandle
-     * @return XML org.yawlfoundation.yawl.risk.state Message
+     * @return XML state Message
      * @throws RemoteException
      */
     public String getCaseState(String caseID, String sessionHandle) throws RemoteException {
@@ -790,10 +984,13 @@ public class EngineGatewayImpl implements EngineGateway {
         String sessionMessage = checkSession(sessionHandle);
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
-        List<YVerificationMessage> errorMessages = new ArrayList<YVerificationMessage>();
+        YVerificationHandler verificationHandler = new YVerificationHandler();
+        List<YSpecificationID> uploadedList;
         try {
-            _engine.addSpecifications(specificationStr, false, errorMessages);
-        } catch (Exception e) {
+            uploadedList = _engine.addSpecifications(specificationStr, false,
+                    verificationHandler);
+        }
+        catch (Exception e) {
             if (e instanceof YPersistenceException) {
                 enginePersistenceFailure = true;
             }
@@ -801,36 +998,12 @@ public class EngineGatewayImpl implements EngineGateway {
             return failureMessage(e.getMessage());
         }
 
-        if (errorMessages.size() > 0) {
-            String status;
-            StringBuilder errorMsg = new StringBuilder();
-            errorMsg.append(OPEN_FAILURE);
-            for (YVerificationMessage message : errorMessages) {
-                status =  message.getStatus().equals(YVerificationMessage.ERROR_STATUS) ?
-                    "error" : "warning";
-
-                errorMsg.append("<" + status + ">");
-                Object src = message.getSource();
-                if (src instanceof YTask) {
-                    YDecomposition decomp = ((YTask) src).getDecompositionPrototype();
-                    if (decomp != null) {
-                        errorMsg.append("<src>").
-                                append(decomp.getName() != null ?
-                                        decomp.getName() : decomp.getID()).
-                                append("</src>");
-                    }
-                }
-                errorMsg.append("<message>").
-                        append(message.getMessage()).
-                        append("</message>").
-                        append("</" + status + ">");
-
-            }
-            errorMsg.append(CLOSE_FAILURE);
-            return errorMsg.toString();
-        } else {
-            return SUCCESS;
+        String result = ! (uploadedList == null || uploadedList.isEmpty()) ? SUCCESS :
+                failureMessage("Upload failed: invalid specification");
+        if (verificationHandler.hasMessages()) {
+            result = failureMessage(verificationHandler.getMessagesXML());
         }
+        return result;
     }
 
 
@@ -869,8 +1042,12 @@ public class EngineGatewayImpl implements EngineGateway {
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
         try {
-            _engine.addExternalClient(new YExternalClient(userName, password, doco));
-            return SUCCESS;
+            if (_engine.getExternalClient(userName) != null) {
+                return failureMessage("A client with that name already exists");
+            }
+            boolean success = _engine.addExternalClient(
+                    new YExternalClient(userName, password, doco));
+            return success ? SUCCESS : failureMessage("Null username or password");
         }
         catch (YPersistenceException ype) {
             return failureMessage("Persistence exception attempting to create account");
@@ -1130,7 +1307,7 @@ public class EngineGatewayImpl implements EngineGateway {
                 specs.append("</params>");
             }
             specs.append(StringUtil.wrap(spec.getRootNet().getID(), "rootNetID"));
-            specs.append(StringUtil.wrap(spec.getSchemaVersion(),"version"));
+            specs.append(StringUtil.wrap(spec.getSchemaVersion().toString(), "version"));
             specs.append(StringUtil.wrap(spec.getSpecVersion(), "specversion"));
             specs.append(StringUtil.wrap(_engine.getLoadStatus(spec.getSpecificationID()),
                          "status"));
@@ -1183,7 +1360,12 @@ public class EngineGatewayImpl implements EngineGateway {
         String sessionMessage = checkSession(sessionHandle);
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
-        return String.valueOf(_engine.updateCaseData(caseID, data));
+        try {
+             return String.valueOf(_engine.updateCaseData(caseID, data));
+        }
+        catch (Exception e) {
+            return "false";
+        }
     }
 
 
@@ -1201,13 +1383,31 @@ public class EngineGatewayImpl implements EngineGateway {
     }
 
 
-    public String cancelWorkItem(String workItemID, String fail, String sessionHandle)
+    public String cancelWorkItem(String workItemID, String data, String fail, String sessionHandle)
                                                                  throws RemoteException {
         String sessionMessage = checkSession(sessionHandle);
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
         YWorkItem item = _engine.getWorkItem(workItemID);
-        _engine.cancelWorkItem(item, fail.equalsIgnoreCase("true")) ;
+        boolean forceFail = fail.equalsIgnoreCase("true");
+        if (forceFail) {
+            try {
+                _engine.completeWorkItem(item, data, null, YEngine.WorkItemCompletion.Fail);
+            }
+            catch (Exception e) {
+                return failureMessage(e.getMessage());
+            }
+        }
+        else {
+            _engine.cancelWorkItem(item) ;
+        }
+
+        // check if cancelling the item also caused the case to end
+        String rootCaseID = item.getCaseID().getRootAncestor().toString();
+        if (_engine.getCaseID(rootCaseID) == null) {
+            return successMessage("Case cancelled as a result");
+        }
+
         return SUCCESS ;
     }
 
@@ -1275,7 +1475,7 @@ public class EngineGatewayImpl implements EngineGateway {
         if (isFailureMessage(sessionMessage)) return sessionMessage;
 
         // if the case id is of a sub-net, get the sub-net's data instead
-        if (caseID.indexOf(".") > -1) {
+        if (caseID.contains(".")) {
             try {
                 return _engine.getNetData(caseID);
             }
@@ -1329,7 +1529,12 @@ public class EngineGatewayImpl implements EngineGateway {
 
         YWorkItem item = _engine.getWorkItem(itemID);
         if (item != null) {
-            _engine.getAnnouncer().rejectAnnouncedEnabledTask(item);
+            if (item.getStatus().equals(YWorkItemStatus.statusExecuting)) {
+                rollbackWorkItem(itemID, sessionHandle);
+            }
+            if (! item.getStatus().equals(YWorkItemStatus.statusIsParent)) {
+                _engine.getAnnouncer().rejectAnnouncedEnabledTask(item);
+            }    
             return successMessage("workitem rejection successful");
         }
         else return failureMessage("Unknown worklitem: " + itemID);
@@ -1354,5 +1559,27 @@ public class EngineGatewayImpl implements EngineGateway {
         }
     }
 
+
+    public String setHibernateStatisticsEnabled(boolean enabled, String sessionHandle) {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        _engine.setHibernateStatisticsEnabled(enabled);
+        return SUCCESS;
+    }
+
+    public String isHibernateStatisticsEnabled(String sessionHandle) {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        return String.valueOf(_engine.isHibernateStatisticsEnabled());
+    }
+
+    public String getHibernateStatistics(String sessionHandle) {
+        String sessionMessage = checkSession(sessionHandle);
+        if (isFailureMessage(sessionMessage)) return sessionMessage;
+
+        return _engine.getHibernateStatistics();
+    }
 
 }

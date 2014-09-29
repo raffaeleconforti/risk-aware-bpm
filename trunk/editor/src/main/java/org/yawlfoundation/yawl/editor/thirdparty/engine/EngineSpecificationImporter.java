@@ -22,9 +22,9 @@
 
 package org.yawlfoundation.yawl.editor.thirdparty.engine;
 
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.input.SAXBuilder;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.input.SAXBuilder;
 import org.yawlfoundation.yawl.editor.YAWLEditor;
 import org.yawlfoundation.yawl.editor.data.DataVariable;
 import org.yawlfoundation.yawl.editor.data.DataVariableSet;
@@ -786,28 +786,28 @@ public class EngineSpecificationImporter extends EngineEditorInterpretor {
 
   private static void setTaskTimers(YAtomicTask engineTask, YAWLAtomicTask editorTask,
                                     NetGraphModel containingNet) {
-      Map timeParams = engineTask.getTimeParameters();
+      YTimerParameters timeParams = engineTask.getTimerParameters();
       if (timeParams != null) {
           TaskTimeoutDetail timeoutDetail = new TaskTimeoutDetail();
-          String netParam = (String) timeParams.get("netparam");
+          String netParam = timeParams.getVariableName();
           if (netParam != null) {
               DataVariable netVar = containingNet.getVariableSet().getVariableWithName(netParam);
               timeoutDetail.setTimeoutVariable(netVar);
           }
           else {
-              YWorkItemTimer.Trigger trigger = (YWorkItemTimer.Trigger) timeParams.get("trigger");
+              YWorkItemTimer.Trigger trigger = (YWorkItemTimer.Trigger) timeParams.getTrigger();
               if (trigger == YWorkItemTimer.Trigger.OnEnabled) {
                   timeoutDetail.setTrigger(TaskTimeoutDetail.TRIGGER_ON_ENABLEMENT);
               }
               else {
                   timeoutDetail.setTrigger(TaskTimeoutDetail.TRIGGER_ON_STARTING);
               }
-              Date expiry = (Date) timeParams.get("expiry");
+              Date expiry = (Date) timeParams.getDate();
               if (expiry != null) {
                   timeoutDetail.setTimeoutDate(expiry);
               }
               else {
-                  Duration duration = (Duration) timeParams.get("duration");
+                  Duration duration = (Duration) timeParams.getDuration();
                   if (duration != null) {
                       timeoutDetail.setTimeoutValue(duration.toString());
                   }
@@ -1067,10 +1067,10 @@ public class EngineSpecificationImporter extends EngineEditorInterpretor {
   }
   
   private static int engineToEditorMultiInstanceCreationMode(String engineCreationMode) {
-    if (engineCreationMode.equals(YMultiInstanceAttributes._creationModeStatic)) {
+    if (engineCreationMode.equals(YMultiInstanceAttributes.CREATION_MODE_STATIC)) {
       return MultipleAtomicTask.STATIC_INSTANCE_CREATION;
     }
-    if (engineCreationMode.equals(YMultiInstanceAttributes._creationModeDynamic)) {
+    if (engineCreationMode.equals(YMultiInstanceAttributes.CREATION_MODE_DYNAMIC)) {
       return MultipleAtomicTask.DYNAMIC_INSTANCE_CREATION;
     }
     return MultipleAtomicTask.STATIC_INSTANCE_CREATION;

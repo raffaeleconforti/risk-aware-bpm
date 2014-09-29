@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -42,6 +42,9 @@ public abstract class YNetElement implements Cloneable, Comparable {
     public String getID() {
         return _id;
     }
+
+    public void setID(String id) { _id = id; }
+
 
     public String toString() {
         String fullClassName = getClass().getName();

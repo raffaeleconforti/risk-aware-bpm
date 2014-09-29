@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -351,8 +351,9 @@ public class customServices extends AbstractPageBean {
 
     /********************************************************************************/
 
-    private SessionBean _sb = getSessionBean();
-    private MessagePanel msgPanel = getSessionBean().getMessagePanel();
+    private final ApplicationBean _appbean = getApplicationBean();
+    private final SessionBean _sb = getSessionBean();
+    private final MessagePanel msgPanel = getSessionBean().getMessagePanel();
 
     /**
      * Overridden method that is called immediately before the page is rendered
@@ -360,7 +361,7 @@ public class customServices extends AbstractPageBean {
     public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.customServices);
-        _sb.showMessagePanel();
+        showMessagePanel();
     }
 
 
@@ -368,7 +369,7 @@ public class customServices extends AbstractPageBean {
     public String btnRemove_action() {
         try {
             Integer selectedRowIndex = new Integer((String) hdnRowIndex.getValue());
-            _sb.removeRegisteredService(selectedRowIndex);
+            _appbean.removeRegisteredService(selectedRowIndex);
             msgPanel.success("Service successfully removed.");
         }
         catch (NumberFormatException nfe) {
@@ -396,7 +397,7 @@ public class customServices extends AbstractPageBean {
             else {
                 String validMsg = HttpURLValidator.validate(uri);
                 if (validMsg.startsWith("<success")) {
-                    _sb.addRegisteredService(name, password, uri, doco);
+                    _appbean.addRegisteredService(name, password, uri, doco);
                     clearInputs();
                     msgPanel.success("Service successfully added.");
                 }
@@ -428,8 +429,14 @@ public class customServices extends AbstractPageBean {
         txtPassword.setText("");
         txtConfirmPassword.setText("");
         txtURL.setText("");
-        txtDescription.setText("");
+        txtDescription.setText("");   
     }
-    
+
+
+    private void showMessagePanel() {
+        body1.setFocus(msgPanel.hasMessage() ? "form1:pfMsgPanel:btnOK001" : "form1:txtName");
+        _sb.showMessagePanel();
+    }
+
 }
 

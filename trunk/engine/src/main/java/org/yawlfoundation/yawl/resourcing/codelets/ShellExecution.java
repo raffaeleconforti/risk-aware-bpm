@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing.codelets;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 
 import java.io.File;
@@ -28,6 +28,7 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * A codelet that executes an external program in the client environment. It expects
@@ -122,10 +123,9 @@ public class ShellExecution extends AbstractCodelet {
         Element envElem = inData.getChild("env");
         if (envElem != null) {
             Map<String, String> env = pb.environment();
-            List addToEnvList = envElem.getChildren();
+            List<Element> addToEnvList = envElem.getChildren();
             if (addToEnvList != null) {
-                for (Object envVar : addToEnvList) {
-                    Element child = (Element) envVar;
+                for (Element child : addToEnvList) {
                     env.put(child.getName(), child.getText());
                 }
             }
@@ -141,6 +141,22 @@ public class ShellExecution extends AbstractCodelet {
 
     public void cancel() {
         if (_proc != null) _proc.destroy();
+    }
+
+
+    public List<YParameter> getRequiredParams() {
+        List<YParameter> params = new ArrayList<YParameter>();
+
+        YParameter param = new YParameter(null, YParameter._INPUT_PARAM_TYPE);
+        param.setDataTypeAndName("string", "command", XSD_NAMESPACE);
+        param.setDocumentation("The command line");
+        params.add(param);
+
+        param = new YParameter(null, YParameter._OUTPUT_PARAM_TYPE);
+        param.setDataTypeAndName("string", "result", XSD_NAMESPACE);
+        param.setDocumentation("The result of the command's execution");
+        params.add(param);
+        return params;
     }
     
 }

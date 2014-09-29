@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.resourcing.resource;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
@@ -52,6 +52,9 @@ public class Capability extends AbstractResourceAttribute implements Comparable 
         reconstitute(e);
     }
 
+
+    public void setLabel(String label) { setCapability(label); }
+
     public String getCapability() { return _capability; }
 
     public void setCapability(String capability) {
@@ -66,6 +69,8 @@ public class Capability extends AbstractResourceAttribute implements Comparable 
         if ((o == null) || (! (o instanceof Capability))) return 1;
         return this.getCapability().compareTo(((Capability) o).getCapability());
     }
+
+    public String getName() { return getCapability(); }
 
    
     public String toXML() {

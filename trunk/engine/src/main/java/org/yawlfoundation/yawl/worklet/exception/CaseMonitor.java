@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,19 +18,20 @@
 
 package org.yawlfoundation.yawl.worklet.exception;
 
-import org.yawlfoundation.yawl.util.JDOMUtil;
-import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
-import org.yawlfoundation.yawl.engine.YSpecificationID;
-
-import org.yawlfoundation.yawl.worklet.WorkletService;
-
-import org.jdom.Element;
 import org.apache.log4j.Logger;
-import org.yawlfoundation.yawl.worklet.support.DBManager;
+import org.jdom2.Element;
+import org.yawlfoundation.yawl.engine.YSpecificationID;
+import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.worklet.rdr.RuleType;
 import org.yawlfoundation.yawl.worklet.support.Library;
+import org.yawlfoundation.yawl.worklet.support.Persister;
 import org.yawlfoundation.yawl.worklet.support.RdrConversionTools;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 
 
 /** The CaseMonitor class manages a dataset of descriptors for each case started in the
@@ -241,9 +242,7 @@ public class CaseMonitor {
 
     /** updates the persisted object after changes (if persisting) */
     private void persistThis() {
-        DBManager dbMgr = DBManager.getInstance(false);
-        if ((dbMgr != null) && dbMgr.isPersisting())
-             dbMgr.persist(this, DBManager.DB_UPDATE);
+        Persister.getInstance().update(this);
     }
 
     //***************************************************************************//
@@ -254,21 +253,17 @@ public class CaseMonitor {
     // updates the running case data with the workitem input / output params
      public void updateData(String sData) {
         Element eData = JDOMUtil.stringToElement(sData);
-        Element wiParam, caseParam, newParam;
 
         // for each child of the passed Data, add/update the caseData
-        Iterator itr = (eData.getChildren()).iterator() ;
-        while (itr.hasNext()) {
-            wiParam = (Element) itr.next() ;
-
-            caseParam = _caseData.getChild(wiParam.getName());
+        for (Element wiParam : eData.getChildren()) {
+            Element caseParam = _caseData.getChild(wiParam.getName());
 
             // if case data contains item, update its value
             if (caseParam != null) caseParam.setText(wiParam.getText());
 
             // else create a new child, and add it to caseData
             else {
-                newParam = new Element(wiParam.getName()) ;
+                Element newParam = new Element(wiParam.getName()) ;
                 newParam.addContent(wiParam.getText());
                 _caseData.addContent(newParam);
             }
@@ -309,7 +304,7 @@ public class CaseMonitor {
     public void addProcessInfo(WorkItemRecord wir) {
 
         //convert the wir contents to an Element
-        Element eWir = (Element) JDOMUtil.stringToElement(wir.toXML()).detach();
+        Element eWir = JDOMUtil.stringToElement(wir.toXML()).detach();
 
         Element eInfo = new Element("process_info");     // new Element for info
         eInfo.addContent(eWir);                          // add the wir
@@ -427,14 +422,14 @@ public class CaseMonitor {
 
 
     /** returns the runner for the specified type (if any) */
-    public HandlerRunner getRunnerForType(int xType, String itemID) {
+    public HandlerRunner getRunnerForType(RuleType xType, String itemID) {
         HandlerRunner result ;
         switch (xType) {
-            case WorkletService.XTYPE_CASE_PRE_CONSTRAINTS :
+            case CasePreconstraint :
                 result = getPreCaseHandlerRunner(); break ;
-            case WorkletService.XTYPE_CASE_POST_CONSTRAINTS :
+            case CasePostconstraint:
                 result = getPostCaseHandlerRunner(); break ;
-            case WorkletService.XTYPE_CASE_EXTERNAL_TRIGGER :
+            case CaseExternalTrigger :
                 result = getCaseExternalHandlerRunner(); break ;
             default :
                 result = getHandlerRunnerForItem(itemID);

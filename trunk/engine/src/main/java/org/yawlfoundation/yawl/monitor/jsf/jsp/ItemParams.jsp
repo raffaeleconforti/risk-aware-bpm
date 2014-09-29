@@ -5,7 +5,7 @@
           xmlns:ui="http://www.sun.com/web/ui">
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -127,7 +127,7 @@
                                     <h:outputText binding="#{ItemParams.colEngineTimeRows}"
                                                   id="colEngineEventTimeRows"
                                                   styleClass="dataTableItemText"
-                                                  value="#{currentRow.timestampString}"/>
+                                                  value="#{currentRow.timestampMidString}"/>
                                 </h:column>
 
                                <h:column binding="#{ItemParams.colEngineEvent}"
@@ -162,7 +162,7 @@
                                       <h:outputText binding="#{ItemParams.colResourceTimeRows}"
                                                    id="colResourceEventTimeRows"
                                                    styleClass="dataTableItemText"
-                                                   value="#{currentRow.timeStampString}"/>
+                                                   value="#{currentRow.timeStampMidString}"/>
                                  </h:column>
 
                                 <h:column binding="#{ItemParams.colResourceEvent}"
@@ -178,7 +178,7 @@
                                     <h:outputText binding="#{ItemParams.colResourceUserRows}"
                                                   id="colResourceUserRows"
                                                   styleClass="dataTableItemText"
-                                                  value="#{currentRow._participantID}"/>
+                                                  value="#{currentRow._resourceID}"/>
                                 </h:column>
 
                              </h:dataTable>       

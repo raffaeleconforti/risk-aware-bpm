@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -43,6 +43,7 @@ public class DynFormField implements Cloneable {
     private int _order;
     private boolean _required ;
     private boolean _hidden = false;
+    private boolean _emptyComplexTypeFlag = false;
     private Boolean _hideApplied = null;               // to avoid double hideIf eval
     private Font _font;                                // used for screen arithmetic
 
@@ -99,7 +100,7 @@ public class DynFormField implements Cloneable {
     }
 
     public String getDatatype() {
-        return _datatype;
+        return _datatype != null ? _datatype : _param.getDataTypeName();
     }
 
     public void setDatatype(String datatype) {
@@ -107,10 +108,9 @@ public class DynFormField implements Cloneable {
     }
 
     public String getDataTypeUnprefixed() {
-        if ((_datatype != null) && (_datatype.indexOf(':') > -1))
-            return _datatype.split(":")[1] ;
-        else
-            return _datatype ;
+        String datatype = getDatatype();
+        return (datatype != null) && datatype.contains(":") ?
+                datatype.substring(datatype.indexOf(':') + 1) : datatype;
     }
 
     public String getNamespacePrefix() {
@@ -219,13 +219,22 @@ public class DynFormField implements Cloneable {
     }
 
 
+    public void setEmptyComplexTypeFlag(boolean flag) {
+        _emptyComplexTypeFlag = flag;
+    }
+
+
+    public boolean isEmptyComplexTypeFlag() { return _emptyComplexTypeFlag; }
+
+
     public void setRequired(boolean required) {
         this._required = required;
     }
 
 
     public boolean isRequired() {
-        _required = (! (isInputOnly() || hasZeroMinimum())) || _attributes.isMandatory();
+        _required = (! (isInputOnly() || hasZeroMinimum() || _attributes.isOptional()))
+                || _attributes.isMandatory();
         return _required;
     }
 
@@ -236,10 +245,7 @@ public class DynFormField implements Cloneable {
 
 
     public boolean hasZeroMinimum() {
-//        if (_parent != null)
-//            return _parent.hasZeroMinimum() || (_minoccurs == 0);
-//        else
-            return (_minoccurs == 0);
+        return (_minoccurs == 0);
     }
     
     public void setEnumeratedValues(List<String> enumValues) {
@@ -248,13 +254,17 @@ public class DynFormField implements Cloneable {
     }
 
     public List<String> getEnumeratedValues() {
+        List<String> values = null;
         if ((_union != null) && _union.hasEnumeration()) {
-            return _union.getEnumeration();
+            values = _union.getEnumeration();
         }
         else if ((_restriction != null) && _restriction.hasEnumeration()) {
-            return _restriction.getEnumeration();
+            values = _restriction.getEnumeration();
         }
-        else return null;
+        if ((values != null) && (! isRequired())) {
+            values.add(0, "<-- Choose (optional) -->");
+        }
+        return values;
     }
 
     public boolean hasEnumeratedValues() {
@@ -269,9 +279,20 @@ public class DynFormField implements Cloneable {
     public List<DynFormField> getSubFieldList() {
         return _subFieldList;
     }
+    
+    public DynFormField getSubField(String name) {
+        if (_subFieldList != null) {
+            for (DynFormField field : _subFieldList) {
+                if (field.getName().equals(name)) {
+                    return field;
+                }
+            }
+        }
+        return null;
+    }
 
     public boolean isFieldContainer() {
-        return _subFieldList != null ;
+        return ! (isSimpleField() || isYDocument());
     }
 
     public void addSubField(DynFormField field) {
@@ -311,6 +332,10 @@ public class DynFormField implements Cloneable {
     }
 
     public boolean isChoiceField() { return _choiceID != null; }
+
+    public boolean isGroupedField() {
+        return ! ((getGroupID() == null) || isYDocument());
+    }
 
     public boolean isSimpleField() {
         return _subFieldList == null ;
@@ -453,6 +478,15 @@ public class DynFormField implements Cloneable {
         return (_hideApplied == null) || (! _hideApplied);
     }
 
+    public boolean isEmptyOptionalInputOnly() {
+        return isInputOnly() && _attributes.isOptional() && hasNullValue();
+    }
+
+    public boolean hasNullValue() {
+        String type = getDataTypeUnprefixed();
+        return (_value == null) && (type != null) && (! type.equals("string"));
+    }
+
     public String getToolTip() {
         String tip = _attributes.getToolTipText();
         return (tip != null) ? tip : getDefaultToolTip();
@@ -503,6 +537,10 @@ public class DynFormField implements Cloneable {
         return _attributes.isTextArea();
     }
 
+    public boolean isYDocument() {
+        return getDataTypeUnprefixed().equals("YDocumentType");
+    }
+
     public String getImageAbove() {
         return _attributes.getImageAbove();
     }
@@ -541,9 +579,8 @@ public class DynFormField implements Cloneable {
     }
 
     public void setRestrictionAttributes() {
-        XSDType xsdType = XSDType.getInstance();
-        if (xsdType.isBuiltInType(getDataTypeUnprefixed())) {    // base types only
-            char[] validFacetMap = xsdType.getConstrainingFacetMap(getDataTypeUnprefixed());
+        if (XSDType.isBuiltInType(getDataTypeUnprefixed())) {    // base types only
+            char[] validFacetMap = XSDType.getConstrainingFacetMap(getDataTypeUnprefixed());
             for (XSDType.RestrictionFacet facet : XSDType.RestrictionFacet.values()) {
                 if (validFacetMap[facet.ordinal()] == '1') {
                     String value = _attributes.getValue(facet.name());

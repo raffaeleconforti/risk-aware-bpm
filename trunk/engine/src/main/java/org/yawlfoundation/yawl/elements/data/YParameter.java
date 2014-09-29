@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,15 +18,10 @@
 
 package org.yawlfoundation.yawl.elements.data;
 
-import org.jdom.Element;
-import org.yawlfoundation.yawl.elements.YAttributeMap;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.YDecomposition;
 import org.yawlfoundation.yawl.util.JDOMUtil;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
-
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Vector;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
 /**
  * 
@@ -43,7 +38,6 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
 
     private boolean _cutsThroughDecompositionStateSpace;
     private int _paramType;
-    private YAttributeMap _attributes = new YAttributeMap();
 
 
     public YParameter() { }
@@ -73,9 +67,9 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
 
 
     /**
-     * Set whether the param bypasses the decomposition's org.yawlfoundation.yawl.risk.state space.  Can only be set
-     * on an input param.
-     * @param isCutThroughParam is yes then true.
+     * Set whether the param bypasses the decomposition's state space.  Can only be set
+     * on an output param.
+     * @param isCutThroughParam if yes then true.
      */
     public void setIsCutThroughParam(boolean isCutThroughParam) {
         if (_paramType == _OUTPUT_PARAM_TYPE) {
@@ -92,34 +86,11 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
     }
 
 
-    public boolean isRequired() {
-        return super.isMandatory() || (! isOptional()) || _attributes.getBoolean("mandatory");
-    }
-
-    public boolean isOptional() {
-        return _attributes.getBoolean("optional");
-
-    }
-
-
     public String toXML() {
         StringBuilder xml = new StringBuilder("<");
         String type = getParamTypeStr(_paramType);
         xml.append(type);
-
-        if (getAttributes() != null) {
-            if (_paramType == _INPUT_PARAM_TYPE) {
-                xml.append(getAttributes().toXML());
-            }
-            else if (_paramType == _OUTPUT_PARAM_TYPE) {
-                if (getAttributes().containsKey("mandatory")) {
-                    xml.append(" mandatory=\"")
-                       .append(getAttributes().get("mandatory"))
-                       .append("\"");     
-                }
-            }
-
-        }
+        if (getAttributes() != null) xml.append(getAttributes().toXML());
         xml.append(">");
 
         xml.append(toXMLGuts());
@@ -156,15 +127,11 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
     }
 
 
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
-        messages.addAll(super.verify());
+    public void verify(YVerificationHandler handler) {
+        super.verify(handler);
         if (super.isMandatory() && _initialValue != null) {
-            messages.add(new YVerificationMessage(this,
-                    this + "cannot be mandatory and have initial value.",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this, this + " cannot be mandatory and have initial value.");
         }
-        return messages;
     }
 
 
@@ -186,8 +153,8 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
     
     /**
      * Returns whether or not the param is used for pure control flow, i.e.,
-     * the value by passes the decompositions org.yawlfoundation.yawl.risk.state space.
-     * @return true if this parameter bypasses decomposition org.yawlfoundation.yawl.risk.state space
+     * the value by passes the decompositions state space.
+     * @return true if this parameter bypasses decomposition state space
      */
     public boolean bypassesDecompositionStateSpace() {
         return _cutsThroughDecompositionStateSpace;
@@ -205,7 +172,9 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
         return getParamTypeStr(_ENABLEMENT_PARAM_TYPE);
     }
 
-    public String getParamType() { return getParamTypeStr(_paramType); }
+    public String getParamTypeStr() { return getParamTypeStr(_paramType); }
+
+    public int getParamType() { return _paramType; }
 
     
     private static int getParamType(String typeStr) {
@@ -234,21 +203,4 @@ public class YParameter extends YVariable implements Comparable<YVariable> {
     }
 
 
-    /**
-     * Return table of attributes associated with this variable.<P>
-     * Table is keyed by attribute 'name' and contains the string representation of the
-     * XML elements attribute.<P>
-     * @return the Map of attributes for this parameter
-     */
-    public YAttributeMap getAttributes() {
-        return _attributes;
-    }
-
-    public void addAttribute(String key, String value) {
-        _attributes.put(key, value);
-    }
-
-    public void setAttributes(Hashtable<String, String> attributes) {
-        _attributes.set(attributes);
-    }
 }

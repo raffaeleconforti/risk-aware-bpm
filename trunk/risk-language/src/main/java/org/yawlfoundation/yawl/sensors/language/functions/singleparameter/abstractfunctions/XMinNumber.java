@@ -1,6 +1,6 @@
 package org.yawlfoundation.yawl.sensors.language.functions.singleparameter.abstractfunctions;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.sensors.language.functions.WorkQueueFacade;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 

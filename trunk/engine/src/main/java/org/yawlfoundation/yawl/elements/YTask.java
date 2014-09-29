@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,22 +20,18 @@ package org.yawlfoundation.yawl.elements;
 
 import net.sf.saxon.s9api.SaxonApiException;
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.elements.data.YVariable;
 import org.yawlfoundation.yawl.elements.data.external.AbstractExternalDBGateway;
 import org.yawlfoundation.yawl.elements.data.external.ExternalDBGatewayFactory;
 import org.yawlfoundation.yawl.elements.e2wfoj.E2WFOJNet;
+import org.yawlfoundation.yawl.elements.predicate.PredicateEvaluator;
+import org.yawlfoundation.yawl.elements.predicate.PredicateEvaluatorCache;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.elements.state.YInternalCondition;
-import org.yawlfoundation.yawl.engine.YEngine;
-import org.yawlfoundation.yawl.engine.YNetRunner;
-import org.yawlfoundation.yawl.engine.YPersistenceManager;
-import org.yawlfoundation.yawl.engine.YWorkItemRepository;
-import org.yawlfoundation.yawl.engine.time.YTimer;
+import org.yawlfoundation.yawl.engine.*;
 import org.yawlfoundation.yawl.engine.time.YTimerVariable;
 import org.yawlfoundation.yawl.engine.time.YWorkItemTimer;
 import org.yawlfoundation.yawl.exceptions.*;
@@ -44,9 +40,8 @@ import org.yawlfoundation.yawl.schema.YDataValidator;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.SaxonUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
-import javax.xml.datatype.Duration;
 import java.net.URL;
 import java.util.*;
 
@@ -54,7 +49,7 @@ import java.util.*;
  * A superclass of any type of task in the YAWL language.
  *
  * @author Lachlan Aldred
- * @author Michael Adams (v2.0 and later) 
+ * @author Michael Adams (v2.0 and later)
  */
 public abstract class YTask extends YExternalNetElement {
 
@@ -64,33 +59,30 @@ public abstract class YTask extends YExternalNetElement {
     public static final int _OR = 103;
     public static final int _XOR = 126;
 
-    //internal org.yawlfoundation.yawl.risk.state nodes
+    //internal state nodes
     protected YIdentifier _i;
     protected YInternalCondition _mi_active = new YInternalCondition(YInternalCondition._mi_active, this);
     protected YInternalCondition _mi_entered = new YInternalCondition(YInternalCondition._mi_entered, this);
     protected YInternalCondition _mi_complete = new YInternalCondition(YInternalCondition._mi_complete, this);
     protected YInternalCondition _mi_executing = new YInternalCondition(YInternalCondition._mi_executing, this);
 
-    // repository reference used by cancel methods in subclasses
-    protected static YWorkItemRepository _workItemRepository = YWorkItemRepository.getInstance();
-
     //private attributes
     private int _splitType;
     private int _joinType;
     protected YMultiInstanceAttributes _multiInstAttr;
     private Set<YExternalNetElement> _removeSet = new HashSet<YExternalNetElement>();
-    protected Map<String, String> _dataMappingsForTaskStarting =
+    protected final Map<String, String> _dataMappingsForTaskStarting =
             new HashMap<String, String>();       //[key=ParamName, value=query]
-    private Map<String, String> _dataMappingsForTaskCompletion =
+    private final Map<String, String> _dataMappingsForTaskCompletion =
             new HashMap<String, String>();       //[key=query, value=NetVarName]
-    protected Map<String, String> _dataMappingsForTaskEnablement =
+    protected final Map<String, String> _dataMappingsForTaskEnablement =
             new HashMap<String, String>();       //[key=ParamName, value=query]
     protected YDecomposition _decompositionPrototype;
 
     // input data storage
-    private Map<YIdentifier, Element> _caseToDataMap = new HashMap<YIdentifier, Element>();
+    private final Map<YIdentifier, Element> _caseToDataMap = new HashMap<YIdentifier, Element>();
     private Iterator _multiInstanceSpecificParamsIterator;
-    private Map<String, Element> _localVariableNameToReplaceableOuptutData;
+    private Map<String, Element> _localVariableNameToReplaceableOutputData;
     private Document _groupedMultiInstanceOutputData;
 
     // Reset net association
@@ -107,21 +99,21 @@ public abstract class YTask extends YExternalNetElement {
     private Element _resourcingSpec = null;      // populated on spec parse
 
     // optional timer params [name, value]
-    private Map<String, Object> _timerParams ;
+    private YTimerParameters _timerParams;
     private YTimerVariable _timerVariable;
 
     // optional URI to a custom form (rather than inbuilt dynamic form)
     private URL _customFormURL;
 
     // optional user-defined data items for logging with task instance events
-    private YLogDataItemList _inputLogDataItems ;
-    private YLogDataItemList _outputLogDataItems ;
+    private YLogDataItemList _inputLogDataItems;
+    private YLogDataItemList _outputLogDataItems;
 
     private static final Logger logger = Logger.getLogger(YTask.class);
 
     /**
      * AJH: Extensions to cater for task level XML attributes.
-     *
+     * <p/>
      * Encoded list of standard XML attributes used on atomic tasks
      */
     private static final String STANDARD_TASK_ATTRIBUTES = "/id/type/skipOutboundSchemaValidation";
@@ -135,6 +127,7 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * Constructor
+     *
      * @param id
      * @param splitType
      * @param joinType
@@ -216,46 +209,32 @@ public abstract class YTask extends YExternalNetElement {
     }
 
 
-    protected List<YVerificationMessage> checkXQuery(String xQuery, String param) {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
-
-        if ((xQuery != null) && (xQuery.length() > 0)) {
+    protected void checkXQuery(String xQuery, String param, YVerificationHandler handler) {
+        if (!StringUtil.isNullOrEmpty(xQuery)) {
             if (ExternalDBGatewayFactory.isExternalDBMappingExpression(xQuery)) {
-                YVerificationMessage errMsg = checkExternalMapping(xQuery);
-                if (errMsg != null) messages.add(errMsg);
-            }
-            else {
+                checkExternalMapping(xQuery, handler);
+            } else {
                 try {
                     SaxonUtil.compileXQuery(xQuery);
+                } catch (SaxonApiException e) {
+                    handler.error(this, this + " [id= " + this.getID() +
+                            "] the XQuery could not be successfully" +
+                            " parsed [" + e.getMessage() + "]");
                 }
-                catch (SaxonApiException e) {
-                    messages.add(new YVerificationMessage(this, this +
-                        "(id= " + this.getID() + ") the XQuery could not be successfully" +
-                        " parsed. [" + e.getMessage() + "]",
-                        YVerificationMessage.ERROR_STATUS));
-                }    
             }
-        }
-        else messages.add(new YVerificationMessage(this, this +
-                    "(id= " + this.getID() + ") the XQuery for param [" +
-                    param + "] cannot be equal to null" +
-                    " or the empty string.",
-                    YVerificationMessage.ERROR_STATUS));
-
-        return messages;
+        } else handler.error(this, this + " [id= " + this.getID() +
+                "] the XQuery for param [" + param +
+                "] cannot be equal to null or the empty string.");
     }
 
 
-    protected YVerificationMessage checkExternalMapping(String query) {
-        YVerificationMessage result = null;
+    protected void checkExternalMapping(String query, YVerificationHandler handler) {
         AbstractExternalDBGateway dbClass = ExternalDBGatewayFactory.getInstance(query);
         if (dbClass == null) {
-            result = new YVerificationMessage(this, this +
-                        "(id= " + this.getID() + ") the mapping could not be successfully" +
-                        " parsed. External DB Class '" + query + "' was not found.",
-                        YVerificationMessage.ERROR_STATUS);
+            handler.error(this, this +
+                    "(id= " + this.getID() + ") the mapping could not be successfully" +
+                    " parsed. External DB Class '" + query + "' was not found.");
         }
-        return result;
     }
 
     protected Set<String> getParamNamesForTaskEnablement() {
@@ -272,6 +251,15 @@ public abstract class YTask extends YExternalNetElement {
         return _dataMappingsForTaskCompletion.keySet();
     }
 
+
+    public Map<String, String> getDataMappingsForTaskStarting() {
+        return _dataMappingsForTaskStarting;
+    }
+
+    public Map<String, String> getDataMappingsForTaskCompletion() {
+        return _dataMappingsForTaskCompletion;
+    }
+
     public Set<YExternalNetElement> getRemoveSet() {
         if (_removeSet != null) {
             return new HashSet<YExternalNetElement>(_removeSet);
@@ -285,8 +273,8 @@ public abstract class YTask extends YExternalNetElement {
 
         //Need to add the task to the CancelledBySet as well
         for (YExternalNetElement element : removeSet) {
-	  		    element.addToCancelledBySet(this);
-	      }
+            element.addToCancelledBySet(this);
+        }
     }
 
     // Added for reduction rules - need to use id to check for equal!
@@ -299,16 +287,14 @@ public abstract class YTask extends YExternalNetElement {
 
     public synchronized List<YIdentifier> t_fire(YPersistenceManager pmgr)
             throws YStateException, YDataStateException, YQueryException,
-            YPersistenceException, YSchemaBuildingException {
+            YPersistenceException {
         YIdentifier id = getI();
 
-        if (! t_enabled(id)) {
+        if (!t_enabled(id)) {
             throw new YStateException(this + " cannot fire due to not being enabled");
         }
         _i = id;
         _i.addLocation(pmgr, this);
-        List<YExternalNetElement> conditions = new Vector<YExternalNetElement>(getPresetElements());
-        Iterator conditionsIt = getPresetElements().iterator();
         long numToSpawn = determineHowManyInstancesToCreate();
         List<YIdentifier> childIdentifiers = new Vector<YIdentifier>();
         for (int i = 0; i < numToSpawn; i++) {
@@ -316,40 +302,39 @@ public abstract class YTask extends YExternalNetElement {
 
             try {
                 prepareDataForInstanceStarting(childID);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
 
                 //if there was a problem firing the task then roll back the case.
                 rollbackFired(childID, pmgr);
-                
+
                 if (e instanceof YDataStateException)
                     throw (YDataStateException) e;
                 else if (e instanceof YStateException)
                     throw (YStateException) e;
                 else if (e instanceof YQueryException)
                     throw (YQueryException) e;
-                else if (e instanceof YSchemaBuildingException)
-                    throw (YSchemaBuildingException) e;
             }
 
             childIdentifiers.add(childID);
         }
         prepareDataDocsForTaskOutput();
+
+        // contract: all task presetElements are conditions
         switch (_joinType) {
             case YTask._AND:
-                while (conditionsIt.hasNext()) {
-                    ((YConditionInterface) conditionsIt.next()).removeOne(pmgr);
+                for (YExternalNetElement preSetElement : getPresetElements()) {
+                    ((YConditionInterface) preSetElement).removeOne(pmgr);
                 }
                 break;
             case YTask._OR:
-                while (conditionsIt.hasNext()) {
-                    YConditionInterface condition = (YConditionInterface) conditionsIt.next();
-                    if (condition.containsIdentifier()) {
-                        condition.removeOne(pmgr);
-                    }
+                for (YExternalNetElement preSetElement : getPresetElements()) {
+                    YConditionInterface condition = ((YConditionInterface) preSetElement);
+                    if (condition.containsIdentifier()) condition.removeOne(pmgr);
                 }
                 break;
             case YTask._XOR:
+                List<YExternalNetElement> conditions =
+                        new Vector<YExternalNetElement>(getPresetElements());
                 boolean done = false;
                 do {
                     int i = Math.abs(_random.nextInt()) % conditions.size();
@@ -364,7 +349,7 @@ public abstract class YTask extends YExternalNetElement {
         return childIdentifiers;
     }
 
-    /*changed to public for persistance*/
+    /*changed to public for persistence*/
     public void prepareDataDocsForTaskOutput() {
         if (null == getDecompositionPrototype()) {
             return;
@@ -374,14 +359,14 @@ public abstract class YTask extends YExternalNetElement {
         _groupedMultiInstanceOutputData.setRootElement(
                 new Element(getDecompositionPrototype().getRootDataElementName()));
 
-        _localVariableNameToReplaceableOuptutData = new HashMap<String, Element>();
+        _localVariableNameToReplaceableOutputData = new HashMap<String, Element>();
     }
 
 
     public synchronized YIdentifier t_add(YPersistenceManager pmgr,
                                           YIdentifier siblingWithPermission, Element newInstanceData)
-            throws YDataStateException, YStateException, YQueryException, YSchemaBuildingException, YPersistenceException {
-        if (!YMultiInstanceAttributes._creationModeDynamic.equals(_multiInstAttr.getCreationMode())) {
+            throws YDataStateException, YStateException, YQueryException, YPersistenceException {
+        if (!YMultiInstanceAttributes.CREATION_MODE_DYNAMIC.equals(_multiInstAttr.getCreationMode())) {
             throw new RuntimeException(this + " does not allow dynamic instance creation.");
         }
         if (t_addEnabled(siblingWithPermission)) {
@@ -398,14 +383,14 @@ public abstract class YTask extends YExternalNetElement {
 
     public boolean t_addEnabled(YIdentifier identifier) {
         return t_isBusy() &&
-               isMultiInstance() &&
-               YMultiInstanceAttributes._creationModeDynamic.equals(_multiInstAttr.getCreationMode()) &&
-               _mi_executing.contains(identifier) &&
-               _mi_active.getIdentifiers().size() < _multiInstAttr.getMaxInstances();
+                isMultiInstance() &&
+                YMultiInstanceAttributes.CREATION_MODE_DYNAMIC.equals(_multiInstAttr.getCreationMode()) &&
+                _mi_executing.contains(identifier) &&
+                _mi_active.getIdentifiers().size() < _multiInstAttr.getMaxInstances();
     }
 
 
-    private long determineHowManyInstancesToCreate() throws YDataStateException, YStateException, YQueryException {
+    private long determineHowManyInstancesToCreate() throws YDataStateException, YQueryException {
         if (!isMultiInstance()) {
             return 1;
         }
@@ -418,7 +403,7 @@ public abstract class YTask extends YExternalNetElement {
                     queryString,
                     dataToSplit,
                     this.getID(),
-                    "No data avaliable for MI splitting at task Start");
+                    "No data available for MI splitting at task start");
         }
 
         generateBeginReport1();
@@ -429,12 +414,12 @@ public abstract class YTask extends YExternalNetElement {
             throw new YDataQueryException(
                     _multiInstAttr.getMISplittingQuery(), dataToSplit, this.getID(),
                     String.format(
-                       "The number of instances produced by MI split (%d) is %s than " +
-                       "the %s instance bound specified (%d).", listSize,
-                       (listSize > max ? "more" : "less"),
-                       (listSize > max ? "maximum" : "minimum"),
-                       (listSize > max ? max : min))
-                    );
+                            "The number of instances produced by MI split (%d) is %s than " +
+                                    "the %s instance bound specified (%d).", listSize,
+                            (listSize > max ? "more" : "less"),
+                            (listSize > max ? "maximum" : "minimum"),
+                            (listSize > max ? max : min))
+            );
         }
         _multiInstanceSpecificParamsIterator = multiInstanceList.iterator();
         return listSize;
@@ -448,24 +433,18 @@ public abstract class YTask extends YExternalNetElement {
 
     public String getPreSplittingMIQuery() {
         String miVarNameInDecomposition = _multiInstAttr.getMIFormalInputParam();
-        if (miVarNameInDecomposition != null) {
-            for (String name : _dataMappingsForTaskStarting.keySet()) {
-                if (miVarNameInDecomposition.equals(name)) {
-                    return _dataMappingsForTaskStarting.get(name);
-                }
-            }    
-        }
-        return null;
+        return miVarNameInDecomposition != null ?
+                _dataMappingsForTaskStarting.get(miVarNameInDecomposition) : null;
     }
 
 
     public synchronized boolean t_isExitEnabled() {
         return t_isBusy() &&
                 ((
-                _mi_active.getIdentifiers().containsAll(_mi_complete.getIdentifiers()) &&
-                _mi_complete.getIdentifiers().containsAll(_mi_active.getIdentifiers())
+                        _mi_active.getIdentifiers().containsAll(_mi_complete.getIdentifiers()) &&
+                                _mi_complete.getIdentifiers().containsAll(_mi_active.getIdentifiers())
                 ) || (
-                _mi_complete.getIdentifiers().size() >= _multiInstAttr.getThreshold()
+                        _mi_complete.getIdentifiers().size() >= _multiInstAttr.getThreshold()
                 ));
     }
 
@@ -473,22 +452,16 @@ public abstract class YTask extends YExternalNetElement {
     public synchronized boolean t_complete(YPersistenceManager pmgr, YIdentifier childID,
                                            Document decompositionOutputData)
             throws YDataStateException, YStateException, YQueryException,
-                   YSchemaBuildingException, YPersistenceException {
+            YPersistenceException {
         if (t_isBusy()) {
-            YDataValidator validator = _net._specification.getDataValidator();
-
-            // if the specification is beta 4 or greater then do validation.
-            if (! _net._specification.usesSimpleRootData()) {
-                if (null != getDecompositionPrototype()) {
-                    validator.validate(_decompositionPrototype.getOutputParameters().values(),
-                            decompositionOutputData.getRootElement(), getID());
-                }
-            }
+            YSpecification spec = _net.getSpecification();
+            YDataValidator validator = spec.getDataValidator();
+            validateOutputs(validator, decompositionOutputData);
 
             for (String query : getQueriesForTaskCompletion()) {
                 if (ExternalDBGatewayFactory.isExternalDBMappingExpression(query)) {
                     AbstractExternalDBGateway gateway =
-                                ExternalDBGatewayFactory.getInstance(query);
+                            ExternalDBGatewayFactory.getInstance(query);
                     updateExternalFromTaskCompletion(gateway, query, decompositionOutputData);
                     continue;
                 }
@@ -500,39 +473,40 @@ public abstract class YTask extends YExternalNetElement {
                 generateCompletingReport1(query, decompositionOutputData, queryResultElement);
 
                 if (queryResultElement == null) {
-                    throw new YDataQueryException(query, queryResultElement, null, 
+                    throw new YDataQueryException(query, queryResultElement, null,
                             "The result of the output query (" + query + ") is null");
+                }
+
+                // handle empty complex type flag elements
+                if (queryResultElement.getContentSize() == 0) {
+                    handleEmptyComplexTypeFlagOutput(decompositionOutputData, queryResultElement,
+                            query, localVarThatQueryResultGetsAppliedTo);
                 }
 
                 if (query.equals(getPreJoiningMIQuery())) {
                     _groupedMultiInstanceOutputData.getRootElement().addContent(
-                            (Element) queryResultElement.clone());
-                }
-                else {
-                    _localVariableNameToReplaceableOuptutData.put(
+                            queryResultElement.clone());
+                } else {
+                    _localVariableNameToReplaceableOutputData.put(
                             localVarThatQueryResultGetsAppliedTo, queryResultElement);
                 }
 
                 //Now we check that the resulting transformation produced data according
                 //to the net variable's type.
-                if (_net.getSpecification().isSchemaValidating() &&
-                        !query.equals(getPreJoiningMIQuery())) {
-                    YVariable var = _net.getLocalVariables().containsKey(localVarThatQueryResultGetsAppliedTo) ?
-                             _net.getLocalVariables().get(localVarThatQueryResultGetsAppliedTo) :
-                             _net.getInputParameters().get(localVarThatQueryResultGetsAppliedTo);
+                if (spec.getSchemaVersion().isSchemaValidating() &&
+                        (!query.equals(getPreJoiningMIQuery()))) {
+                    YVariable var = _net.getLocalOrInputVariable(localVarThatQueryResultGetsAppliedTo);
                     try {
                         Element tempRoot = new Element(_decompositionPrototype.getID());
-                        tempRoot.addContent((Element) queryResultElement.clone());
+                        tempRoot.addContent(queryResultElement.clone());
                         /**
                          * MF: Skip schema checking if we have an empty XQuery result to allow us to effectively blank-out
                          * a net variable.
                          */
-                        if ((queryResultElement.getChildren().size() != 0 || (queryResultElement.getContent().size() != 0)))
-                        {
+                        if ((queryResultElement.getChildren().size() != 0 || (queryResultElement.getContent().size() != 0))) {
                             validator.validate(var, tempRoot, getID());
                         }
-                    }
-                    catch (YDataValidationException e) {
+                    } catch (YDataValidationException e) {
                         YDataStateException f = new YDataStateException(
                                 query,
                                 decompositionOutputData.getRootElement(),
@@ -555,12 +529,77 @@ public abstract class YTask extends YExternalNetElement {
                 return true;
             }
             return false;
-        }
-        else {
+        } else {
             throw new RuntimeException(
                     "This task [" +
-                    (getName() != null ? getName() : getID()) +
-                    "] is not active, and therefore cannot be completed.");
+                            (getName() != null ? getName() : getID()) +
+                            "] is not active, and therefore cannot be completed.");
+        }
+    }
+
+
+    private void addDefaultValuesAsRequired(Document dataDoc) {
+        if (dataDoc == null) return;
+        Element dataElem = dataDoc.getRootElement();
+        for (YParameter param : _decompositionPrototype.getOutputParameters().values()) {
+            String defaultValue = param.getDefaultValue();
+            if (defaultValue != null) {
+                Element paramData = dataElem.getChild(param.getPreferredName());
+
+                // if there's an element, but no value, add the default
+                if (paramData != null) {
+                    if (paramData.getText() == null) {
+                        paramData.setText(defaultValue);
+                    }
+                }
+
+                // else if there's no element at all, add it with the default value
+                else {
+                    Element defElem = JDOMUtil.stringToElement(
+                            StringUtil.wrap(defaultValue, param.getPreferredName()));
+                    defElem.setNamespace(dataElem.getNamespace());
+                    dataElem.addContent(param.getOrdering(), defElem.detach());
+                }
+            }
+        }
+    }
+
+
+    private void handleEmptyComplexTypeFlagOutput(Document outputDataDoc,
+                                                  Element queryResult, String query, String localVarName) {
+        YVariable localVar = _net.getLocalOrInputVariable(localVarName);
+        if (localVar.isEmptyTyped()) {
+
+            // extract the xpath part of the xquery and use it to check whether the
+            // optional element was included in the output data. If so, add an 'internal'
+            // attribute to remember the flag was set (and not just an empty xquery
+            // mapping). It will be used when the local var is next used as a source mapping.
+            if (getElementForXQuery(outputDataDoc, query) != null) {
+                queryResult.setAttribute("__emptyComplexTypeFlag__", "true");
+            }
+        }
+    }
+
+
+    private Element getElementForXQuery(Document outputDataDoc, String query) {
+        String innerQuery = StringUtil.unwrap(query);
+        String xpath = innerQuery.substring(innerQuery.indexOf('/'), innerQuery.lastIndexOf('/'));
+        return JDOMUtil.selectElement(outputDataDoc, xpath);
+    }
+
+
+    private void validateOutputs(YDataValidator validator, Document decompositionOutputData)
+            throws YDataValidationException {
+        YSpecification spec = _net.getSpecification();
+
+        // if the specification is beta 4 or greater then do validation.
+        if ((!spec.getSchemaVersion().usesSimpleRootData()) && (null != getDecompositionPrototype())) {
+
+            // fix any output vars with missing values that have default values defined
+            addDefaultValuesAsRequired(decompositionOutputData);
+
+            validator.validate(_decompositionPrototype.getOutputParameters().values(),
+                    decompositionOutputData.getRootElement(), getID());
         }
     }
 
@@ -575,30 +614,30 @@ public abstract class YTask extends YExternalNetElement {
     }
 
 
-    private static void generateCompletingReport2(Element resultElem, String forNetVar, String query, Document data) {
-        if(logger.isDebugEnabled()) {
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+    private static void generateCompletingReport2(Element resultElem, String forNetVar,
+                                                  String query, Document data) {
+        if (logger.isDebugEnabled()) {
             logger.debug("\n\nYTask::t_completing " +
                     "\n\tstatus: transforming output for net" +
                     "\n\tforNetVar = " + forNetVar +
                     "\n\tquery = " + query +
-                    "\n\tover data = " + out.outputString(data).trim() +
-                    "\n\tresulting data = " + out.outputString(resultElem).trim());
+                    "\n\tover data = " + JDOMUtil.documentToString(data) +
+                    "\n\tresulting data = " + JDOMUtil.elementToString(resultElem));
         }
     }
 
-    private void generateCompletingReport1(String query, Document rawDecompositionData, Element queryResultElement) {
-        if(logger.isDebugEnabled()) {
-            String debug = "\n\n\nYTask::completing\n\tTaskID = " + getID() + "\n\tquery " + query;
+    private void generateCompletingReport1(String query, Document rawDecompositionData,
+                                           Element queryResultElement) {
+        if (logger.isDebugEnabled()) {
+            StringBuilder debug = new StringBuilder("\n\n\nYTask::completing\n\tTaskID = ");
+            debug.append(getID()).append("\n\tquery ").append(query);
             if (query.equals(getPreJoiningMIQuery())) {
-                debug = debug + "\tquery = [" + query + "] is pre-joining MI query.";
+                debug.append("\tquery = [").append(query).append("] is pre-joining MI query.");
             }
-
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-            String rawDataStr = out.outputString(rawDecompositionData).trim();
-            debug = debug + "\n\trawDecomositionData = " + rawDataStr;
-            String queryResultStr = out.outputString(queryResultElement).trim();
-            debug = debug + "\n\tresult = " + queryResultStr.trim();
+            debug.append("\n\trawDecompositionData = ");
+            debug.append(JDOMUtil.documentToString(rawDecompositionData));
+            debug.append("\n\tresult = ");
+            debug.append(JDOMUtil.elementToString(queryResultElement));
             logger.debug(debug);
         }
     }
@@ -615,8 +654,8 @@ public abstract class YTask extends YExternalNetElement {
 
 
     public synchronized void t_start(YPersistenceManager pmgr, YIdentifier child)
-            throws YSchemaBuildingException, YDataStateException, YPersistenceException,
-                   YQueryException, YStateException {
+            throws YDataStateException, YPersistenceException,
+            YQueryException, YStateException {
         if (t_isBusy()) {
             startOne(pmgr, child);
         }
@@ -636,7 +675,7 @@ public abstract class YTask extends YExternalNetElement {
 
     private synchronized void t_exit(YPersistenceManager pmgr)
             throws YDataStateException, YStateException, YQueryException,
-                   YSchemaBuildingException, YPersistenceException {
+            YPersistenceException {
         if (!t_isExitEnabled()) {
             throw new RuntimeException(this + "_exit() is not enabled.");
         }
@@ -654,15 +693,11 @@ public abstract class YTask extends YExternalNetElement {
         for (YExternalNetElement netElement : _removeSet) {
             if (netElement instanceof YTask) {
                 ((YTask) netElement).cancel(pmgr);
-            }
-            else if (netElement instanceof YCondition) {
-                ((YCondition) netElement).removeAll(pmgr); 
+            } else if (netElement instanceof YCondition) {
+                ((YCondition) netElement).removeAll(pmgr);
             }
         }
-        _mi_active.removeAll(pmgr);
-        _mi_complete.removeAll(pmgr);
-        _mi_entered.removeAll(pmgr);
-        _mi_executing.removeAll(pmgr);
+        purgeLocations(pmgr);
         switch (_splitType) {
             case YTask._AND:
                 doAndSplit(pmgr, i);
@@ -675,6 +710,7 @@ public abstract class YTask extends YExternalNetElement {
                 break;
         }
         i.removeLocation(pmgr, this);
+        _caseToDataMap.remove(i);
         logger.debug("YTask::" + getID() + ".exit() caseID(" + _i + ") " +
                 "_parentDecomposition.getInternalDataDocument() = "
                 + JDOMUtil.documentToString(_net.getInternalDataDocument()));
@@ -683,16 +719,13 @@ public abstract class YTask extends YExternalNetElement {
 
 
     private void performDataAssignmentsAccordingToOutputExpressions(YPersistenceManager pmgr)
-            throws YDataStateException, YStateException, YQueryException, YSchemaBuildingException, YPersistenceException {
+            throws YDataStateException, YQueryException, YPersistenceException {
         if (null == getDecompositionPrototype()) {
             return;
         }
-        if(logger.isInfoEnabled()) generateExitReport1();
-        for (Iterator iter = _localVariableNameToReplaceableOuptutData.keySet().iterator();
-             iter.hasNext();) {
-            String localVariableName = (String) iter.next();
-            Element queryResult =
-                    (Element) _localVariableNameToReplaceableOuptutData.get(localVariableName);
+        if (logger.isInfoEnabled()) generateExitReport1();
+        for (String localVariableName : _localVariableNameToReplaceableOutputData.keySet()) {
+            Element queryResult = _localVariableNameToReplaceableOutputData.get(localVariableName);
             //todo check that queryResult is valid instance of variable type
             _net.addData(pmgr, queryResult);
         }
@@ -702,21 +735,16 @@ public abstract class YTask extends YExternalNetElement {
             result = evaluateTreeQuery(
                     _multiInstAttr.getMIJoiningQuery(),
                     _groupedMultiInstanceOutputData);
-            if (_net.getSpecification().isSchemaValidating()) {
+            if (_net.getSpecification().getSchemaVersion().isSchemaValidating()) {
                 //if betaversion > beta3 then validate the results of the aggregation query
                 String uniqueInstanceOutputQuery = _multiInstAttr.getMIFormalOutputQuery();
                 String localVarThatQueryResultGetsAppliedTo =
                         _dataMappingsForTaskCompletion.get(uniqueInstanceOutputQuery);
-
-                YVariable var = _net.getLocalVariables().containsKey(
-                        localVarThatQueryResultGetsAppliedTo) ?
-                        (YVariable) _net.getLocalVariables().get(localVarThatQueryResultGetsAppliedTo) :
-                        (YVariable) _net.getInputParameters().get(localVarThatQueryResultGetsAppliedTo);
-
+                YVariable var = _net.getLocalOrInputVariable(localVarThatQueryResultGetsAppliedTo);
                 Element tempRoot = new Element(_decompositionPrototype.getID());
-                tempRoot.addContent((Element) result.clone());
+                tempRoot.addContent(result.clone());
                 try {
-                    _net.getSpecification().getDataValidator().validate(var,tempRoot,getID());
+                    _net.getSpecification().getDataValidator().validate(var, tempRoot, getID());
                 } catch (YDataValidationException e) {
 
                     YDataStateException f = new YDataStateException(
@@ -725,34 +753,32 @@ public abstract class YTask extends YExternalNetElement {
                             _net.getSpecification().getDataValidator().getSchema(), result,
                             e.getErrors(), getID(),
                             "BAD PROCESS DEFINITION. " +
-                            "Data extraction failed schema validation at task completion.");
+                                    "Data extraction failed schema validation at task completion.");
                     f.setStackTrace(e.getStackTrace());
                     throw f;
                 }
             }
-            if(logger.isInfoEnabled()) generateExitReports2(
+            if (logger.isInfoEnabled()) generateExitReports2(
                     _multiInstAttr.getMIJoiningQuery(),
                     _groupedMultiInstanceOutputData,
                     result);
             _net.addData(pmgr, result);
-            if(logger.isInfoEnabled()) generateExitReports3();
+            if (logger.isInfoEnabled()) generateExitReports3();
         }
     }
 
     private void generateExitReports3() {
-        if(logger.isInfoEnabled()) {
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+        if (logger.isInfoEnabled()) {
             logger.debug("\tresulting net data = " +
-                    out.outputString(_net.getInternalDataDocument()));
+                    JDOMUtil.documentToString(_net.getInternalDataDocument()));
         }
     }
 
     private void generateExitReports2(String miJoiningQuery, Document groupedOutputData, Element result) {
-        if(logger.isInfoEnabled()) {
+        if (logger.isInfoEnabled()) {
             logger.debug("\tmi JoiningQuery = " + miJoiningQuery);
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
-            logger.debug("\tmi groupedOutputData = " + out.outputString(groupedOutputData));
-            logger.debug("\tmi result = " + out.outputString(result));
+            logger.debug("\tmi groupedOutputData = " + JDOMUtil.documentToString(groupedOutputData));
+            logger.debug("\tmi result = " + JDOMUtil.elementToString(result));
         }
     }
 
@@ -760,7 +786,7 @@ public abstract class YTask extends YExternalNetElement {
         if (logger.isInfoEnabled()) {
             logger.debug("\n\nYTask::exit()");
             logger.debug("\tgetID = " + getID());
-            for (Element queryResult : _localVariableNameToReplaceableOuptutData.values()) {
+            for (Element queryResult : _localVariableNameToReplaceableOutputData.values()) {
                 logger.debug("\tqueryResult = " + JDOMUtil.elementToString(queryResult));
             }
         }
@@ -770,7 +796,7 @@ public abstract class YTask extends YExternalNetElement {
     private Set<String> getLocalVariablesForTaskCompletion() {
         Set<String> localVars = new HashSet<String>();
         for (String query : _dataMappingsForTaskCompletion.keySet()) {
-            if (! ExternalDBGatewayFactory.isExternalDBMappingExpression(query)) {
+            if (!ExternalDBGatewayFactory.isExternalDBMappingExpression(query)) {
                 localVars.add(_dataMappingsForTaskCompletion.get(query));
             }
         }
@@ -782,7 +808,7 @@ public abstract class YTask extends YExternalNetElement {
             throws YQueryException, YPersistenceException {
 
         logger.debug("Evaluating XQueries against Net: " +
-                     JDOMUtil.documentToString(_net.getInternalDataDocument()));
+                JDOMUtil.documentToString(_net.getInternalDataDocument()));
 
         // get & sort the flows according to their evaluation ordering,
         // and with the default flow occurring last.
@@ -797,10 +823,10 @@ public abstract class YTask extends YExternalNetElement {
             }
 
             if (evaluateSplitQuery(flow.getXpathPredicate(), tokenToSend)) {
-               ((YCondition) flow.getNextElement()).add(pmgr, tokenToSend);
-               return;
+                ((YCondition) flow.getNextElement()).add(pmgr, tokenToSend);
+                return;
             }
-         }
+        }
     }
 
 
@@ -809,7 +835,7 @@ public abstract class YTask extends YExternalNetElement {
         boolean noTokensOutput = true;
 
         logger.debug("Evaluating XQueries against Net: " +
-                     JDOMUtil.documentToString(_net.getInternalDataDocument()));
+                JDOMUtil.documentToString(_net.getInternalDataDocument()));
 
         // get & sort the flows according to their evaluation ordering,
         // and with the default flow occurring last.
@@ -819,8 +845,8 @@ public abstract class YTask extends YExternalNetElement {
         for (YFlow flow : flows) {
 
             if (evaluateSplitQuery(flow.getXpathPredicate(), tokenToSend)) {
-               ((YCondition) flow.getNextElement()).add(pmgr, tokenToSend);
-               noTokensOutput = false;
+                ((YCondition) flow.getNextElement()).add(pmgr, tokenToSend);
+                noTokensOutput = false;
             }
 
             if (flow.isDefaultFlow() && noTokensOutput) {
@@ -836,20 +862,29 @@ public abstract class YTask extends YExternalNetElement {
             for (YExternalNetElement element : getPostsetElements()) {
                 ((YCondition) element).add(pmgr, tokenToSend);
             }
-        }
-        else throw new RuntimeException("token is equal to null = " + tokenToSend);
+        } else throw new RuntimeException("token is equal to null = " + tokenToSend);
     }
 
 
     private boolean evaluateSplitQuery(String query, YIdentifier tokenToSend)
             throws YQueryException {
 
-        // check timer predicates first
+        // check for timer predicates first
         if (isTimerPredicate(query)) {
             return evaluateTimerPredicate(query, tokenToSend);
         }
 
-        // check if this query evaluates to true
+        // next check for plugin evaluators
+        PredicateEvaluator evaluator = PredicateEvaluatorCache.getEvaluator(query);
+        if (evaluator != null) {
+            try {
+                return evaluator.evaluate(getDecompositionPrototype(), query, tokenToSend);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        // so, a standard query - check if it evaluates to true
         String xquery = "boolean(" + query + ")";
         try {
             logger.debug("Evaluating XQuery: " + xquery);
@@ -859,19 +894,17 @@ public abstract class YTask extends YExternalNetElement {
                 if (result.equalsIgnoreCase("true")) {
                     logger.debug("XQuery evaluated TRUE.");
                     return true;
-                }
-                else if (result.equalsIgnoreCase("false")) {
+                } else if (result.equalsIgnoreCase("false")) {
                     logger.debug("XQuery evaluated FALSE.");
                     return false;
                 }
             }
 
             // either result is null or result is not a boolean string
-           logger.error("Evaluated XQuery did not return a singular boolean result.");
-           throw new YQueryException("Evaluated XQuery did not return a singular " +
-                   "boolean result. Evaluated: '" + xquery + "'");
-        }
-        catch (SaxonApiException e) {
+            logger.error("Evaluated XQuery did not return a singular boolean result.");
+            throw new YQueryException("Evaluated XQuery did not return a singular " +
+                    "boolean result. Evaluated: '" + xquery + "'");
+        } catch (SaxonApiException e) {
             logger.error("Invalid XQuery expression (" + xquery + ").", e);
             throw new YQueryException("Invalid XQuery expression (" + xquery + ").");
         }
@@ -882,24 +915,32 @@ public abstract class YTask extends YExternalNetElement {
     }
 
     private boolean evaluateTimerPredicate(String predicate, YIdentifier token) throws YQueryException {
-        YNetRunner runner = _workItemRepository.getNetRunner(token);
+        YNetRunner runner = getNetRunnerRepository().get(token);
         if (runner != null) {
             return runner.evaluateTimerPredicate(predicate);
-        }
-        else throw new YQueryException("Unable to determine current timer status for " +
+        } else throw new YQueryException("Unable to determine current timer status for " +
                 "predicate: " + predicate);
     }
 
 
+    protected YNetRunnerRepository getNetRunnerRepository() {
+        return YEngine.getInstance().getNetRunnerRepository();
+    }
+
+
+    protected YWorkItemRepository getWorkItemRepository() {
+        return YEngine.getInstance().getWorkItemRepository();
+    }
+
 
     public synchronized boolean t_enabled(YIdentifier id) {
 
-        if (_i != null)  return false;     // busy tasks are never enabled
+        if (_i != null) return false;     // busy tasks are never enabled
 
         switch (_joinType) {
             case YTask._AND:
                 for (YExternalNetElement condition : getPresetElements()) {
-                    if (! ((YCondition) condition).containsIdentifier()) {
+                    if (!((YCondition) condition).containsIdentifier()) {
                         return false;
                     }
                 }
@@ -936,15 +977,15 @@ public abstract class YTask extends YExternalNetElement {
 
         if (this.isMultiInstance()) {
             copy._multiInstAttr = (YMultiInstanceAttributes) _multiInstAttr.clone();
-            copy._multiInstAttr._myTask = copy;
+            copy._multiInstAttr.setTask(copy);
         }
         return copy;
     }
 
 
     protected abstract void startOne(YPersistenceManager pmgr, YIdentifier id)
-            throws YDataStateException, YSchemaBuildingException, YPersistenceException,
-                   YQueryException, YStateException;
+            throws YDataStateException, YPersistenceException,
+            YQueryException, YStateException;
 
 
     protected YIdentifier createFiredIdentifier(YPersistenceManager pmgr) throws YPersistenceException {
@@ -954,15 +995,24 @@ public abstract class YTask extends YExternalNetElement {
         return childCaseID;
     }
 
-    public void prepareDataForInstanceStarting(YIdentifier childInstanceID) throws YDataStateException, YStateException, YQueryException, YSchemaBuildingException {
+    public void prepareDataForInstanceStarting(YIdentifier childInstanceID)
+            throws YDataStateException, YStateException, YQueryException {
 
         logger.debug("--> prepareDataForInstanceStarting" + childInstanceID);
+        if (null != getDecompositionPrototype()) {
+            _caseToDataMap.put(childInstanceID, getStartingDataSnapshot());
+        }
+        logger.debug("<-- prepareDataForInstanceStarting");
+    }
 
-        if (null == getDecompositionPrototype())  return;
+
+    public Element getStartingDataSnapshot()
+            throws YDataStateException, YStateException, YQueryException {
+
+        logger.debug("--> getStartingDataSnapshot");
+        if (null == getDecompositionPrototype()) return null;
 
         Element dataForChildCase = produceDataRootElement();
-//       InstanceCache instanceCache = YEngine.getInstance().getInstanceCache();
-
         List<YParameter> inputParams =
                 new ArrayList<YParameter>(_decompositionPrototype.getInputParameters().values());
         Collections.sort(inputParams);
@@ -983,26 +1033,19 @@ public abstract class YTask extends YExternalNetElement {
                         specificMIData.setAttributes(parameter.getAttributes().toJDOM());
                     }
                     dataForChildCase.addContent(specificMIData.detach());
-       //             instanceCache.addParameter(childInstanceID, parameter,
-     //                                          expression, specificMIData);
-               }
+                }
+            } else {
+                Element result = ExternalDBGatewayFactory.isExternalDBMappingExpression(expression) ?
+                        performExternalDataExtraction(expression, parameter) :
+                        performDataExtraction(expression, parameter);
+
+                if (result != null) {
+                    if (YEngine.getInstance().generateUIMetaData()) {
+                        result.setAttributes(parameter.getAttributes().toJDOM());
+                    }
+                    dataForChildCase.addContent(result.clone());
+                }
             }
-            else {
-                Element result;
-                if (ExternalDBGatewayFactory.isExternalDBMappingExpression(expression)) {
-                    result = performExternalDataExtraction(expression, parameter);
-                }
-                else  {
-                    result = performDataExtraction(expression, parameter);
-                }
-                
-                if ((result != null) && YEngine.getInstance().generateUIMetaData()) {
-                    result.setAttributes(parameter.getAttributes().toJDOM());
-                }
-                dataForChildCase.addContent((Element) result.clone());
-   //             instanceCache.addParameter(childInstanceID, parameter,
-   //                                        expression, (Element) result.clone());
-          }
         }
 
         if (YEngine.getInstance().generateUIMetaData()) {
@@ -1013,65 +1056,65 @@ public abstract class YTask extends YExternalNetElement {
              */
             for (String attrName : getDecompositionPrototype().getAttributes().keySet()) {
                 String attrValue = getDecompositionPrototype().getAttributes().get(attrName);
-                if (STANDARD_TASK_ATTRIBUTES.indexOf("/" + attrName + "/") == -1) {
+                if (!STANDARD_TASK_ATTRIBUTES.contains("/" + attrName + "/")) {
                     dataForChildCase.setAttribute(attrName, attrValue);
                 }
             }
         }
-        _caseToDataMap.put(childInstanceID, dataForChildCase);
-        logger.debug("<-- prepareDataForInstanceStarting");
+        logger.debug("<-- getStartingDataSnapshot");
+        return dataForChildCase;
     }
 
 
-    protected Element performDataExtraction(String expression, YParameter inputParamName)
-            throws YSchemaBuildingException, YDataStateException, YQueryException, YStateException {
+    protected Element performDataExtraction(String expression, YParameter inputParam)
+            throws YDataStateException, YQueryException {
+
         Element result = evaluateTreeQuery(expression, _net.getInternalDataDocument());
 
-//        TODO: REVIEW THIS BIT OF CODE: (i) is xforms assumption correct in all cases?
-//        /**
-//         * AJH: If we have an empty element and the element is not mandatory and the task is not destined for
-//         * an XForm (assumed here if there are no UI meta-data attributes), don't pass the element out to the
-//         * task as input data.
-//         */
-        if (!inputParamName.isMandatory())
-//        {
-//            if (!_skipOutboundSchemaChecks)
-//            {
-//                if ((inputParamName.getAttributes() == null) || (inputParamName.getAttributes().size() == 0))
-//                {
-//                    if ((result.getChildren().size() == 0) && (result.getContent().size() ==0 ))
-//                    {
-//                        return null;
-//                    }
-//                }
-//            }
-//        }
+        // if the param id of empty complex type flag type, don't return the query result
+        // as input data if the flag is not currently set
+        if (inputParam.isEmptyTyped()) {
+            if (!isPopulatedEmptyTypeFlag(expression)) return null;
+        }
+
+        // else if we have an empty element and the element is not mandatory, don't pass
+        // the element out to the task as input data.
+        else if ((!inputParam.isRequired()) && (result.getChildren().size() == 0) &&
+                (result.getContentSize() == 0)) {
+            return null;
+        }
 
         /**
          * AJH: Allow option to inhibit schema validation for outbound data.
          *      Ideally need to support this at task level.
          */
-        if (_net.getSpecification().isSchemaValidating()) {
-            if (!skipOutboundSchemaChecks()) {
-                performSchemaValidationOverExtractionResult(expression, inputParamName, result); }
+        if (_net.getSpecification().getSchemaVersion().isSchemaValidating()
+                && (!skipOutboundSchemaChecks())) {
+            performSchemaValidationOverExtractionResult(expression, inputParam, result);
         }
         return result;
     }
 
 
+    protected boolean isPopulatedEmptyTypeFlag(String expression) {
+        Element elem = getElementForXQuery(_net.getInternalDataDocument(), expression);
+        return (elem != null) && (elem.getAttribute("__emptyComplexTypeFlag__") != null);
+    }
+
+
     protected Element performExternalDataExtraction(String expression, YParameter inputParam)
-            throws YStateException, YSchemaBuildingException, YDataStateException {
+            throws YStateException, YDataStateException {
         Element result = null;
         if (ExternalDBGatewayFactory.isExternalDBMappingExpression(expression)) {
             AbstractExternalDBGateway extractor =
                     ExternalDBGatewayFactory.getInstance(expression);
             if (extractor != null) {
                 Element netData = _net.getInternalDataDocument().getRootElement();
-                result = extractor.populateTaskParameter(this, inputParam, netData) ;
+                result = extractor.populateTaskParameter(this, inputParam, netData);
             }
         }
         if (result != null) {
-            if (_net.getSpecification().isSchemaValidating()) {
+            if (_net.getSpecification().getSchemaVersion().isSchemaValidating()) {
                 if (!skipOutboundSchemaChecks()) {
 
                     // remove any dynamic attributes for schema checking
@@ -1079,23 +1122,21 @@ public abstract class YTask extends YExternalNetElement {
                     performSchemaValidationOverExtractionResult(expression, inputParam, resultSansAttributes);
                 }
             }
-        }
-        else {
+        } else {
             throw new YStateException("External data pull failure.");
         }
         return result;
     }
 
-    
+
     private void performSchemaValidationOverExtractionResult(String expression,
-                                                YParameter param, Element result)
-            throws YSchemaBuildingException, YDataStateException {
+                                                             YParameter param, Element result)
+            throws YDataStateException {
         Element tempRoot = new Element(_decompositionPrototype.getID());
         try {
-            tempRoot.addContent((Element) result.clone());
+            tempRoot.addContent(result.clone());
             _net.getSpecification().getDataValidator().validate(param, tempRoot, getID());
-        }
-        catch (YDataValidationException e) {
+        } catch (YDataValidationException e) {
             YDataStateException f = new YDataStateException(
                     expression,
                     _net.getInternalDataDocument().getRootElement(),
@@ -1103,7 +1144,7 @@ public abstract class YTask extends YExternalNetElement {
                     tempRoot,
                     e.getErrors(), getID(),
                     "BAD PROCESS DEFINITION. " +
-                    "Data extraction failed schema validation at task starting.");
+                            "Data extraction failed schema validation at task starting.");
             f.setStackTrace(e.getStackTrace());
             throw f;
         }
@@ -1120,15 +1161,14 @@ public abstract class YTask extends YExternalNetElement {
         try {
             logger.debug("Evaluating XQuery: " + query);
             return SaxonUtil.evaluateTreeQuery(query, document);
-        }
-        catch (SaxonApiException e) {
+        } catch (SaxonApiException e) {
             YQueryException qe = new YQueryException(
                     "Something Wrong with Process Specification:\n" +
-                    "The engine failed to parse an invalid query.\n" +
-                    "Please check task:\n\t" +
-                    "id[ " + getID() + " ]\n\t" +
-                    "query: \n\t" + query + ".\n" +
-                    "Message from parser: [" + e.getMessage() + "]");
+                            "The engine failed to parse an invalid query.\n" +
+                            "Please check task:\n\t" +
+                            "id[ " + getID() + " ]\n\t" +
+                            "query: \n\t" + query + ".\n" +
+                            "Message from parser: [" + e.getMessage() + "]");
             qe.setStackTrace(e.getStackTrace());
             throw qe;
         }
@@ -1141,8 +1181,7 @@ public abstract class YTask extends YExternalNetElement {
         try {
             logger.debug("Evaluating XQuery: " + query);
             return SaxonUtil.evaluateListQuery(query, element);
-        }
-        catch (SaxonApiException e) {
+        } catch (SaxonApiException e) {
             YQueryException de = new YQueryException(e.getMessage());
             de.setStackTrace(e.getStackTrace());
             throw de;
@@ -1161,12 +1200,10 @@ public abstract class YTask extends YExternalNetElement {
 
 
     public synchronized void cancel(YPersistenceManager pmgr) throws YPersistenceException {
-        _mi_active.removeAll(pmgr);
-        _mi_complete.removeAll(pmgr);
-        _mi_entered.removeAll(pmgr);
-        _mi_executing.removeAll(pmgr);
+        purgeLocations(pmgr);
         if (_i != null) {
             _i.removeLocation(pmgr, this);
+            _caseToDataMap.remove(_i);
             _i = null;
         }
     }
@@ -1178,6 +1215,14 @@ public abstract class YTask extends YExternalNetElement {
         _i.removeChild(childID);
         _i.removeLocation(pmgr, this);
         _i = null;
+    }
+
+
+    private void purgeLocations(YPersistenceManager pmgr) throws YPersistenceException {
+        _mi_active.removeAll(pmgr);
+        _mi_complete.removeAll(pmgr);
+        _mi_entered.removeAll(pmgr);
+        _mi_executing.removeAll(pmgr);
     }
 
     public YInternalCondition getMIActive() {
@@ -1196,8 +1241,18 @@ public abstract class YTask extends YExternalNetElement {
         return _mi_executing;
     }
 
+    public List<YInternalCondition> getAllInternalConditions() {
+        List<YInternalCondition> icList = new Vector<YInternalCondition>();
+        icList.add(_mi_active);
+        icList.add(_mi_entered);
+        icList.add(_mi_complete);
+        icList.add(_mi_executing);
+        return icList;
+    }
+
     /**
      * The input must be map of [key="variableName", value="expression"]
+     *
      * @param map
      */
     public void setDataMappingsForTaskStarting(Map<String, String> map) {
@@ -1207,6 +1262,7 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * The input must be map of [key="expression", value="variableName"]
+     *
      * @param map
      */
     public void setDataMappingsForTaskCompletion(Map<String, String> map) {
@@ -1230,7 +1286,7 @@ public abstract class YTask extends YExternalNetElement {
 
         // adds process configuration information
         if (getDefaultConfiguration() != null) {
-        	  xml.append(getDefaultConfiguration());
+            xml.append(getDefaultConfiguration());
         }
         if (getConfiguration() != null) {
             xml.append(getConfiguration());
@@ -1301,13 +1357,12 @@ public abstract class YTask extends YExternalNetElement {
         }
 
         if (_timerParams != null) {
-            xml.append(timerParamsToXML());
+            xml.append(_timerParams.toXML());
         }
 
         if (_resourcingXML != null) {
-            xml.append(_resourcingXML) ;
-        }
-        else if (_resourcingSpec != null) {
+            xml.append(_resourcingXML);
+        } else if (_resourcingSpec != null) {
             xml.append(JDOMUtil.elementToString(_resourcingSpec));
         }
 
@@ -1337,20 +1392,23 @@ public abstract class YTask extends YExternalNetElement {
 
     private String decoratorTypeToString(int decType) {
         switch (decType) {
-            case _AND: return "and";
-            case _OR:  return "or";
-            case _XOR: return "xor";
+            case _AND:
+                return "and";
+            case _OR:
+                return "or";
+            case _XOR:
+                return "xor";
         }
         return "invalid";
     }
 
     private String writeExpressionMapping(String expression, String mapsTo) {
         StringBuilder xml = new StringBuilder("<mapping><expression query=\"");
-        xml.append(JDOMUtil.encodeEscapes(expression))
-           .append("\"/>")
-           .append("<mapsTo>")
-           .append(mapsTo)
-           .append("</mapsTo></mapping>");
+        xml.append(JDOMUtil.encodeEscapes(expression).replace("\n", "&#xA;"))
+                .append("\"/>")
+                .append("<mapsTo>")
+                .append(mapsTo)
+                .append("</mapsTo></mapping>");
         return xml.toString();
     }
 
@@ -1367,18 +1425,20 @@ public abstract class YTask extends YExternalNetElement {
          * AJH: Check if this task is to perform outbound schema validation. This is currently configured
          *      via the tasks UI MetaData.
          */
-        String attrVal = decomposition.getAttributes().get(PERFORM_OUTBOUND_SCHEMA_VALIDATION);
-
-        if("TRUE".equalsIgnoreCase(attrVal))
-        {
-            setSkipOutboundSchemaChecks(true);
+        if (decomposition != null) {
+            String attrVal = decomposition.getAttributes().get(
+                    PERFORM_OUTBOUND_SCHEMA_VALIDATION);
+            if ("TRUE".equalsIgnoreCase(attrVal)) {
+                setSkipOutboundSchemaChecks(true);
+            }
         }
     }
 
     /**
      * Connects the query to a decomposition enablement parameter.
-     * @param query a query applied to the net enablement variable in the net
-     *      containing this task.
+     *
+     * @param query     a query applied to the net enablement variable in the net
+     *                  containing this task.
      * @param paramName the enablement decomposition parameter to which to apply the result.
      */
     public void setDataBindingForEnablementParam(String query, String paramName) {
@@ -1387,18 +1447,20 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * Returns the query to a decomposition enablement parameter.
+     *
      * @param paramName the decomposition enablement variable.
      * @return the data binding query for that parameter.
      */
 
     public String getDataBindingForEnablementParam(String paramName) {
-      return _dataMappingsForTaskEnablement.get(paramName);
+        return _dataMappingsForTaskEnablement.get(paramName);
     }
 
     /**
      * Connects the query to a decomposition parameter.
-     * @param query a query applied to the net variables in the net containing
-     * this task.
+     *
+     * @param query     a query applied to the net variables in the net containing
+     *                  this task.
      * @param paramName the decomposition parameter to which to apply the result.
      */
     public void setDataBindingForInputParam(String query, String paramName) {
@@ -1407,17 +1469,19 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * Returns the query to a decomposition input parameter.
+     *
      * @param paramName the decomposition input parameter.
      * @return the data binding query for that parameter.
      */
 
     public String getDataBindingForInputParam(String paramName) {
-      return _dataMappingsForTaskStarting.get(paramName);
+        return _dataMappingsForTaskStarting.get(paramName);
     }
 
     /**
      * Binds an output expression of a decomposition to a net variable.
-     * @param query the ouptut expression belonging to the tasks decomposition
+     *
+     * @param query      the ouptut expression belonging to the tasks decomposition
      * @param netVarName the net scope variable to which to apply the result.
      */
     public void setDataBindingForOutputExpression(String query, String netVarName) {
@@ -1426,17 +1490,18 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * Returns the query to a decomposition output parameter.
+     *
      * @param paramName the decomposition output parameter.
      * @return the data binding query for that parameter.
      */
     public String getDataBindingForOutputParam(String paramName) {
-      for (String outputParameterQuery : _dataMappingsForTaskCompletion.keySet()) {
-        String outputParameter = _dataMappingsForTaskCompletion.get(outputParameterQuery);
-        if (paramName.equals(outputParameter)) {
-          return outputParameterQuery;
+        for (String outputParameterQuery : _dataMappingsForTaskCompletion.keySet()) {
+            String outputParameter = _dataMappingsForTaskCompletion.get(outputParameterQuery);
+            if (paramName.equals(outputParameter)) {
+                return outputParameterQuery;
+            }
         }
-      }
-      return null;
+        return null;
     }
 
     public String getInformation() {
@@ -1470,9 +1535,9 @@ public abstract class YTask extends YExternalNetElement {
                 result.append(_decompositionPrototype.getID());
                 result.append("</decompositionID>");
 
-		            result.append("<attributes>");
+                result.append("<attributes>");
                 result.append(_decompositionPrototype.getAttributes().toXMLElements());
-		            result.append("</attributes>");
+                result.append("</attributes>");
 
                 YAWLServiceGateway wsgw = (YAWLServiceGateway) _decompositionPrototype;
                 YAWLServiceReference ys = wsgw.getYawlService();
@@ -1502,8 +1567,7 @@ public abstract class YTask extends YExternalNetElement {
 
             if (_customFormURL != null) {
                 result.append(StringUtil.wrap(_customFormURL.toExternalForm(), "customform"));
-            }
-            else {
+            } else {
                 result.append("<customform/>");
             }
 
@@ -1518,6 +1582,7 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * Gets the version of the specification.
+     *
      * @return the specification version.
      */
     public String getSpecVersion() {
@@ -1546,16 +1611,13 @@ public abstract class YTask extends YExternalNetElement {
     //###########################  BEGIN VERIFICATION CODE  ################################
     //######################################################################################
 
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
-        messages.addAll(super.verify());
-        if (! (_splitType == _AND || _splitType == _OR || _splitType == _XOR)) {
-            messages.add(new YVerificationMessage(this, this + " Incorrect value for split type",
-                    YVerificationMessage.ERROR_STATUS));
+    public void verify(YVerificationHandler handler) {
+        super.verify(handler);
+        if (!(_splitType == _AND || _splitType == _OR || _splitType == _XOR)) {
+            handler.error(this, this + " has an incorrect value for split type");
         }
-        if (! (_joinType == _AND || _joinType == _OR || _joinType == _XOR)) {
-            messages.add(new YVerificationMessage(this, this + " Incorrect value for join type",
-                    YVerificationMessage.ERROR_STATUS));
+        if (!(_joinType == _AND || _joinType == _OR || _joinType == _XOR)) {
+            handler.error(this, this + " has an incorrect value for join type");
         }
         if (_splitType == _OR || _splitType == _XOR) {
             int defaultCount = 0;
@@ -1566,10 +1628,9 @@ public abstract class YTask extends YExternalNetElement {
                 if (flow.getEvalOrdering() != null) {
                     int thisOrdering = flow.getEvalOrdering();
                     if (thisOrdering == lastOrdering) {
-                        messages.add(new YVerificationMessage(this,
-                                this + " no two elements may posess the same " +
-                                "ordering (" + flow + ") for the same task.",
-                                YVerificationMessage.ERROR_STATUS));
+                        handler.error(this,
+                                this + " no two elements may possess the same " +
+                                        "ordering (" + flow + ") for the same task.");
                     }
                     lastOrdering = thisOrdering;
                 }
@@ -1578,147 +1639,122 @@ public abstract class YTask extends YExternalNetElement {
                 }
             }
             if (defaultCount != 1) {
-                messages.add(new YVerificationMessage(this, this + " the postset of any OR/XOR " +
-                        "split must have one default flow. (not " + defaultCount + ")",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, this + " the postset of any OR/XOR split must have" +
+                        " exactly one default flow (not " + defaultCount + ")");
             }
         }
         if (_multiInstAttr != null) {
-            messages.addAll(_multiInstAttr.verify());
+            _multiInstAttr.verify(handler);
         }
         for (YExternalNetElement element : _removeSet) {
             if (element == null) {
-                messages.add(new YVerificationMessage(this,
-                        this + " refers to a non existent element in its remove set.",
-                        YVerificationMessage.ERROR_STATUS));
-            }
-            else if (! element._net.equals(_net)) {
-                messages.add(new YVerificationMessage(this,
+                handler.error(this,
+                        this + " refers to a non existent element in its remove set.");
+            } else if (!element._net.equals(_net)) {
+                handler.error(this,
                         this + " and " + element + " must be contained in the same net."
-                        + " (container " + _net + " & " + element._net + ")",
-                        YVerificationMessage.ERROR_STATUS));
+                                + " (container " + _net + " & " + element._net + ")");
             }
         }
         if (_decompositionPrototype != null) {
-            messages.addAll(checkParameterMappings());
-        }
-        else {
+            checkParameterMappings(handler);
+        } else {
             if (_dataMappingsForTaskStarting.size() > 0) {
-                messages.add(new YVerificationMessage(
-                        this, "Syntax error for " + this + " to have startingMappings and no decomposition.",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, "Syntax error for " + this +
+                        " to have startingMappings and no decomposition.");
             }
             if (_dataMappingsForTaskCompletion.size() > 0) {
-                messages.add(new YVerificationMessage(
-                        this,
-                        "Syntax error for " + this + " to have completionMappings and no decomposition.",
-                        YVerificationMessage.ERROR_STATUS));
+                handler.error(this, "Syntax error for " + this +
+                        " to have completionMappings and no decomposition.");
             }
         }
-        return messages;
     }
 
-    private List<YVerificationMessage> checkParameterMappings() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
-        messages.addAll(checkInputParameterMappings());
-        messages.addAll(checkForDuplicateParameterMappings());
-        messages.addAll(checkOutputParameterMappings());
-        return messages;
+    private void checkParameterMappings(YVerificationHandler handler) {
+        checkInputParameterMappings(handler);
+        checkForDuplicateParameterMappings(handler);
+        checkOutputParameterMappings(handler);
     }
 
-    private List<YVerificationMessage> checkOutputParameterMappings() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
-        if (_net._specification.usesSimpleRootData()) {
-            messages.addAll(checkOutputParamsPreBeta4());
+    private void checkOutputParameterMappings(YVerificationHandler handler) {
+        if (_net._specification.getSchemaVersion().usesSimpleRootData()) {
+            checkOutputParamsPreBeta4(handler);
         }
 
         //check that each output query has valid syntax
         for (String nextQuery : _dataMappingsForTaskCompletion.keySet()) {
             String netVarNam = _dataMappingsForTaskCompletion.get(nextQuery);
-            messages.addAll(checkXQuery(nextQuery, netVarNam));
+            checkXQuery(nextQuery, netVarNam, handler);
         }
 
         //check that non existent local variables are not assigned output.
         for (String localVarName : getLocalVariablesForTaskCompletion()) {
             if (_net.getLocalVariables().get(localVarName) == null &&
                     _net.getInputParameters().get(localVarName) == null) {
-                messages.add(new YVerificationMessage(this,
+                handler.error(this,
                         "The task (id= " + getID() + ") claims to assign its " +
-                        "output to a net variable named (" + localVarName + ").  " +
-                        "However the containing net does not have " +
-                        "such a variable.",
-                        YVerificationMessage.ERROR_STATUS));
+                                "output to a net variable named (" + localVarName + ").  " +
+                                "However the containing net does not have " +
+                                "such a variable.");
             }
         }
-        return messages;
     }
 
 
-    private List<YVerificationMessage> checkForDuplicateParameterMappings() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
+    private void checkForDuplicateParameterMappings(YVerificationHandler handler) {
 
         //catch the case where several expressions map to the same decomposition input param
-        //The only case where the schema misses this is where the muilti-instance input
+        //The only case where the schema misses this is where the multi-instance input
         //is the same as one the regular variable mappings
         int numOfUniqueParamsMappedTo = new HashSet<String>(
                 _dataMappingsForTaskStarting.values()).size();
         int numParams = _dataMappingsForTaskStarting.size();
         if (numOfUniqueParamsMappedTo != numParams) {
-            messages.add(new YVerificationMessage(this,
-                    "A input parameter is used twice.  The task (id=" + getID() + ") " +
-                    "uses the same parameter through its multi-instance input " +
-                    "and its regular input.",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this,
+                    "An input parameter is used twice.  The task (id=" + getID() + ") " +
+                            "uses the same parameter through its multi-instance input " +
+                            "and its regular input.");
         }
 
         //check that the MI data output extract process does not map to a net variable that is
         //already mapped to by the said task.
-        //The only case where the schema misses this is where the muilti-instance output
+        //The only case where the schema misses this is where the multi-instance output
         //is applied to the same net variable as one of regular outputs.
         int numOfUniqueNetVarsMappedTo = new HashSet<String>(
                 _dataMappingsForTaskCompletion.values()).size();
         numParams = _dataMappingsForTaskCompletion.size();
         if (numOfUniqueNetVarsMappedTo != numParams) {
-            messages.add(new YVerificationMessage(this,
-                    "A output parameter is used twice.  The task (id=" + getID() + ") " +
-                    "uses the same parameter through its multi-instance output " +
-                    "and its regular output.",
-                    YVerificationMessage.ERROR_STATUS));
+            handler.error(this,
+                    "An output parameter is used twice.  The task (id=" + getID() + ") " +
+                            "uses the same parameter through its multi-instance output " +
+                            "and its regular output.");
         }
-        return messages;
     }
 
-    private List<YVerificationMessage> checkOutputParamsPreBeta4() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
+    private void checkOutputParamsPreBeta4(YVerificationHandler handler) {
 
         //check there is link to each to each output param(query).
         Set<String> outputQueriesAtDecomposition = _decompositionPrototype.getOutputQueries();
         Set<String> outputQueriesAtTask = getQueriesForTaskCompletion();
         for (String query : outputQueriesAtDecomposition) {
-            if (! outputQueriesAtTask.contains(query)) {
-                messages.add(new YVerificationMessage(this,
-                        this + " there exists an output" +
-                        " query(" + query + ") in " + _decompositionPrototype +
-                        " that is" + " not mapped to by this Task.",
-                        YVerificationMessage.ERROR_STATUS));
+            if (!outputQueriesAtTask.contains(query)) {
+                handler.error(this, this + " there exists an output" +
+                        " query (" + query + ") in " + _decompositionPrototype +
+                        " that is" + " not mapped to by this Task.");
             }
         }
         for (String query : outputQueriesAtTask) {
-            if (! outputQueriesAtDecomposition.contains(query)) {
-                messages.add(new YVerificationMessage(this,
-                        this + " there exists an output" +
-                        " query(" + query + ") in this Task that has no " +
+            if (!outputQueriesAtDecomposition.contains(query)) {
+                handler.error(this, this + " there exists an output" +
+                        " query (" + query + ") in this Task that has no " +
                         "corresponding mapping at its decomposition(" +
-                        _decompositionPrototype + ").",
-                        YVerificationMessage.ERROR_STATUS));
+                        _decompositionPrototype + ").");
             }
         }
-        return messages;
     }
 
 
-    private List<YVerificationMessage> checkInputParameterMappings() {
-        List<YVerificationMessage> messages = new ArrayList<YVerificationMessage>();
+    private void checkInputParameterMappings(YVerificationHandler handler) {
 
         //check that there is a link to each inputParam
         Set<String> inputParamNamesAtTask = getParamNamesForTaskStarting();
@@ -1726,23 +1762,22 @@ public abstract class YTask extends YExternalNetElement {
         //check that task input var maps to decomp input var
         for (String paramName : _decompositionPrototype.getInputParameterNames()) {
             String query = _dataMappingsForTaskStarting.get(paramName);
-            messages.addAll(checkXQuery(query, paramName));
+            checkXQuery(query, paramName, handler);
 
-            if (! inputParamNamesAtTask.contains(paramName)) {
-                messages.add(new YVerificationMessage(this,
+            if (!inputParamNamesAtTask.contains(paramName)) {
+                handler.error(this,
                         "The task (id= " + this.getID() + ")" +
-                        " needs to be connected with the input parameter (" +
-                        paramName + ")" + " of decomposition (" +
-                        _decompositionPrototype + ").",
-                        YVerificationMessage.ERROR_STATUS));
+                                " needs to be connected with the input parameter (" +
+                                paramName + ")" + " of decomposition (" +
+                                _decompositionPrototype + ").");
             }
         }
-        return messages;
     }
 
 
     /**
      * Indicates if schema validation is to be performed when starting the task.
+     *
      * @return whether or not to skip validation on task starting.
      */
     private boolean skipOutboundSchemaChecks() {
@@ -1751,6 +1786,7 @@ public abstract class YTask extends YExternalNetElement {
 
     /**
      * Defines if schema validation is to be performed when starting the task.
+     *
      * @param performOutboundSchemaChecks
      */
     private void setSkipOutboundSchemaChecks(boolean performOutboundSchemaChecks) {
@@ -1760,109 +1796,42 @@ public abstract class YTask extends YExternalNetElement {
 
     public String getResourcingXML() { return _resourcingXML; }
 
-    public void setResourcingXML(String xml) { _resourcingXML = xml ; }
+    public void setResourcingXML(String xml) {
+        _resourcingXML = xml;
+        setResourcingSpecs(JDOMUtil.stringToElement(xml));
+    }
 
 
-    public Element getResourcingSpecs() { return _resourcingSpec ; }
+    public Element getResourcingSpecs() { return _resourcingSpec; }
 
     public void setResourcingSpecs(Element resSpec) {
-        _resourcingSpec = resSpec ;
+        _resourcingSpec = resSpec;
     }
 
 
     public void setCustomFormURI(URL formURL) {
-        _customFormURL = formURL ;
+        _customFormURL = formURL;
     }
 
     public URL getCustomFormURL() { return _customFormURL; }
 
 
-    /*** TIMER SETTINGS ***/
+    /**
+     * TIMER SETTINGS **
+     */
 
-    public void setTimerParameters(String netParamName) {
-        initTimerParameters() ;
-        _timerParams.put("netparam", netParamName) ;
+    public void setTimerParameters(YTimerParameters timerParameters) {
+        _timerParams = timerParameters;
+        _timerVariable = (_timerParams != null) ? new YTimerVariable(this) : null;
     }
 
-
-    public void setTimerParameters(YWorkItemTimer.Trigger trigger, Date expiryTime) {
-        initTimerParameters() ;
-        _timerParams.put("trigger", trigger) ;
-        _timerParams.put("expiry", expiryTime) ;
-    }
-
-
-    public void setTimerParameters(YWorkItemTimer.Trigger trigger, long ticks,
-                                   YTimer.TimeUnit timeUnit) {
-        initTimerParameters() ;
-        _timerParams.put("trigger", trigger) ;
-        _timerParams.put("ticks", ticks) ;
-
-        if (timeUnit == null) timeUnit = YTimer.TimeUnit.MSEC ;
-
-        _timerParams.put("interval", timeUnit);
-    }
-
-    public void setTimerParameters(YWorkItemTimer.Trigger trigger, Duration duration) {
-        initTimerParameters() ;
-        _timerParams.put("trigger", trigger) ;
-        _timerParams.put("duration", duration) ;        
-    }
-
-    private void initTimerParameters() {
-        _timerParams = new HashMap<String, Object>() ;
-        _timerVariable = new YTimerVariable(this);
-    }
 
     public YTimerVariable getTimerVariable() {
         return _timerVariable;
     }
 
 
-    public Map getTimeParameters() { return _timerParams; }
-
-
-    public String timerParamsToXML() {
-        if (_timerParams == null) return null ;
-
-        StringBuilder xml = new StringBuilder("<timer>") ;
-
-        // if there's a net-level param specified, that's all we need
-        String netParam = (String) _timerParams.get("netparam");
-        if (netParam != null) {
-            xml.append(StringUtil.wrap(netParam, "netparam")) ;
-        }
-        else {
-            YWorkItemTimer.Trigger trigger =
-                                  (YWorkItemTimer.Trigger) _timerParams.get("trigger") ;
-            xml.append(StringUtil.wrap(trigger.name(), "trigger"));
-
-            // if there's an expiry time, get it and we're done
-            Date expiry = (Date) _timerParams.get("expiry") ;
-            if (expiry != null) {
-                Long dateAsLong = expiry.getTime();
-                xml.append(StringUtil.wrap(dateAsLong.toString(), "expiry"));
-            }
-            else {
-                // this is a duration timer
-                Duration duration = (Duration) _timerParams.get("duration");
-                if (duration != null) {
-                    xml.append(StringUtil.wrap(duration.toString(), "duration"));
-                }
-                else {
-                    // duration supplied as ticks / interval params
-                    xml.append("<durationparams>");
-                    Long ticks = (Long) _timerParams.get("ticks") ;
-                    YTimer.TimeUnit interval = (YTimer.TimeUnit) _timerParams.get("interval") ;
-                    xml.append(StringUtil.wrap(ticks.toString(), "ticks"));
-                    xml.append(StringUtil.wrap(interval.name(), "interval"));
-                    xml.append("</durationparams>");
-                }
-            }
-        }
-        xml.append("</timer>") ;
-        return xml.toString();
-    }
+    public YTimerParameters getTimerParameters() { return _timerParams; }
 
 
     // process configuration setters & getters

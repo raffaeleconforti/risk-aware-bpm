@@ -211,7 +211,7 @@ public class AvailableResourcingServiceProxyImplementation implements Resourcing
                         new ResourcingFilter(
                                 filter.getName(),
                                 filter.getDisplayName(),
-                                filter.getParams()
+                                (java.util.HashMap<String, String>) filter.getParams()
                         )
                 );
             }

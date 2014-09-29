@@ -16,7 +16,7 @@ import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 import javax.tools.JavaCompiler.CompilationTask;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.resourcing.rsInterface.WorkQueueGatewayClient;
 import org.yawlfoundation.yawl.sensors.language.YExpression;
 import org.yawlfoundation.yawl.sensors.language.functions.WorkQueueFacade;

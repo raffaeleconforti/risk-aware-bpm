@@ -1,12 +1,12 @@
-<%@ page import="org.jdom.Element" %>
+<%@ page import="org.jdom2.Element" %>
 <%@ page import="org.yawlfoundation.yawl.resourcing.rsInterface.WorkQueueGatewayClient" %>
-<%@ page import="org.jdom.output.XMLOutputter" %>
-<%@ page import="org.jdom.output.Format" %>
-<%@ page import="org.jdom.input.SAXBuilder" %>
+<%@ page import="org.jdom2.output.XMLOutputter" %>
+<%@ page import="org.jdom2.output.Format" %>
+<%@ page import="org.jdom2.input.SAXBuilder" %>
 <%@ page import="java.io.StringReader" %>
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -76,14 +76,19 @@
         session.setAttribute("handle", handle);
     }
 
-    // the workitem's data is found in the <data> 1st level element. Any appropriate
-    // xml parsing method can be used. Here we use JDOM (and ignore possible exceptions
-    // for simplicity).
+    // the workitem's original data is found in the <data> 1st level element. If the
+    // workitem has been previously saved, the saved data is stored in the <updateddata>
+    // 1st level element. So, we check if there is updated data, and if so show the user
+    // the updated data values; if not, show them the original data values.
+    //
+    // Any appropriate xml parsing method can be used to read the data. Here we use
+    // JDOM (and ignore possible exceptions for simplicity).
     Element wir = new SAXBuilder().build(new StringReader(itemXML)).getRootElement();
-    Element data = wir.getChild("data");
+    Element updatedData = wir.getChild("updateddata");
+    Element data = (updatedData.getContentSize() > 0) ? updatedData : wir.getChild("data");
 
     // one level down from data is the actual workitem data tree
-    Element wirData = (Element) data.getChildren().get(0);
+    Element wirData = data.getChildren().get(0);
 
     // if there was a problem getting the workitem's xml, the xml will contain an
     // error message instead. It can be tested like this:

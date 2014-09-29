@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -24,6 +24,7 @@ import com.sun.rave.web.ui.component.Label;
 import com.sun.rave.web.ui.component.TextArea;
 import com.sun.rave.web.ui.component.TextField;
 import com.sun.rave.web.ui.model.Option;
+import org.yawlfoundation.yawl.resourcing.jsf.FontUtil;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
@@ -74,7 +75,7 @@ public class DynFormComponentBuilder {
         String name = field.getName();
         SubPanel subPanel = new SubPanel();
         subPanel.setName(name);
-        subPanel.setId(_factory.createUniqueID("sub" + name));
+        subPanel.setId(createUniqueID("sub" + name));
         if ((! name.startsWith("choice")) && field.isFieldContainer())
             subPanel.getChildren().add(makeHeaderText(null, name)) ;
 
@@ -99,6 +100,7 @@ public class DynFormComponentBuilder {
                 spc.setOccursButtonsEnablement();
             }    
         }
+        subPanel.setVisible(! field.hasHideAttribute());
         return subPanel ;
     }
 
@@ -112,12 +114,16 @@ public class DynFormComponentBuilder {
         fieldList.add(label);
 
         String type = input.getDataTypeUnprefixed();
-        if (type.equals("boolean"))
+        if (input.isEmptyComplexTypeFlag() || type.equals("boolean")) {
             field = makeCheckbox(input);
+        }
         else {
             _hasCheckboxOnly = false;
             if (type.equals("date")) {
                 field = makeCalendar(input);
+            }
+            else if (type.equals("YDocumentType")) {
+                field = makeDocumentField(input, label);
             }
             else if (input.hasEnumeratedValues()) {
                 field = makeEnumeratedList(input);
@@ -128,7 +134,7 @@ public class DynFormComponentBuilder {
             else field = makeTextField(input);
         }
         fieldList.add(field);
-        label.setFor(field.getId());
+        if (! (field instanceof DocComponent)) label.setFor(field.getId());
         if (! focusSet) focusSet = setFocus(field) ;
         _componentFieldTable.put(field, input);            // store for validation later
 
@@ -220,7 +226,7 @@ public class DynFormComponentBuilder {
 
     public Label makeSimpleLabel(String text) {
         Label label = new Label() ;
-        label.setId(_factory.createUniqueID("lbl" + _factory.despace(text)));
+        label.setId(createUniqueID("lbl" + _factory.despace(text)));
         label.setText(parseText(text) + ": ");
         return label;
     }
@@ -228,7 +234,7 @@ public class DynFormComponentBuilder {
 
     public StaticText makeHeaderText(String text, String defText) {
         StaticText header = new StaticText() ;
-        header.setId(_factory.createUniqueID("stt" + defText));
+        header.setId(createUniqueID("stt" + defText));
         String headerText = (text != null) ? text : _factory.enspace(defText);
         header.setText(headerText);
         header.setStyleClass("dynFormPanelHeader");
@@ -242,48 +248,85 @@ public class DynFormComponentBuilder {
 
     public Checkbox makeCheckbox(DynFormField input) {
         Checkbox cbox = new Checkbox();
-        cbox.setId(_factory.createUniqueID("cbx" + input.getName()));
+        cbox.setId(createUniqueID("cbx" + input.getName()));
         cbox.setSelected((input.getValue() != null) &&
                           input.getValue().equalsIgnoreCase("true")) ;
         cbox.setDisabled(isDisabled(input));
         cbox.setStyleClass("dynformInput");
         cbox.setStyle(makeStyle(cbox, input)) ;
         cbox.setVisible(isVisible(input));
+        cbox.setToolTip(input.getToolTip());
         return cbox ;
     }
 
 
     public Calendar makeCalendar(DynFormField input) {
         Calendar cal = new Calendar();
-        cal.setId(_factory.createUniqueID("cal" + input.getName()));
-        cal.setSelectedDate(createDate(input.getValue()));
+        cal.setId(createUniqueID("cal" + input.getName()));
+        cal.setSelectedDate(createDate(input.getValue(), -1));       // default to today
         cal.setDateFormatPatternHelp("");
         cal.setDisabled(isDisabled(input));
-        cal.setMinDate(new Date(1));
-        cal.setMaxDate(getDate(25));
+        cal.setMinDate(getMinDate(input));
+        cal.setMaxDate(getMaxDate(input));
         cal.setColumns(15);
         cal.setStyleClass(getInputStyleClass(input));    
-        cal.setStyle(makeStyle(cal, input)) ;
+        cal.setStyle(makeStyle(cal, input));
         cal.setVisible(isVisible(input));
+        cal.setToolTip(input.getToolTip());
         return cal;
     }
 
-    private Date getDate(int yearAdj) {
-        GregorianCalendar result = new GregorianCalendar() ;
-        result.add(java.util.Calendar.YEAR, yearAdj);
-        return result.getTime();
+    
+    private Date getAdjustedDate(int period, int adjustment, Date startDate) {
+        GregorianCalendar greg = new GregorianCalendar();
+        if (startDate != null) greg.setTimeInMillis(startDate.getTime());
+        greg.add(period, adjustment);
+        return greg.getTime();
+    }
+
+
+    private Date getMinDate(DynFormField input) {
+        Date minDate = new Date(1);
+        DynFormFieldRestriction restriction = input.getRestriction();
+        if (restriction != null) {
+            if (restriction.hasMinInclusive()) {
+                minDate = createDate(restriction.getMinInclusive(), 1);   // def. 1/1/70
+            }
+            else if (restriction.hasMinExclusive()) {
+                minDate = createDate(restriction.getMinExclusive(), 1);
+                minDate = getAdjustedDate(java.util.Calendar.DAY_OF_MONTH, 1, minDate);
+            }
+        }
+        return minDate;
+    }
+
+
+    private Date getMaxDate(DynFormField input) {
+        Date maxDate = getAdjustedDate(java.util.Calendar.YEAR, 25, null);
+        DynFormFieldRestriction restriction = input.getRestriction();
+        if (restriction != null) {
+            if (restriction.hasMaxInclusive()) {
+                maxDate = createDate(restriction.getMaxInclusive(), maxDate.getTime());
+            }
+            else if (restriction.hasMaxExclusive()) {
+                maxDate = createDate(restriction.getMaxExclusive(), maxDate.getTime());
+                maxDate = getAdjustedDate(java.util.Calendar.DAY_OF_MONTH, -1, maxDate);
+            }
+        }
+        return maxDate;
     }
 
 
     public DropDown makeEnumeratedList(DynFormField input) {
         DropDown dropdown = new DropDown();
-        dropdown.setId(_factory.createUniqueID("cal" + input.getName()));
+        dropdown.setId(createUniqueID("cal" + input.getName()));
         dropdown.setStyleClass(getInputStyleClass(input));
         dropdown.setStyle(makeStyle(dropdown, input)) ;
         dropdown.setItems(getEnumeratedList(input));
-        dropdown.setSelected(input.getValue());
+        dropdown.setSelected(getEnumeratedListValue(input));
         dropdown.setDisabled(isDisabled(input));
         dropdown.setVisible(isVisible(input));
+        dropdown.setToolTip(input.getToolTip());
         return dropdown;
     }
 
@@ -297,10 +340,16 @@ public class DynFormComponentBuilder {
         return result;
     }
 
+    private String getEnumeratedListValue(DynFormField input) {
+        String value = input.getValue();
+        if (StringUtil.isNullOrEmpty(value)) value = null;     // nullify empty strings
+        return value;
+    }
+
 
     public TextArea makeTextArea(DynFormField input) {
         TextArea textarea = new TextArea();
-        textarea.setId(_factory.createUniqueID("txa" + input.getName()));
+        textarea.setId(createUniqueID("txa" + input.getName()));
         textarea.setStyleClass(getInputStyleClass(input));
         textarea.setStyle(makeStyle(textarea, input));
         textarea.setDisabled(isDisabled(input));
@@ -320,27 +369,39 @@ public class DynFormComponentBuilder {
 
     public TextField makeTextField(DynFormField input) {
         TextField textField = new TextField() ;
-        textField.setId(_factory.createUniqueID("txt" + input.getName()));
+        textField.setId(createUniqueID("txt" + input.getName()));
         textField.setStyleClass(getInputStyleClass(input));
         textField.setStyle(makeStyle(textField, input));
         textField.setDisabled(isDisabled(input));
         textField.setToolTip(input.getToolTip());
         textField.setVisible(isVisible(input));
-        if (textField.isVisible()) setMaxTextValueWidth(input, (String) textField.getText());
-        if (input.hasBlackoutAttribute()) {
-            textField.setText("");
-        }
-        else {
-            textField.setText(JDOMUtil.decodeEscapes(input.getValue()));
-        }
+        textField.setText(input.hasBlackoutAttribute() ? "" :
+                           JDOMUtil.decodeEscapes(input.getValue()));
+        if (textField.isVisible()) setMaxTextValueWidth(input, (String) textField.getText(), 0);
         input.setRestrictionAttributes();
         return textField ;
+    }
+
+    public DocComponent makeDocumentField(DynFormField input, Label label) {
+        DynFormField name = input.getSubField("name");
+        DynFormField id = input.getSubField("id");
+        TextField textField = makeTextField(name);
+        String uniqueID = createUniqueID("doc" + input.getName());
+        boolean inputOnly = input.isInputOnly();
+        DocComponent docField =
+                new DocComponent(id.getValue(), name.getValue(), uniqueID, textField, inputOnly);
+        if (isVisible(input)) setMaxTextValueWidth(input, (String) textField.getText(),
+                DocComponent.BTN_WIDTH * 2 + DocComponent.BTN_HSPACE);
+        docField.setId(uniqueID);
+        docField.setStyleClass("dynformDocComponent");
+        docField.setLabel(label);
+        return docField;
     }
 
 
     public RadioButton makeRadioButton(DynFormField input) {
         RadioButton rb = new RadioButton();
-        rb.setId(_factory.createUniqueID("rb" + input.getName()));
+        rb.setId(createUniqueID("rb" + input.getName()));
         rb.setLabel("");
         rb.setName(input.getChoiceID());               // same name means same rb group
         rb.setStyle(makeStyle(rb, input));
@@ -353,7 +414,7 @@ public class DynFormComponentBuilder {
 
     private StaticTextBlock makeStaticTextBlock(DynFormField input, String text) {
         StaticTextBlock block = new StaticTextBlock() ;
-        block.setId(_factory.createUniqueID("stb"));
+        block.setId(createUniqueID("stb"));
         block.setText(parseText(text));
         block.setStyle(String.format("position: absolute; text-align: left; left: 10px; %s;",
                 input.getUserDefinedFontStyle()));
@@ -364,7 +425,7 @@ public class DynFormComponentBuilder {
 
     private FlatPanel makeFlatPanel() {
         FlatPanel line = new FlatPanel();                                        
-        line.setId(_factory.createUniqueID("fpl"));
+        line.setId(createUniqueID("fpl"));
         line.setStyle("position: absolute; background-color: black; left: 10px; height: 2px;");
         return line;
     }
@@ -375,7 +436,7 @@ public class DynFormComponentBuilder {
         if (size.getHeight() < 0) return null;
        
         ImageComponent image = new ImageComponent();
-        image.setId(_factory.createUniqueID("img"));
+        image.setId(createUniqueID("img"));
         image.setUrl(imagePath);
         image.setHeight((int) size.getHeight());
         image.setWidth((int) size.getWidth());
@@ -421,8 +482,9 @@ public class DynFormComponentBuilder {
     }
 
 
-    private Date createDate(String dateStr) {
-        // set the date to the param's input value if possible, else default to today
+    private Date createDate(String dateStr, long defaultDate) {
+        // set the date to the param's input value if possible, else default to a
+        // date representation of the long defaultDate, or today if defaultDate < 0
         Date result = null;
 
         if (dateStr != null) {
@@ -430,9 +492,11 @@ public class DynFormComponentBuilder {
                 result = _sdf.parse(dateStr) ;
             }
             catch (ParseException pe) {
-                result = new Date();
+                result = (defaultDate > -1) ? new Date(defaultDate) : new Date();
             }
         }
+        else result = new Date();
+        
         return result ;
     }
 
@@ -468,8 +532,8 @@ public class DynFormComponentBuilder {
     }
 
 
-    private void setMaxTextValueWidth(DynFormField input, String text) {
-        _maxTextValueWidth = Math.max(_maxTextValueWidth, getTextWidth(input, text));
+    private void setMaxTextValueWidth(DynFormField input, String text, int buffer) {
+        _maxTextValueWidth = Math.max(_maxTextValueWidth, getTextWidth(input, text) + buffer);
     }
 
     public int getMaxTextValueWidth() {
@@ -503,6 +567,8 @@ public class DynFormComponentBuilder {
         // use field's udFont first, then form's, then default (via formfonts)
         Font font = input.getFont();
         if (font == null) font = _factory.getFormFonts().getFormFont();
-        return _factory.getTextWidth(text, font);
+        return FontUtil.getTextWidth(text, font);
     }
+
+    private String createUniqueID(String id) { return IdGenerator.uniquify(id); }
 }

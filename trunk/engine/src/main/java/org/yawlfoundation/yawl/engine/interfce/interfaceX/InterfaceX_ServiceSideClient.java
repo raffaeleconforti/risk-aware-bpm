@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.engine.interfce.interfaceX;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.interfce.Interface_Client;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
@@ -61,7 +61,7 @@ public class InterfaceX_ServiceSideClient extends Interface_Client {
      * Constructor.
      * @param backEndURIStr the back end uri of where to find
      * the engine.  A default deployment this value is
-     * http://localhost:8080/yawl/ib
+     * http://localhost:8080/yawl/ix
      */
     public InterfaceX_ServiceSideClient(String backEndURIStr) {
         _backEndURIStr = backEndURIStr;
@@ -82,31 +82,31 @@ public class InterfaceX_ServiceSideClient extends Interface_Client {
     }
 
 
-    public void updateWorkItemData(WorkItemRecord wir, Element data,
+    public String updateWorkItemData(WorkItemRecord wir, Element data,
                                      String sessionHandle) throws IOException {
         Map<String, String> params = prepareParamMap("updateWorkItemData", sessionHandle);
         params.put("workitemID", wir.getID());
         params.put("data", JDOMUtil.elementToString(data));
-        executePost(_backEndURIStr, params);
+        return executePost(_backEndURIStr, params);
     }
 
 
-    public void updateCaseData(String caseID, Element data, String sessionHandle)
+    public String updateCaseData(String caseID, Element data, String sessionHandle)
                                                                throws IOException {
         Map<String, String> params = prepareParamMap("updateCaseData", sessionHandle);
         params.put("caseID", caseID);
         params.put("data", JDOMUtil.elementToString(data));
-        executePost(_backEndURIStr, params);
+        return executePost(_backEndURIStr, params);
     }
 
 
-    public void forceCompleteWorkItem(WorkItemRecord wir, Element data,
+    public String forceCompleteWorkItem(WorkItemRecord wir, Element data,
                                  String sessionHandle) throws IOException {
         Map<String, String> params = prepareParamMap("completeWorkItem", sessionHandle);
         params.put("workitemID", wir.getID());
         params.put("data", JDOMUtil.elementToString(data));
         params.put("force", "true");
-        executePost(_backEndURIStr, params);
+        return executePost(_backEndURIStr, params);
     }
 
 
@@ -131,28 +131,29 @@ public class InterfaceX_ServiceSideClient extends Interface_Client {
         return Marshaller.unmarshalWorkItem(stripOuterElement(result));
     }
 
-    public void restartWorkItem(String workItemID, String sessionHandle)
+    public String restartWorkItem(String workItemID, String sessionHandle)
                                                            throws IOException {
         Map<String, String> params = prepareParamMap("restartWorkItem", sessionHandle);
         params.put("workitemID", workItemID);
-        executePost(_backEndURIStr, params);
+        return executePost(_backEndURIStr, params);
     }
 
 
-    public void startWorkItem(String workItemID, String sessionHandle)
+    public String startWorkItem(String workItemID, String sessionHandle)
                                                            throws IOException {
         Map<String, String> params = prepareParamMap("startWorkItem", sessionHandle);
         params.put("workitemID", workItemID);
-        executePost(_backEndURIStr, params);
+        return executePost(_backEndURIStr, params);
     }
 
 
-    public void cancelWorkItem(String workItemID, boolean fail, String sessionHandle)
+    public String cancelWorkItem(String workItemID, String data, boolean fail, String sessionHandle)
                                                            throws IOException {
         Map<String, String> params = prepareParamMap("cancelWorkItem", sessionHandle);
         params.put("workitemID", workItemID);
+        if (data != null) params.put("data", data);
         params.put("fail", String.valueOf(fail));
-        executePost(_backEndURIStr, params);
+        return executePost(_backEndURIStr, params);
     }
 
 }

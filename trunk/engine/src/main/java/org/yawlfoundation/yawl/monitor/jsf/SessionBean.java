@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -22,7 +22,7 @@ import com.sun.rave.web.ui.appbase.AbstractSessionBean;
 import com.sun.rave.web.ui.component.Button;
 import com.sun.rave.web.ui.component.Script;
 import com.sun.rave.web.ui.component.PanelLayout;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.engine.instance.CaseInstance;
 import org.yawlfoundation.yawl.engine.instance.ParameterInstance;
 import org.yawlfoundation.yawl.engine.instance.WorkItemInstance;
@@ -35,7 +35,7 @@ import org.yawlfoundation.yawl.monitor.sort.SensorOrder;
 import org.yawlfoundation.yawl.monitor.sort.TableSorter;
 import org.yawlfoundation.yawl.resourcing.datastore.eventlog.BaseEvent;
 import org.yawlfoundation.yawl.resourcing.datastore.eventlog.ResourceEvent;
-import org.yawlfoundation.yawl.resourcing.jsf.MessagePanel;
+import org.yawlfoundation.yawl.resourcing.jsf.*;
 import org.yawlfoundation.yawl.sensors.YSensorNotification;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
@@ -77,8 +77,7 @@ public class SessionBean extends AbstractSessionBean {
         return (ApplicationBean) getBean("ApplicationBean");
     }
 
-    @Override
-	public void init() {
+    public void init() {
         super.init();
 
         // *Note* - this code should NOT be modified
@@ -90,31 +89,11 @@ public class SessionBean extends AbstractSessionBean {
         }
     }
 
-    @Override
-	public void passivate() { }
+    public void passivate() { }
 
-    @Override
-	public void activate() { }
+    public void activate() { }
 
-    @Override
-	public void destroy() {
-
-        // getApplicationBean() will throw a NPE if the session has already
-        // timed out due to inactivity
-        try {
-            ApplicationBean app = getApplicationBean();
-            if (app != null) {
-              //  if (participant != null) {
-              //      app.removeSessionReference(participant.getID()) ;
-              //      app.removeLiveUser(userid);
-              //  }
-
-            }
-        }
-        catch (Exception e) {
-            // write to log that session has already expired
-        }
-    }
+    public void destroy() { }
 
     /*****************************************************************************/
 
@@ -280,7 +259,7 @@ public class SessionBean extends AbstractSessionBean {
 
     /********************************************************************************/
 
-    private final MonitorClient _monClient = getApplicationBean().getMonitorClient();
+    private MonitorClient _monClient = getApplicationBean().getMonitorClient();
 
     private PanelLayout transparentPanel = new PanelLayout();
 
@@ -315,7 +294,7 @@ public class SessionBean extends AbstractSessionBean {
     }
 
 
-    private final TableSorter _sorter = new TableSorter();
+    private TableSorter _sorter = new TableSorter();
 
     public void clearCaches() {
         initActiveCases();
@@ -324,7 +303,7 @@ public class SessionBean extends AbstractSessionBean {
 
     /*** ACTIVE CASES ***/
 
-    private final SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd H:mm:ss");
+    private SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd H:mm:ss");
 
     public String getStartupTime() {
         long startTime = _monClient.getStartupTime();
@@ -558,8 +537,7 @@ public class SessionBean extends AbstractSessionBean {
 
     class EngineLogEventTimeComparator implements Comparator<YLogEvent> {
 
-        @Override
-		public int compare(YLogEvent e1, YLogEvent e2) {
+        public int compare(YLogEvent e1, YLogEvent e2) {
             long difference = e1.getTimestamp() - e2.getTimestamp();
 
             // guard against integer overrun
@@ -569,8 +547,7 @@ public class SessionBean extends AbstractSessionBean {
 
     class ResourceLogEventTimeComparator implements Comparator<BaseEvent> {
 
-        @Override
-		public int compare(BaseEvent e1, BaseEvent e2) {
+        public int compare(BaseEvent e1, BaseEvent e2) {
             long difference = e1.get_timeStamp() - e2.get_timeStamp();
 
             // guard against integer overrun

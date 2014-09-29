@@ -184,7 +184,7 @@ public class DataVariable implements Serializable, Cloneable, Comparable<DataVar
   }
   
   public boolean isNumberType() {
-      return XSDType.getInstance().isNumericType(getDataType());
+      return XSDType.isNumericType(getDataType());
   }
 
   public boolean isYTimerType() {
@@ -201,7 +201,7 @@ public class DataVariable implements Serializable, Cloneable, Comparable<DataVar
 
 
   public static boolean isBaseDataType(String type) {
-    return XSDType.getInstance().isBuiltInType(type);  
+    return XSDType.isBuiltInType(type);
   }
   
   public static String[] getBaseDataTypes() {
@@ -210,7 +210,7 @@ public class DataVariable implements Serializable, Cloneable, Comparable<DataVar
 
   private static String[] makeBaseDataTypeArray() {
       List<String> typeList = new ArrayList<String>(
-                                  XSDType.getInstance().getBuiltInTypeList());
+                                  XSDType.getBuiltInTypeList());
       typeList.add(YAWL_SCHEMA_TIMER_TYPE);
       typeList.add(YAWL_SCHEMA_STRINGLIST_TYPE);
       Collections.sort(typeList, new StringIgnoreCaseComparator());

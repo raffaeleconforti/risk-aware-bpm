@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -22,7 +22,8 @@
      xmlns:f="http://java.sun.com/jsf/core"
      xmlns:ui="http://www.sun.com/web/ui">
 
-    <f:subview id="pfQueueUI">
+    <f:subview id="pfOrgData">
+
         <ui:label binding="#{pfOrgData.lblItems}"
                   for="lbxItems"
                   id="lblItems"
@@ -34,6 +35,7 @@
                     items="#{SessionBean.orgDataOptions}"
                     selected="#{SessionBean.orgDataChoice}"
                     onChange="common_timeoutSubmitForm(this.form, 'lbxItems');"
+                    onKeyPress="return disableEnterKey(event);"
                     styleClass="orgDataListbox"
                     valueChangeListener="#{pfOrgData.lbxItems_processValueChange}"/>
 
@@ -47,6 +49,7 @@
                       id="txtName"
                       styleClass="orgDataTextField"
                       style="left: 12px; top: 270px; width: 184px"
+                      onKeyPress="return disableEnterKey(event);"
                       trim="false"/>
 
         <ui:label binding="#{pfOrgData.lblMembers}"

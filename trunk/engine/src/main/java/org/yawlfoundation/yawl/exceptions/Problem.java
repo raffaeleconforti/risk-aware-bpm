@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -72,17 +72,10 @@ public class Problem implements Serializable {
         if (!(o instanceof Problem)) return false;
 
         final Problem warning = (Problem) o;
-
-        if (!_problemTime.equals(warning._problemTime)) return false;
-        if (!_source.equals(warning._source)) return false;
-
-        return true;
+        return _problemTime.equals(warning._problemTime) && _source.equals(warning._source);
     }
 
     public int hashCode() {
-        int result;
-        result = _source.hashCode();
-        result = 29 * result + _problemTime.hashCode();
-        return result;
+        return 29 * _source.hashCode() + _problemTime.hashCode();
     }
 }

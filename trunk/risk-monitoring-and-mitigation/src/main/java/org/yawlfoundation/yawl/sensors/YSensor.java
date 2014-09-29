@@ -15,8 +15,8 @@ import java.util.StringTokenizer;
 
 import net.sf.saxon.s9api.SaxonApiException;
 
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.resourcing.rsInterface.WorkQueueGatewayClient;
 import org.yawlfoundation.yawl.sensors.language.YExpression;
 import org.yawlfoundation.yawl.sensors.language.functions.WorkQueueFacade;

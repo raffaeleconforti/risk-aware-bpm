@@ -34,7 +34,7 @@ import org.deckfour.xes.factory.XFactoryNaiveImpl;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.riskPrediction.Annotations.RiskAnnotations;
 import org.yawlfoundation.yawl.sensors.SensorPredictor;
 import org.yawlfoundation.yawl.sensors.YSensor;

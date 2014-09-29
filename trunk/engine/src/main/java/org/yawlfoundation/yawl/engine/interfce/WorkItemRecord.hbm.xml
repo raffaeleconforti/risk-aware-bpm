@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  ~ Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+  ~ Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
   ~ The YAWL Foundation is a collaboration of individuals and
   ~ organisations who are committed to improving workflow technology.
   ~
@@ -18,7 +18,7 @@
   -->
 
 <!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
-          "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+          "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 
 <hibernate-mapping package="org.yawlfoundation.yawl.engine.interfce">
 
@@ -37,6 +37,8 @@
         <property name="_taskID" column="taskID" access="field"/>
         <property name="_uniqueID" column="uniqueID" access="field"/>
         <property name="_taskName" column="taskName" access="field"/>
+        <property name="_documentation" column="documentation" access="field" type="text"/>
+        <property name="_docoChanged" column="documentationChanged" access="field" type="boolean"/>
         <property name="_extendedAttributes" column="ExtendedAttributes" access="field" type="text"/>
         <property name="_allowsDynamicCreation" column="canCreate" access="field"/>
         <property name="_codelet" column="codelet" access="field"/>

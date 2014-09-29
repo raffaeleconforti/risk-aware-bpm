@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -96,6 +96,15 @@ public class YLogSpecification {
         this.rootNetID = rootNetID;
     }
 
+
+    public boolean equals(Object other) {
+        return (other instanceof YLogSpecification) &&
+                (this.getRowKey() == ((YLogSpecification) other).getRowKey());
+    }
+
+    public int hashCode() {
+        return (int) (31 * getRowKey()) % Integer.MAX_VALUE;
+    }
 
     public String toXML() {
         StringBuilder xml = new StringBuilder(210);

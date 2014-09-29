@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -49,8 +49,7 @@ public class AdministrationTask {
     public static final int TASKTYPE_CASE_EXTERNAL_EXCEPTION = 1;
     public static final int TASKTYPE_ITEM_EXTERNAL_EXCEPTION = 2;
 
-    private static Logger _log = Logger.getLogger(
-                                 "AdministrationTask");
+    private static Logger _log = Logger.getLogger(AdministrationTask.class);
 
 
     public AdministrationTask() {}                        // required for persistence

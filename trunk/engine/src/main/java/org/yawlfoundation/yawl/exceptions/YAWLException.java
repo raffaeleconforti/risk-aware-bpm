@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,9 +18,9 @@
 
 package org.yawlfoundation.yawl.exceptions;
 
-import org.jdom.Document;
-import org.jdom.JDOMException;
-import org.jdom.input.SAXBuilder;
+import org.jdom2.Document;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
 
 import java.io.IOException;
 
@@ -121,17 +121,16 @@ public class YAWLException extends Exception {
 
     /**
      * A convenience method that effectively rethrows the exceptions listed.
-     * Caveat: ALL 5 exceptions must appear in the throws clause of any methods that
+     * Caveat: ALL 4 exceptions must appear in the throws clause of any methods that
      * call this method.
      * @throws YStateException
      * @throws YDataStateException
      * @throws YQueryException
-     * @throws YSchemaBuildingException
      * @throws YPersistenceException
      */
 
     public void rethrow() throws YStateException, YDataStateException, YQueryException,
-                                 YSchemaBuildingException, YPersistenceException
+                                 YPersistenceException
     {
         if (this instanceof YStateException) {
             throw (YStateException) this;
@@ -139,8 +138,6 @@ public class YAWLException extends Exception {
             throw (YDataStateException) this;
         } else if (this instanceof YQueryException) {
             throw (YQueryException) this;
-        } else if (this instanceof YSchemaBuildingException) {
-            throw (YSchemaBuildingException) this;
         } else if (this instanceof YPersistenceException) {
             throw (YPersistenceException) this;
         }

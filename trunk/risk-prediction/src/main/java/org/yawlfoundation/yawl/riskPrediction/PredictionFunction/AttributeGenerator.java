@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XLog;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
 import org.yawlfoundation.yawl.riskPrediction.Annotations.TaskExecutionAnnotation;
 import org.yawlfoundation.yawl.riskPrediction.Annotations.TimeBetweenTasksAnnotation;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,28 +19,24 @@
 package org.yawlfoundation.yawl.engine;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
-import org.jdom.Element;
+import org.jdom2.Document;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.authentication.YClient;
 import org.yawlfoundation.yawl.elements.*;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
-import static org.yawlfoundation.yawl.engine.YWorkItemStatus.*;
-import org.yawlfoundation.yawl.engine.time.YTimer;
 import org.yawlfoundation.yawl.engine.time.YWorkItemTimer;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 import org.yawlfoundation.yawl.logging.*;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.Duration;
 import java.net.URL;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+import static org.yawlfoundation.yawl.engine.YWorkItemStatus.*;
 
 /**
  * 
@@ -55,7 +51,7 @@ public class YWorkItem {
 
     private static DateFormat _df = new SimpleDateFormat("MMM:dd, yyyy H:mm:ss");
     private static YEngine _engine = YEngine.getInstance();
-    private static YWorkItemRepository _workItemRepository = YWorkItemRepository.getInstance();
+    private YWorkItemRepository _workItemRepository = _engine.getWorkItemRepository();
     private YWorkItemID _workItemID;
     private String _thisID = null;
     private YSpecificationID _specID;
@@ -64,31 +60,33 @@ public class YWorkItem {
     private Date _firingTime;
     private Date _startTime;
 
-    private YAttributeMap _attributes;          // decomposition attributes
+    private YAttributeMap _attributes;                    // decomposition attributes
 
     private YWorkItemStatus _status;
-    private YWorkItemStatus _prevStatus = null;             // for worklet service.
+    private YWorkItemStatus _prevStatus = null;       // this item's next to last status
     private YClient _externalClient;                     // the 'started by' service/app
-    private String _externalClientStr;                        // for persistence
+    private String _externalClientStr;                   // for persistence
     private boolean _allowsDynamicCreation;
     private boolean _requiresManualResourcing;
-    private YWorkItem _parent;                             // this item's parent (if any)
-    private Set<YWorkItem> _children;                      // this item's kids (if any)
+    private YWorkItem _parent;                            // this item's parent (if any)
+    private Set<YWorkItem> _children;                     // this item's kids (if any)
     private Element _dataList;
     private String _dataString = null;                  // persisted version of datalist
 
     private String _deferredChoiceGroupID = null ;
 
-    private Map _timerParameters ;                         // timer extensions
+    private YTimerParameters _timerParameters ;                      // timer extensions
     private boolean _timerStarted ;
     private long _timerExpiry = 0;                     // set to expiry when timer starts
 
     private URL _customFormURL ;
     private String _codelet ;
-    private String _logPredicateCompletion ;               // set by services on checkin
+    private String _documentation;
+    private String _externalLogPredicate;                 // set by services on checkin
 
-    private YEventLogger _eventLog = YEventLogger.getInstance();
-    private Logger _log = Logger.getLogger(YWorkItem.class);
+
+    private final YEventLogger _eventLog = YEventLogger.getInstance();
+    private final Logger _log = Logger.getLogger(YWorkItem.class);
 
 
     // CONSTRUCTORS //
@@ -103,13 +101,13 @@ public class YWorkItem {
 
         _log.debug("Spec =" + specID + " WorkItem =" + workItemID.getTaskID());
 
-        createWorkItem(pmgr, specID, workItemID,
-                       isDeadlocked ? statusDeadlocked : statusEnabled,
+        createWorkItem(specID, workItemID, isDeadlocked ? statusDeadlocked : statusEnabled,
                        allowsDynamicCreation); 
 
         _task = task;
+        if (task != null) _documentation = task.getDocumentationPreParsed(); 
         _enablementTime = new Date();
-        _eventLog.logWorkItemEvent(this, _status, null);
+        _eventLog.logWorkItemEvent(pmgr, this, _status, null);
         if ((pmgr != null) && (! isDeadlocked)) pmgr.storeObject(this);
     }
 
@@ -122,13 +120,12 @@ public class YWorkItem {
 
         _log.debug("Spec =" + specID + " WorkItem =" + workItemID.getTaskID());
 
-        createWorkItem(pmgr, specID, workItemID, statusFired,
-                       allowsDynamicInstanceCreation);
+        createWorkItem(specID, workItemID, statusFired, allowsDynamicInstanceCreation);
 
         _enablementTime = workItemCreationTime;
         _firingTime = new Date();
         _parent = parent;
-        _eventLog.logWorkItemEvent(this, _status, createLogDataList("fired"));
+        _eventLog.logWorkItemEvent(pmgr, this, _status, createLogDataList("fired"));
         if (pmgr != null) pmgr.storeObject(this);
     }
 
@@ -138,17 +135,16 @@ public class YWorkItem {
     // PRIVATE METHODS //
 
     /** Called from constructors to set some mutual members */
-    private void createWorkItem(YPersistenceManager pmgr, YSpecificationID specificationID,
+    private void createWorkItem(YSpecificationID specificationID,
                                 YWorkItemID workItemID, YWorkItemStatus status,
                                 boolean allowsDynamicInstanceCreation)
                                 throws YPersistenceException {
         _workItemID = workItemID;
+        addToRepository();
+        set_thisID(_workItemID.toString() + "!" + _workItemID.getUniqueID());
         _specID = specificationID;
         _allowsDynamicCreation = allowsDynamicInstanceCreation;
         _status = status ;
-        set_thisID(_workItemID.toString() + "!" + _workItemID.getUniqueID());
-        
-        _workItemRepository.addNewWorkItem(this);
     }
 
 
@@ -164,10 +160,8 @@ public class YWorkItem {
         }
 
         // set final status, log event and remove from persistence
-        set_status(pmgr, completionStatus);
-        _eventLog.logWorkItemEvent(this, _status, createLogDataList(_status.name()));
-        if (pmgr != null) pmgr.deleteObject(this);
-
+        set_status(null, completionStatus);              // don't persist status update
+        logAndUnpersist(pmgr, this);
         completeParentPersistence(pmgr) ;
     }
 
@@ -176,22 +170,31 @@ public class YWorkItem {
     private void completeParentPersistence(YPersistenceManager pmgr)
             throws YPersistenceException {
 
-        // if all siblings are completed, then the parent is completed too
-        boolean parentcomplete = true;
-        Set<YWorkItem> siblings = _parent.getChildren();
+        synchronized(_parent) {                      // sequentially handle children
 
-        for (YWorkItem mysibling : siblings) {
-            if (mysibling.hasUnfinishedStatus()) {
-                parentcomplete = false;
-                break;
+            // if all siblings are completed, then the parent is completed too
+            boolean parentComplete = true;
+
+            if (_parent.getChildren().size() >  1) {  // short-circuit if not multi-task
+                for (YWorkItem mysibling : _parent.getChildren()) {
+                    if (mysibling.hasUnfinishedStatus()) {
+                        parentComplete = false;
+                        break;
+                    }
+                }
             }
-        }
 
-        if (parentcomplete) {
-            _eventLog.logWorkItemEvent(_parent, _status, createLogDataList(_status.name()));
-            if (pmgr != null) pmgr.deleteObject(_parent);
+            if (parentComplete) logAndUnpersist(pmgr, _parent);
         }
     }
+
+
+    private void logAndUnpersist(YPersistenceManager pmgr, YWorkItem item)
+            throws YPersistenceException {
+        _eventLog.logWorkItemEvent(pmgr, item, _status, createLogDataList(_status.name()));
+        if (pmgr != null) pmgr.deleteObject(item);
+    }
+
 
     /**
      * Finds the net-level param specified, then deconstructs its data to simple
@@ -203,62 +206,23 @@ public class YWorkItem {
      * @param data the case or net-level data object
      * @return true if the param is successfully unpacked.
      */
-    private boolean unpackTimerParams(String param, YCaseData data) {
-        if (data == null)
-            data = _engine.getCaseData(_workItemID.getCaseID());
-
+    private boolean unpackTimerParams(String param, YNetData data) {
+        if (data == null) data = _engine.getCaseData(_workItemID.getCaseID());
         if (data == null) return false ;                    // couldn't get case data
 
         Element eData = JDOMUtil.stringToElement(data.getData());
-
         Element timerParams = eData.getChild(param) ;
         if (timerParams == null) return false ;            // no var with param's name
 
-        String trigger = timerParams.getChildText("trigger");
-        if (trigger == null) {
-            _log.warn("Unable to set timer for workitem: " + getIDString() +
-                      ". Missing 'trigger' parameter." ) ;
-            return false ;                                 // no trigger value set
-        }
-        _timerParameters.put("trigger", YWorkItemTimer.Trigger.valueOf(trigger));
-
-        String expiry = timerParams.getChildText("expiry");
-        if (expiry == null) {
-            _log.warn("Unable to set timer for workitem: " + getIDString() +
-                      ". Missing 'expiry' parameter." ) ;
-            return false ;                                 // no expiry value set            
-        }
-
-        if (expiry.startsWith("P")) {                    // duration types start with P
-            try {
-                Duration duration = DatatypeFactory.newInstance().newDuration(expiry) ;
-                _timerParameters.put("duration", duration);
-                return true ;                        // OK - trigger & duration set
-            }
-            catch (DatatypeConfigurationException dce) {
-                // do nothing here - trickle down
-            }
-        }
-
-        DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         try {
-            Date date = sdf.parse(expiry);                        // test for dateTime
-            _timerParameters.put("expiry", date);
+            _timerParameters.parseYTimerType(timerParams);
             return true;
         }
-        catch (ParseException pe) {
-            // do nothing here - trickle down                
-        }
+        catch (IllegalArgumentException iae) {
+            _log.warn("Unable to set timer for workitem '" + getIDString() +
+                      "' - " + iae.getMessage()) ;
+            return false ;
 
-        try {
-            long time = Long.parseLong(expiry);                 // test for long value
-            _timerParameters.put("expiry", new Date(time));
-            return true ;                                 // OK - trigger & expiry set
-        }
-        catch (NumberFormatException nfe) {
-            _log.warn("Unable to set timer for workitem: " + getIDString() +
-                      ". Invalid 'expiry' parameter." ) ;
-            return false ;                             // not duration, dateTime or long
         }
     }
 
@@ -268,24 +232,26 @@ public class YWorkItem {
     // MISC METHODS //
 
     public void addToRepository() {
-        if ((_workItemRepository.getWorkItem(_workItemID.toString())) == null) {
-            _workItemRepository.addNewWorkItem(this);
-        }
+        _workItemRepository.add(this);
+        _engine.getInstanceCache().addWorkItem(this);
     }
 
 
     public YWorkItem createChild(YPersistenceManager pmgr, YIdentifier childCaseID)
            throws YPersistenceException {
         if (this._parent == null) {
+
+            // don't proceed if child caseid is invalid
             YIdentifier parentCaseID = getWorkItemID().getCaseID();
-            if (childCaseID.getParent() != parentCaseID) return null;
+            if ((childCaseID == null) || (childCaseID.getParent() == null) ||
+                    (! childCaseID.getParent().equals(parentCaseID))) return null;
 
             set_status(pmgr, statusIsParent);
 
             // if this parent has no children yet, create the set and log it
             if (_children == null) {
                 _children = new HashSet<YWorkItem>();
-                _eventLog.logWorkItemEvent(this, _status, createLogDataList("createChild"));
+                _eventLog.logWorkItemEvent(pmgr, this, _status, createLogDataList("createChild"));
             }
 
             YWorkItem childItem = new YWorkItem(pmgr,
@@ -308,8 +274,8 @@ public class YWorkItem {
     }
 
     // set by custom service on checkin, and immediately before workitem completes 
-    public void setLogPredicateCompletion(String predicate) {
-        _logPredicateCompletion = predicate;
+    public void setExternalLogPredicate(String predicate) {
+        _externalLogPredicate = predicate;
     }
 
     /** write data input values to event log */
@@ -321,14 +287,14 @@ public class YWorkItem {
         if (pmgr != null) pmgr.updateObject(this);
 
         YLogDataItemList logData = assembleLogDataItemList(data, true);
-        _eventLog.logDataEvent(this, "DataValueChange", logData);
+        _eventLog.logDataEvent(pmgr, this, "DataValueChange", logData);
     }
 
 
     /** write output data values to event log */
     public void completeData(YPersistenceManager pmgr, Document output) {
         YLogDataItemList logData = assembleLogDataItemList(output.getRootElement(), false);
-        _eventLog.logDataEvent(this, "DataValueChange", logData);
+        _eventLog.logDataEvent(pmgr, this, "DataValueChange", logData);
     }
 
 
@@ -338,9 +304,7 @@ public class YWorkItem {
             Map<String, YParameter> params =
                     _engine.getParameters(_specID, getTaskID(), input) ;
             String descriptor = (input ? "Input" : "Output") + "VarAssignment";
-            List list = data.getChildren();
-            for (Object o : list) {
-                Element child = (Element) o;
+            for (Element child : data.getChildren()) {
                 String name = child.getName();
                 String value = child.getValue();
                 YParameter param = params.get(name);
@@ -366,8 +330,7 @@ public class YWorkItem {
         if (getDataString() != null) {
             YNet net;
             try {
-                net = YWorkItemRepository.getInstance()
-                        .getNetRunner(getCaseID().getParent()).getNet();
+                net = _engine.getNetRunner(getCaseID().getParent()).getNet();
             }
             catch (Exception e) {
                 return;
@@ -404,10 +367,10 @@ public class YWorkItem {
         if (pmgr != null) {
 
             //remove the children first
-            Set children = getChildren();
+            Set<YWorkItem> children = getChildren();
             if (children != null) {
-                for (Object o : getChildren()) {
-                    deleteWorkItem(pmgr, (YWorkItem) o);
+                for (YWorkItem child : children) {
+                    deleteWorkItem(pmgr, child);
                 }
             }
 
@@ -419,61 +382,48 @@ public class YWorkItem {
     private void deleteWorkItem(YPersistenceManager pmgr, YWorkItem item)
             throws YPersistenceException {
         pmgr.deleteObject(item);
-        _eventLog.logWorkItemEvent(item, YWorkItemStatus.statusDeleted,
+        _eventLog.logWorkItemEvent(pmgr, item, YWorkItemStatus.statusDeleted,
                 createLogDataList(YWorkItemStatus.statusDeleted.name()));
+        _engine.getAnnouncer().announceCancelledWorkItem(item);
     }
 
 
-    public void checkStartTimer(YPersistenceManager pmgr, YCaseData data) {
-        YWorkItemTimer timer = null ;
+    public void checkStartTimer(YPersistenceManager pmgr, YNetData data)
+            throws YPersistenceException {
 
         if (_timerParameters != null) {
 
             // get values from net-level var if necessary
-            String netParam = (String) _timerParameters.get("netparam") ;
-            if (netParam != null)
+            String netParam = _timerParameters.getVariableName();
+            if (netParam != null) {
                 if (!unpackTimerParams(netParam, data)) return ;
-
-            YWorkItemTimer.Trigger trigger =
-                          (YWorkItemTimer.Trigger) _timerParameters.get("trigger") ;
+            }
 
             // if current workitem status equals trigger status, start the timer
-            if (((trigger == YWorkItemTimer.Trigger.OnEnabled) &&
-                                (_status.equals(statusEnabled))) ||
-                ((trigger == YWorkItemTimer.Trigger.OnExecuting) &&
-                                (_status.equals(statusExecuting)))) {
-
-                // try expiry type first
-                Date expiryTime = (Date) _timerParameters.get("expiry");
-                if (expiryTime != null) {
-                    timer = new YWorkItemTimer(_workItemID.toString(), expiryTime, (pmgr != null)) ;
-                    _timerStarted = true ;
-                }
-                else {
-                    // try duration type
-                    Duration duration = (Duration) _timerParameters.get("duration");
-                    if (duration != null) {
-                        timer = new YWorkItemTimer(_workItemID.toString(), duration, (pmgr != null));
-                        _timerStarted = true ;
+            if (_timerParameters.statusMatchesTrigger(_status)) {
+                YWorkItemTimer timer = null ;
+                switch (_timerParameters.getTimerType()) {
+                    case Expiry: {
+                        timer = new YWorkItemTimer(_workItemID.toString(),
+                                _timerParameters.getDate(), (pmgr != null)) ;
+                        break;
                     }
-                    else {
-                        // other duration settings
-                        long ticks = (Long) _timerParameters.get("ticks");
-                        if (ticks > 0) {
-                            YTimer.TimeUnit interval = (YTimer.TimeUnit)
-                                                      _timerParameters.get("interval") ;
-
-                            if (interval == null) interval = YTimer.TimeUnit.MSEC ;
-                            timer = new YWorkItemTimer(_workItemID.toString(),
-                                                       ticks, interval, (pmgr != null)) ;
-                            _timerStarted = true ;
-                        }
-                    }    
+                    case Duration: {
+                        timer = new YWorkItemTimer(_workItemID.toString(),
+                                _timerParameters.getDuration(), (pmgr != null));
+                        break;
+                    }
+                    case Interval: {
+                        timer = new YWorkItemTimer(_workItemID.toString(),
+                                _timerParameters.getTicks(), _timerParameters.getTimeUnit(), (pmgr != null)) ;
+                    }
                 }
-            }
-            if (_timerStarted && (timer != null)) {
-                _timerExpiry = timer.getEndTime();
-                setTimerActive();
+                if (timer != null) {
+                    _timerExpiry = timer.getEndTime();
+                    setTimerActive();
+                    _timerStarted = true ;
+                    if (pmgr != null) pmgr.storeObject(timer);
+                }
             }
         }
     }
@@ -494,9 +444,8 @@ public class YWorkItem {
 
     /** @return true if workitem is finished */
     public boolean hasFinishedStatus() {
-        return _status.equals(statusComplete) ||
+        return hasCompletedStatus() ||
                _status.equals(statusDeleted)  ||
-               _status.equals(statusForcedComplete) ||
                _status.equals(statusFailed) ;
     }
 
@@ -520,6 +469,25 @@ public class YWorkItem {
     }
 
 
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other instanceof YWorkItem) {         // instanceof = false if other is null
+            YWorkItem otherItem = (YWorkItem) other;
+            if (this.get_thisID() != null) {
+                return this.get_thisID().equals(otherItem.get_thisID());
+            }
+            else if (this.getWorkItemID() != null) {
+                return this.getWorkItemID().equals(otherItem.getWorkItemID());
+            }
+        }
+        return false;
+    }
+
+    public int hashCode() {
+        return (get_thisID() != null) ? get_thisID().hashCode() :
+               (getWorkItemID() != null) ? getWorkItemID().hashCode() : super.hashCode();
+    }
+
     /********************************************************************************/
 
     // STATUS CHANGE METHODS //
@@ -536,21 +504,42 @@ public class YWorkItem {
         _externalClient = client;
         if (! _timerStarted) checkStartTimer(pmgr, null) ;
         if (pmgr != null) pmgr.updateObject(this);
-        _eventLog.logWorkItemEvent(this, _status, createLogDataList(_status.name()));
+        _eventLog.logWorkItemEvent(pmgr, this, _status, createLogDataList(_status.name()));
     }
 
 
-    public void setStatusToComplete(YPersistenceManager pmgr, boolean force)
+    public void setStatusToComplete(YPersistenceManager pmgr,
+                                    YEngine.WorkItemCompletion completionFlag)
            throws YPersistenceException {
-        YWorkItemStatus completionStatus = force ? statusForcedComplete : statusComplete ;
+        YWorkItemStatus completionStatus;
+        switch (completionFlag) {
+            case Normal : completionStatus = statusComplete; break;
+            case Force  : completionStatus = statusForcedComplete; break;
+            case Fail   : completionStatus = statusFailed; break;
+            default     : completionStatus = statusComplete;
+        }
         completePersistence(pmgr, completionStatus) ;
     }
 
 
-    public void setStatusToDeleted(YPersistenceManager pmgr, boolean fail)
+    public void setStatusToDeleted(YPersistenceManager pmgr)
            throws YPersistenceException {
-        YWorkItemStatus completionStatus = fail ? statusFailed : statusDeleted ;
-        completePersistence(pmgr, completionStatus) ;
+        completePersistence(pmgr, statusDeleted) ;
+    }
+
+
+    /**
+     * announces and logs that this workitem has been discarded - ie. left in the net when
+     * the net completed
+     */
+    public void setStatusToDiscarded(YPersistenceManager pmgr) {
+        try {
+            set_status(null, statusDiscarded);
+            _eventLog.logWorkItemEvent(pmgr, this, _status, null);
+        }
+        catch (YPersistenceException ype) {
+            // no action required
+        }
     }
 
 
@@ -562,7 +551,7 @@ public class YWorkItem {
         }
 
         set_status(pmgr, statusFired);
-        _eventLog.logWorkItemEvent(this, _status, createLogDataList(_status.name()));
+        _eventLog.logWorkItemEvent(pmgr, this, _status, createLogDataList(_status.name()));
         _startTime = null;
         _externalClient = null;
         if (pmgr != null) pmgr.updateObject(this);
@@ -574,7 +563,7 @@ public class YWorkItem {
         if (hasLiveStatus()) {
             _prevStatus = _status ;
             set_status(pmgr, statusSuspended);
-            _eventLog.logWorkItemEvent(this, _status, createLogDataList(_status.name()));
+            _eventLog.logWorkItemEvent(pmgr, this, _status, createLogDataList(_status.name()));
         }
         else throw new RuntimeException(this + " [when current status is \""
                                 + _status + "\" it cannot be moved to \"Suspended\".]");
@@ -585,7 +574,7 @@ public class YWorkItem {
             throws YPersistenceException {
         set_status(pmgr, _prevStatus);
         _prevStatus = null ;
-        _eventLog.logWorkItemEvent(this, "resume", createLogDataList(_status.name()));
+        _eventLog.logWorkItemEvent(pmgr, this, "resume", createLogDataList("resume"));
     }
 
 
@@ -598,6 +587,8 @@ public class YWorkItem {
     public YWorkItem get_parent() { return _parent; }
 
     public Set get_children() { return _children; }
+
+    public boolean hasChildren() { return _children != null; }
 
     public void add_child(YWorkItem child) { _children.add(child); }
 
@@ -695,7 +686,7 @@ public class YWorkItem {
     }
 
 
-    public void set_status(YPersistenceManager pmgr, YWorkItemStatus status)
+    private void set_status(YPersistenceManager pmgr, YWorkItemStatus status)
                                                          throws YPersistenceException {
         _engine.getAnnouncer().announceWorkItemStatusChange(this, _status, status);
         _status = status;
@@ -759,9 +750,9 @@ public class YWorkItem {
 
     public YSpecificationID getSpecificationID() { return _specID ; }
 
-    public Map getTimerParameters() { return _timerParameters; }
+    public YTimerParameters getTimerParameters() { return _timerParameters; }
 
-    public void setTimerParameters(Map params) {
+    public void setTimerParameters(YTimerParameters params) {
         _timerParameters = params;
     }
 
@@ -796,7 +787,7 @@ public class YWorkItem {
     }
 
     public YNetRunner getNetRunner() {
-        return _workItemRepository.getNetRunner(_workItemID.getCaseID()) ;
+        return _engine.getNetRunnerRepository().get(this);
     }
 
 
@@ -809,7 +800,12 @@ public class YWorkItem {
 
     public YTask getTask() { return _task; }
 
-    public void setTask(YTask task) { _task = task; }    
+    public void setTask(YTask task) { _task = task; }
+
+
+    public String getDocumentation() {
+        return (_parent != null) ? _parent.getDocumentation() : _documentation;
+    }
 
     public String toXML() {
         StringBuilder xml = new StringBuilder("<workItem");
@@ -819,6 +815,7 @@ public class YWorkItem {
         xml.append(StringUtil.wrap(getCaseID().toString(), "caseid"));
         xml.append(StringUtil.wrap(getUniqueID(), "uniqueid"));
         xml.append(StringUtil.wrap(_task.getName(), "taskname"));
+        xml.append(StringUtil.wrap(getDocumentation(), "documentation"));
         if (_specID.getIdentifier() != null)
             xml.append(StringUtil.wrap(_specID.getIdentifier(), "specidentifier"));
 
@@ -851,11 +848,12 @@ public class YWorkItem {
             }    
         }
         if (_timerParameters != null) {
-            YWorkItemTimer.Trigger trigger = (YWorkItemTimer.Trigger) _timerParameters.get("trigger");
+            YWorkItemTimer.Trigger trigger = _timerParameters.getTrigger();
             if (trigger != null) {
                 String triggerName = trigger.name();
                 xml.append(StringUtil.wrap(triggerName, "timertrigger"));
-                xml.append(StringUtil.wrap(String.valueOf(_timerExpiry), "timerexpiry"));
+                long expiry = _timerExpiry > 0 ? _timerExpiry : _parent.getTimerExpiry();
+                xml.append(StringUtil.wrap(String.valueOf(expiry), "timerexpiry"));
             }    
         }
         if (_customFormURL != null) {
@@ -872,49 +870,85 @@ public class YWorkItem {
         return xml.toString();
     }
 
+    
     private YLogDataItemList createLogDataList(String tag) {
         YLogDataItemList itemList = new YLogDataItemList();
         if (_externalClient != null) {
             itemList.add(new YLogDataItem("OwnerService", tag,
                     _externalClient.getUserName(), "string"));
         }
-
-        if (tag.equals(statusExecuting.name()) || tag.equals(statusComplete.name())) {
-            YLogDataItem dataItem = getLogPredicate(YWorkItemStatus.valueOf(tag));
+        if (tag.equals(statusExecuting.name())) {
+            YLogDataItem dataItem = getDecompLogPredicate(YWorkItemStatus.valueOf(tag));
             if (dataItem != null) itemList.add(dataItem);
         }
-
+        else if (tag.equals(statusComplete.name()) || tag.equals(statusForcedComplete.name())) {
+            itemList.addAll(getCompletionPredicates());
+        }
         return (itemList.isEmpty()) ? null : itemList;
     }
 
-    private YLogDataItem getLogPredicate(YWorkItemStatus itemStatus) {
+
+    private YLogDataItemList getCompletionPredicates() {
+        YLogDataItemList completionList = new YLogDataItemList();
+        YLogDataItem completionItem = null;
+        if (_externalLogPredicate != null) {
+            if (_externalLogPredicate.startsWith("<logdataitemlist>")) {
+                completionList.fromXML(_externalLogPredicate);
+                for (YLogDataItem item : completionList) {
+                    if (item.getName().equals("Complete")) {
+                        completionItem = item;
+                        break;
+                    }
+                }
+            }
+            else if (_externalLogPredicate.startsWith("<logdataitem>")) {
+                YLogDataItem item = new YLogDataItem(_externalLogPredicate);
+                completionList.add(item);
+                if (item.getName().equals("Complete")) completionItem = item;
+            }
+            else {
+                completionItem = new YLogDataItem("Predicate", "External",
+                        _externalLogPredicate, "string");
+                completionList.add(completionItem);
+            }
+        }
+        if (completionItem != null) {
+            completionItem.setValue(
+                    new YLogPredicateWorkItemParser(this).parse(completionItem.getValue()));
+        }
+        else {
+            completionItem = getDecompLogPredicate(YWorkItemStatus.statusComplete);
+            if (completionItem != null) completionList.add(completionItem);
+        }
+        return completionList;
+    }
+
+
+    private YLogDataItem getDecompLogPredicate(YWorkItemStatus itemStatus) {
         YLogDataItem dataItem = null;
-        YDecomposition decomp = _task.getDecompositionPrototype();
-        if (decomp != null) {
-            YLogPredicate logPredicate = decomp.getLogPredicate();
-            if (logPredicate != null) {
-                String predicate;
-                if (itemStatus.equals(YWorkItemStatus.statusExecuting)) {
-                    predicate = logPredicate.getParsedStartPredicate(this);
-                }
-                else {
-                    String rawPredicate;
-                    if (_logPredicateCompletion != null) {   // means a service pre-parse
-                        rawPredicate = _logPredicateCompletion;
-                    }
-                    else {
-                        rawPredicate = logPredicate.getCompletionPredicate();
-                    }
-                    predicate = new YLogPredicateWorkItemParser(this).parse(rawPredicate);
-                }
-                if (predicate != null) {
-                    dataItem = new YLogDataItem("Predicate", itemStatus.name(),
+        String predicate = null;
+        YLogPredicate logPredicate = getDecompLogPredicate();
+        if (logPredicate != null) {
+           if (itemStatus.equals(YWorkItemStatus.statusExecuting)) {
+               predicate = logPredicate.getParsedStartPredicate(this);
+           }
+           else if (itemStatus.equals(YWorkItemStatus.statusComplete)) {
+               predicate = logPredicate.getParsedCompletionPredicate(this);
+           }
+           if (predicate != null) {
+                dataItem = new YLogDataItem("Predicate", itemStatus.name(),
                             predicate, "string");
-                }
             }
         }
         return dataItem ;
     }
+
+
+    private YLogPredicate getDecompLogPredicate() {
+        YDecomposition decomp = _task.getDecompositionPrototype();
+        return (decomp != null) ? decomp.getLogPredicate() : null;
+    }
+
 
     private YLogDataItem getDataLogPredicate(YParameter param, boolean input) {
         YLogDataItem dataItem = null;

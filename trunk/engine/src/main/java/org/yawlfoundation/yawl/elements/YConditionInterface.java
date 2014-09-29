@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -38,46 +38,46 @@ public interface YConditionInterface {
      * @param identifier the identifier in question.
      * @return true iff this contains identifier.
      */
-    public boolean contains(YIdentifier identifier);
+    boolean contains(YIdentifier identifier);
 
     /**
      * Check whether a condition has at least one identifier.
      * @return true iff this contains one or more identifier.
      */
-    public boolean containsIdentifier();
+    boolean containsIdentifier();
 
     /**
      * Get the number of identifiers in a condition that match the specified identifier.
      * @param identifier the identifier in question.
      * @return the number of equal identifiers in the condition.
      */
-    public int getAmount(YIdentifier identifier);
+    int getAmount(YIdentifier identifier);
 
     /**
      * Get all the identifiers in a condition.
      * @return a List of the identifiers in the condition.
      */
-    public List<YIdentifier> getIdentifiers();
+    List<YIdentifier> getIdentifiers();
 
     /**
      * Remove one identifier from the condition. If there are none to remove
-     * then make no change to the condition's org.yawlfoundation.yawl.risk.state.
+     * then make no change to the condition's state.
      * @param pmgr an instantiated persistence manager object.
      * @return the identifier that has been removed.
      * @throws RuntimeException if there's a problem removing the identifier.
      * @throws YPersistenceException if there's a problem persisting the change.
      */
-    public YIdentifier removeOne(YPersistenceManager pmgr) throws RuntimeException, YPersistenceException;
+    YIdentifier removeOne(YPersistenceManager pmgr) throws RuntimeException, YPersistenceException;
 
     /**
      * Remove one identifier equal to the specified identifier from the condition.
      * If there are none to remove, or none matching the specified identifier, then
-     * make no change to the condition's org.yawlfoundation.yawl.risk.state.
+     * make no change to the condition's state.
      * @param pmgr an instantiated persistence manager object.
      * @param identifier an identifier matching the one to be removed.
      * @throws YPersistenceException if there's a problem persisting the change.
      */
-    public void removeOne(YPersistenceManager pmgr, YIdentifier identifier) throws YPersistenceException;
+    void removeOne(YPersistenceManager pmgr, YIdentifier identifier) throws YPersistenceException;
 
     /**
      * Remove a specified number of identifiers equal to the specified identifier
@@ -86,10 +86,10 @@ public interface YConditionInterface {
      * @param identifier an identifier matching the ones to be removed.
      * @param amount the number of matching identifiers to remove.
      * @throws YStateException if the amount specified is greater than the number of identifiers
-     * held inside the condition, and furthermore no change will be made to the org.yawlfoundation.yawl.risk.state of this.
+     * held inside the condition, and furthermore no change will be made to the state of this.
      * @throws YPersistenceException if there's a problem persisting the change.
      */
-    public void remove(YPersistenceManager pmgr, YIdentifier identifier, int amount) throws YStateException, YPersistenceException;
+    void remove(YPersistenceManager pmgr, YIdentifier identifier, int amount) throws YStateException, YPersistenceException;
 
     /**
      * Remove all the identifiers that match the specified identifier.
@@ -97,14 +97,14 @@ public interface YConditionInterface {
      * @param identifier an identifier matching the ones to be removed.
      * @throws YPersistenceException if there's a problem persisting the change.
      */
-    public void removeAll(YPersistenceManager pmgr, YIdentifier identifier) throws YPersistenceException;
+    void removeAll(YPersistenceManager pmgr, YIdentifier identifier) throws YPersistenceException;
 
     /**
      * Remove all the identifiers in the condition.
      * @param pmgr an instantiated persistence manager object.
      * @throws YPersistenceException if there's a problem persisting the change.
      */
-    public void removeAll(YPersistenceManager pmgr) throws YPersistenceException;
+    void removeAll(YPersistenceManager pmgr) throws YPersistenceException;
 
     /**
      * Add an identifier to the condition.
@@ -112,6 +112,6 @@ public interface YConditionInterface {
      * @param id the identifier to add.
      * @throws YPersistenceException if there's a problem persisting the change.
      */
-    public void add(YPersistenceManager pmgr, YIdentifier id) throws YPersistenceException;
+    void add(YPersistenceManager pmgr, YIdentifier id) throws YPersistenceException;
 
 }

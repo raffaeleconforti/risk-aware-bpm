@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,52 +19,59 @@
 package org.yawlfoundation.yawl.resourcing.util;
 
 import org.apache.log4j.Logger;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.interfce.TaskInformation;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
 import org.yawlfoundation.yawl.resourcing.codelets.AbstractCodelet;
 import org.yawlfoundation.yawl.resourcing.codelets.CodeletExecutionException;
-import org.yawlfoundation.yawl.resourcing.codelets.CodeletFactory;
 
 import java.text.MessageFormat;
 import java.util.List;
 
 /**
- * Executes a codelet in a separate thread, and announces its completion when done
+ * Executes a codelet in a separate thread, and announces its completion when done.
+ *
  * @author Michael Adams
  * @date 3/09/2010
  */
 public class CodeletRunner implements Runnable {
 
-    private WorkItemRecord _wir;
-    private String _codeletName;
+    private WorkItemRecord _wir;                                 // the 'owner' workitem
     private TaskInformation _taskInfo;
     private AbstractCodelet _codelet;
-    private boolean _init;
+    private boolean _init;                                 // is this an init or a resume
     private Logger _log = Logger.getLogger(this.getClass());
 
-    public CodeletRunner(WorkItemRecord wir, TaskInformation taskInfo, boolean resume) {
+    
+    public CodeletRunner(WorkItemRecord wir, TaskInformation taskInfo, boolean init) {
         _wir = wir;
-        _codeletName = wir.getCodelet();
         _taskInfo = taskInfo;
-        _init = resume;
+        _init = init;
     }
 
 
+    /**
+     * Runs the codelet referenced by the work item passed to the constructor.
+     */
     public void run() {
+        String codeletName = _wir.getCodelet();
         Element result = null;
+        ResourceManager rm = ResourceManager.getInstance();
 
         try {
 
-            // get params
+            if (codeletName == null) throw new CodeletExecutionException("Codelet name is null.");
+
+            // get the workitem's data parameters
             List<YParameter> inputs = _taskInfo.getParamSchema().getInputParams();
             List<YParameter> outputs = _taskInfo.getParamSchema().getOutputParams();
 
             // get class instance
-            _codelet = CodeletFactory.getInstance(_codeletName);
+            _codelet = PluginFactory.newCodeletInstance(codeletName);
             if (_codelet != null) {
+                _codelet.setWorkItem(_wir);
                 if (_init)
                     _codelet.init();
                 else
@@ -72,15 +79,17 @@ public class CodeletRunner implements Runnable {
 
                 result = _codelet.execute(_wir.getDataList(), inputs, outputs);
             }
+            else throw new CodeletExecutionException("Codelet '" + codeletName +
+                    "' could not be located.");
         }
-        catch (CodeletExecutionException e) {
-            _log.error(MessageFormat.format("Exception executing codelet '{0}': {1}. " +
-                    "Codelet could not be executed; default value returned for workitem '{2}'",
-                    _codeletName, e.getMessage(), _wir.getID()));
+        catch (Exception e) {
+            _log.error(MessageFormat.format("Exception executing codelet ''{0}'': {1}. " +
+                    "Codelet could not be executed; default value returned for workitem ''{2}''",
+                    codeletName, e.getMessage(), _wir.getID()));
         }
 
         // tell the RM we're done
-        ResourceManager.getInstance().handleCodeletCompletion(_wir, result);
+        rm.handleCodeletCompletion(_wir, result);
     }
 
 
@@ -90,5 +99,9 @@ public class CodeletRunner implements Runnable {
 
     public void shutdown() {
         if (_codelet != null) _codelet.shutdown();
+    }
+
+    public boolean persist() {
+        return (_codelet != null) && _codelet.getPersist() ; 
     }
 }

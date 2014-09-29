@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,15 +20,13 @@ package org.yawlfoundation.yawl.worklet.selection;
 
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
-import org.yawlfoundation.yawl.worklet.support.DBManager;
+import org.yawlfoundation.yawl.worklet.WorkletService;
 import org.yawlfoundation.yawl.worklet.support.Library;
+import org.yawlfoundation.yawl.worklet.support.Persister;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-// import org.apache.log4j.Logger;
-
 
 
 /** The CheckedOutItem class maintains, for a workitem that has been 
@@ -99,14 +97,12 @@ public class CheckedOutItem {
         _specId = new YSpecificationID(_wir) ;
         _myChildren = new ArrayList() ;
         _me = this ;
-        //  _log = Logger.getLogger("CheckedOutItem");
+        //  _log = Logger.getLogger("org.yawlfoundation.yawl.worklet.selection.CheckedOutItem");
     }
 
     // update the persisted object
     public void persistThis() {
-        DBManager dbMgr = DBManager.getInstance(false);
-        if ((dbMgr != null) && dbMgr.isPersisting())
-            dbMgr.persist(this, DBManager.DB_UPDATE);
+        Persister.getInstance().update(this);
     }
 
 

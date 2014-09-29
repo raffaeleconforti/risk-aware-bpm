@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,9 +19,11 @@
 package org.yawlfoundation.yawl.elements;
 
 import org.yawlfoundation.yawl.elements.data.YParameter;
-import org.yawlfoundation.yawl.util.YVerificationMessage;
+import org.yawlfoundation.yawl.util.YVerificationHandler;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A decomposition associated with a Web Service Gateway.
@@ -57,20 +59,14 @@ public class YAWLServiceGateway extends YDecomposition implements YVerifiable {
      * @return a List of error and/or warning messages. An empty list is returned if
      * the verification is successful.
      */
-    public List<YVerificationMessage> verify() {
-        List<YVerificationMessage> messages = new Vector<YVerificationMessage>();
-        messages.addAll(super.verify());
+    public void verify(YVerificationHandler handler) {
+        super.verify(handler);
         for (YParameter parameter : _enablementParameters.values()) {
-            messages.addAll(parameter.verify());
+            parameter.verify(handler);
         }
         for (YAWLServiceReference yawlService : _yawlServices.values()) {
-            List<YVerificationMessage> verificationResult = yawlService.verify();
-            for (YVerificationMessage message : verificationResult) {
-                message.setSource(this);
-            }
-            messages.addAll(verificationResult);
+            yawlService.verify(handler);
         }
-        return messages;
     }
 
 
@@ -96,7 +92,7 @@ public class YAWLServiceGateway extends YDecomposition implements YVerifiable {
 
     /**
      * Gets the named YAWL Service associated with this gateway.
-     * @param yawlServiceID the idnetifier of the service.
+     * @param yawlServiceID the identifier of the service.
      * @return the Service associated with this gateway iff the service matches the id
      * passed, or null if it doesn't match ori f there is no associated gateway.
      */

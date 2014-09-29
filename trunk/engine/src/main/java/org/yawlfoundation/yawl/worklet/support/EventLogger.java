@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -21,6 +21,7 @@ package org.yawlfoundation.yawl.worklet.support;
 import org.apache.log4j.Logger;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.util.HibernateEngine;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -39,6 +40,7 @@ public class EventLogger {
 
     // event type descriptors
     public static final String eCheckOut = "CheckOutWorkItem";
+    public static final String eDecline = "DeclineWorkItem";
     public static final String eUndoCheckOut = "UndoCheckOutWorkItem";
     public static final String eLaunch = "WorkletLaunched";
     public static final String eCheckIn = "CheckInWorkItem";
@@ -53,7 +55,7 @@ public class EventLogger {
             "yyyy.MM.dd hh:mm:ss:SS");
 
     // log for exception dumps
-    private static Logger elog = Logger.getLogger("EventLogger");
+    private static Logger elog = Logger.getLogger("org.yawlfoundation.yawl.worklet.support.EventLogger");
 
 //===========================================================================//
 
@@ -62,17 +64,17 @@ public class EventLogger {
      *  @param event - the type of event to log
      *  @param caseId - the case that caused the event
      *  @param specId - the specification id of the case
-     *  @param taskId - the id of the task the workletwas subbed for
+     *  @param taskId - the id of the task the worklet was subbed for
      *  @param parentCaseId - the case id of the original workitem
      *  @param xType - the reason for raising a worklet case (maps to WorkletService.XTYPE)
      */
-    public static void log(DBManager mgr, String event, String caseId, YSpecificationID specId,
-                           String taskId, String parentCaseId, int xType) {
+    public static void log(String event, String caseId,
+                           YSpecificationID specId, String taskId,
+                           String parentCaseId, int xType) {
 
-        if (mgr != null) {
-            WorkletEvent we = new WorkletEvent(event, caseId, specId, taskId,
-                    parentCaseId, xType);
-            mgr.persist(we, DBManager.DB_INSERT);
+        if (Persister.getInstance().isPersisting()) {
+            Persister.insert(new WorkletEvent(event, caseId, specId, taskId,
+                                parentCaseId, xType));
         }
         else {
             logToCSV(event, caseId, specId, taskId, parentCaseId, xType);
@@ -109,8 +111,8 @@ public class EventLogger {
      *  @param event - the type of event to log
      *  @param wir - the workitem that triggered the event
      */
-    public static void log(DBManager mgr, String event, WorkItemRecord wir, int xType) {
-        log(mgr, event, wir.getCaseID(), new YSpecificationID(wir),
+    public static void log(String event, WorkItemRecord wir, int xType) {
+        log(event, wir.getCaseID(), new YSpecificationID(wir),
                 wir.getTaskID(), "", xType);
     }
 

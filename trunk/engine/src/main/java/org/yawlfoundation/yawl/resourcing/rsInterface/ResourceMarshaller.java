@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,29 +18,32 @@
 
 package org.yawlfoundation.yawl.resourcing.rsInterface;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.elements.YAWLServiceReference;
 import org.yawlfoundation.yawl.elements.data.YParameter;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
 import org.yawlfoundation.yawl.engine.interfce.Marshaller;
 import org.yawlfoundation.yawl.engine.interfce.SpecificationData;
 import org.yawlfoundation.yawl.engine.interfce.WorkItemRecord;
+import org.yawlfoundation.yawl.resourcing.resource.Capability;
 import org.yawlfoundation.yawl.resourcing.resource.Participant;
+import org.yawlfoundation.yawl.resourcing.resource.Position;
+import org.yawlfoundation.yawl.resourcing.resource.Role;
+import org.yawlfoundation.yawl.schema.YSchemaVersion;
 import org.yawlfoundation.yawl.unmarshal.YDecompositionParser;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Author: Michael Adams
  * Creation Date: 9/03/2008
  */
 public class ResourceMarshaller {
+
+    private static final String SPEC_HEADER = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
     /** Constructor */
     public ResourceMarshaller() { }
@@ -51,8 +54,8 @@ public class ResourceMarshaller {
      * @param s the xml string to be converted
      * @return a list of child elements of the converted element passed
      */
-    private List getChildren(String s) {
-        if ((s == null) || (! s.trim().startsWith("<"))) return null;
+    private List<Element> getChildren(String s) {
+        if ((s == null) || (! s.trim().startsWith("<"))) return Collections.emptyList();
         return JDOMUtil.stringToElement(s).getChildren();
     }
 
@@ -72,19 +75,44 @@ public class ResourceMarshaller {
         Set<Participant> result = new HashSet<Participant>();
 
         // each child is one Participant (as xml)
-        List eList = getChildren(xml);
-        if (eList != null) {
-            for (Object o : eList) {
-                Participant p = new Participant();
-
-                // repopulate the members from its xml
-                p.reconstitute((Element) o);
-                result.add(p);
-            }
+        for (Element ePart : getChildren(xml)) {
+            result.add(unmarshallParticipant(ePart));
         }
         if (result.isEmpty()) return null;
         return result ;
     }
+
+
+    public Participant unmarshallParticipant(Element e) {
+        Participant p = new Participant();
+
+        // repopulate the members from its xml
+        p.reconstitute(e);
+        Element roles = e.getChild("roles");
+        if (roles != null) {
+            for (Element eRole : roles.getChildren()) {
+                p.addRole(new Role(eRole));
+            }
+        }
+        Element positions = e.getChild("positions");
+        if (positions != null) {
+            for (Element ePos : positions.getChildren()) {
+                p.addPosition(new Position(ePos));
+            }
+        }
+        Element capabilities = e.getChild("capabilities");
+        if (capabilities != null) {
+            for (Element eCap : capabilities.getChildren()) {
+                p.addCapability(new Capability(eCap));
+            }
+        }
+        return p;
+    }
+
+    public Participant unmarshallParticipant(String xml) {
+        return unmarshallParticipant(JDOMUtil.stringToElement(xml));
+    }
+
 
     /******************************************************************************/
 
@@ -106,14 +134,9 @@ public class ResourceMarshaller {
         Set<WorkItemRecord> result = new HashSet<WorkItemRecord>();
 
         // each child is one WorkItemRecord (as xml)
-        List eList = getChildren(xml);
-        if (eList != null) {
-            for (Object o : eList) {
-                Element e = (Element) o;
-                result.add(Marshaller.unmarshalWorkItem(e));
-            }
+        for (Element e : getChildren(xml)) {
+            result.add(Marshaller.unmarshalWorkItem(e));
         }
-        if (result.isEmpty()) return null;
         return result ;
     }
 
@@ -143,27 +166,47 @@ public class ResourceMarshaller {
         xml.append(StringUtil.wrap(specData.getID().getIdentifier(), "id"));
         xml.append(StringUtil.wrap(specData.getID().getUri(), "uri"));
 
-            if (specData.getName() != null) {
-                xml.append(StringUtil.wrap(specData.getName(), "name"));
-            }
-            if (specData.getDocumentation() != null) {
-                xml.append(StringUtil.wrap(specData.getDocumentation(), "documentation"));
-            }
+        if (specData.getName() != null) {
+            xml.append(StringUtil.wrap(specData.getName(), "name"));
+        }
+        if (specData.getDocumentation() != null) {
+            xml.append(StringUtil.wrap(specData.getDocumentation(), "documentation"));
+        }
 
-            Iterator inputParams = specData.getInputParams().iterator();
-            if (inputParams.hasNext()) {
-                xml.append("<params>");
-                while (inputParams.hasNext()) {
-                    YParameter inputParam = (YParameter) inputParams.next();
-                    xml.append(inputParam.toSummaryXML());
-                }
-                xml.append("</params>");
+        Iterator inputParams = specData.getInputParams().iterator();
+        if (inputParams.hasNext()) {
+            xml.append("<params>");
+            while (inputParams.hasNext()) {
+                YParameter inputParam = (YParameter) inputParams.next();
+                xml.append(inputParam.toSummaryXML());
             }
-            xml.append(StringUtil.wrap(specData.getRootNetID(), "rootNetID"));
-            xml.append(StringUtil.wrap(specData.getSchemaVersion(),"version"));
-            xml.append(StringUtil.wrap(specData.getSpecVersion(), "specversion"));
-            xml.append(StringUtil.wrap(specData.getStatus(), "status"));
-   
+            xml.append("</params>");
+        }
+        xml.append(StringUtil.wrap(specData.getRootNetID(), "rootNetID"));
+        xml.append(StringUtil.wrap(specData.getSchemaVersion().toString(), "version"));
+        xml.append(StringUtil.wrap(specData.getSpecVersion(), "specversion"));
+        xml.append(StringUtil.wrap(specData.getStatus(), "status"));
+
+        String metaTitle = specData.getMetaTitle();
+        if (metaTitle != null) xml.append(StringUtil.wrap(metaTitle, "metaTitle"));
+
+        String authors = specData.getAuthors();
+        if (authors != null) {
+            xml.append("<authors>");
+            for (String author : authors.split(",")) {
+                xml.append(StringUtil.wrap(author.trim(), "author"));
+            }
+            xml.append("</authors>");
+        }
+        String gateway = specData.getExternalDataGateway();
+        if (gateway != null) {
+            xml.append(StringUtil.wrap(gateway, "externalDataGateway"));
+        }
+        String specXML = specData.getAsXML();
+        if (specXML != null) {
+            xml.append(StringUtil.wrap(
+                    specXML.substring(SPEC_HEADER.length()), "specAsXML"));
+        }
         xml.append("</specificationData>");
         return xml.toString() ;
     }
@@ -198,15 +241,14 @@ public class ResourceMarshaller {
             String dataGateway = specElement.getChildText("externalDataGateway");
             if (id != null && status != null) {
                 specID = new YSpecificationID(id, specVersion, uri);
-                result = new SpecificationData(specID, name, doco, status, version);
+                YSchemaVersion schemaVersion = YSchemaVersion.fromString(version);
+                result = new SpecificationData(specID, name, doco, status, schemaVersion);
                 result.setRootNetID(rootNetID);
                 result.setSpecVersion(specVersion);
                 result.setExternalDataGateway(dataGateway);
                 Element inputParams = specElement.getChild("params");
                 if (inputParams != null) {
-                    List paramElements = inputParams.getChildren();
-                    for (int j = 0; j < paramElements.size(); j++) {
-                        Element paramElem = (Element) paramElements.get(j);
+                    for (Element paramElem : inputParams.getChildren()) {
                         YParameter param = new YParameter(null, YParameter._INPUT_PARAM_TYPE);
                         YDecompositionParser.parseParameter( paramElem, param, null,false);
                         result.addInputParam(param);
@@ -215,13 +257,18 @@ public class ResourceMarshaller {
                 result.setMetaTitle(specElement.getChildText("metaTitle"));
                 Element authors = specElement.getChild("authors");
                 if (authors != null) {
-                    List authorlist = authors.getChildren();
-                    for (Object e : authorlist) {
-                        Element authorElem = (Element) e;
-                        result.setAuthors(authorElem.getText());
+                    for (Element authorElem : authors.getChildren()) {
+                        result.addAuthor(authorElem.getText());
                     }
                 }
-
+                Element specAsXML = specElement.getChild("specAsXML");
+                if (specAsXML != null) {
+                    List<Element> specSet = specAsXML.getChildren();
+                    if (! specSet.isEmpty()) {
+                        result.setSpecAsXML(SPEC_HEADER +
+                                JDOMUtil.elementToString(specSet.get(0)));
+                    }
+                }
             }
         }
         return result;
@@ -234,15 +281,10 @@ public class ResourceMarshaller {
 
     public Set<YAWLServiceReference> unmarshallServices(String xml) {
         Set<YAWLServiceReference> result = new HashSet<YAWLServiceReference>();
-        List eList = getChildren(xml);
-        if (eList != null) {
-            Iterator itr = eList.iterator();
-            while (itr.hasNext()) {
-                Element eService = (Element) itr.next();
-                String eString = JDOMUtil.elementToString(eService);
-                YAWLServiceReference service = YAWLServiceReference.unmarshal(eString);
-                result.add(service);
-            }
+        for (Element eService : getChildren(xml)) {
+            String eString = JDOMUtil.elementToString(eService);
+            YAWLServiceReference service = YAWLServiceReference.unmarshal(eString);
+            result.add(service);
         }
         if (result.isEmpty()) return null;
         return result ;
@@ -253,15 +295,15 @@ public class ResourceMarshaller {
         Set<YParameter> result = new HashSet<YParameter>();
 
         Element params = JDOMUtil.stringToElement(paramStr);
-        List paramElementsList = params.getChildren();
-        for (Object o : paramElementsList) {
-            Element paramElem = (Element) o;
-            if ("formalInputParam".equals(paramElem.getName())) {
-                continue;
+        if (params != null) {
+            for (Element paramElem : params.getChildren()) {
+                if ("formalInputParam".equals(paramElem.getName())) {
+                    continue;
+                }
+                YParameter param = new YParameter(null, paramElem.getName());
+                YDecompositionParser.parseParameter(paramElem, param, null, false);
+                result.add(param);
             }
-            YParameter param = new YParameter(null, paramElem.getName());
-            YDecompositionParser.parseParameter(paramElem, param, null, false);
-            result.add(param);
         }
         return result;
     }

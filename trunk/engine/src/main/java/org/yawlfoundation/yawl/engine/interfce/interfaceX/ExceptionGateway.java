@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -20,7 +20,7 @@ package org.yawlfoundation.yawl.engine.interfce.interfaceX;
 
 import org.yawlfoundation.yawl.engine.YWorkItem;
 import org.yawlfoundation.yawl.engine.YSpecificationID;
-import org.jdom.Document;
+import org.jdom2.Document;
 
 import java.util.List;
 
@@ -73,6 +73,14 @@ public interface ExceptionGateway
      * @param caseID - the cancelled case
      */
     void announceCaseCancellation(String caseID);
+
+    
+    /**
+     * Called when the Engine is shutdown (servlet destroyed); the listener should
+     * to do its own finalisation processing
+     */
+    void shutdown();
+
 
 
     /************** FOR FUTURE IMPLEMENTATION *************/

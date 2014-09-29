@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -26,13 +26,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Author: Michael Adams
- * Creation Date: 13/02/2009
+ * @author Michael Adams
+ * @date 13/02/2009
  */
 
 public class FourEyesCache {
 
-    class CaseCache {}
     private String _caseid ;
     private Map<String, TaskCompleterSet> _taskTable;
 

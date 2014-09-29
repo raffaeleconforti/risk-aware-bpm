@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -36,8 +36,7 @@ public class AdminTasksManager {
     private Map _tasks ;                              // set of tasks to attend to
     private String _nextID ;                          // next unique id
 
-    private static Logger _log = Logger.getLogger(
-                                 "AdminTasksManager");
+    private static Logger _log = Logger.getLogger(AdminTasksManager.class);
 
 
     /** the constructor */

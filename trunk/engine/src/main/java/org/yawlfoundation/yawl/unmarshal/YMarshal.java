@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,17 +18,17 @@
 
 package org.yawlfoundation.yawl.unmarshal;
 
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.Namespace;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.Namespace;
 import org.yawlfoundation.yawl.elements.YSpecification;
-import org.yawlfoundation.yawl.exceptions.YSchemaBuildingException;
 import org.yawlfoundation.yawl.exceptions.YSyntaxException;
+import org.yawlfoundation.yawl.schema.SchemaHandler;
+import org.yawlfoundation.yawl.schema.YSchemaVersion;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 /**
  * Marshals & Unmarshals specifications
@@ -41,26 +41,21 @@ public class YMarshal {
 
     /**
      * Builds a list of specification objects from a XML document.
-     * @param specificationSetDoc the JDom docment containing the specification XML
+     * @param specificationSetElem the JDOM Element containing the specification XML
+     * @param ns specificationSetElem namespace
+     * @param version the schema version of the specification set 
      * @return a list of YSpecification objects taken from the XML document.
      * @throws YSyntaxException if a parsed specification doesn't validate against
      * schema
-     * @throws YSchemaBuildingException if there's a problem parsing the document
      */
-    private static List<YSpecification> buildSpecifications(Document specificationSetDoc)
-            throws YSchemaBuildingException, YSyntaxException {
-        Element specificationSetElem = specificationSetDoc.getRootElement();
-        Namespace ns = specificationSetElem.getNamespace();
-        String version = getVersion(specificationSetElem);
-        List<YSpecification> specifications = new Vector<YSpecification>();
-        List specificationElemList = specificationSetElem.getChildren("specification", ns);
+    private static List<YSpecification> buildSpecifications(
+            Element specificationSetElem, Namespace ns, YSchemaVersion version)
+            throws YSyntaxException {
+        List<YSpecification> specifications = new ArrayList<YSpecification>();
 
         // parse each specification element into a YSpecification
-        for (Object o : specificationElemList) {
-            Element xmlSpecification = (Element) o;
-
-            YSpecificationParser specParser =
-                    new YSpecificationParser(xmlSpecification, version);
+        for (Element xmlSpecification : specificationSetElem.getChildren("specification", ns)) {
+            YSpecificationParser specParser = new YSpecificationParser(xmlSpecification, version);
             specifications.add(specParser.getSpecification());
         }
         return specifications;
@@ -75,10 +70,9 @@ public class YMarshal {
      * @return a list of YSpecification objects taken from the XML string.
      * @throws YSyntaxException if a parsed specification doesn't validate against
      * schema
-     * @throws YSchemaBuildingException if there's a problem parsing the document
      */
     public static List<YSpecification> unmarshalSpecifications(String specStr)
-            throws YSyntaxException, YSchemaBuildingException {
+            throws YSyntaxException {
         return unmarshalSpecifications(specStr, true) ;
     }
 
@@ -91,32 +85,38 @@ public class YMarshal {
      * @return a list of YSpecification objects taken from the XML string.
      * @throws YSyntaxException if a parsed specification doesn't validate against
      * schema
-     * @throws YSchemaBuildingException if there's a problem parsing the document
      */
     public static List<YSpecification> unmarshalSpecifications(String specStr,
                                                                boolean schemaValidate)
-            throws YSyntaxException, YSchemaBuildingException {
+            throws YSyntaxException {
+        
         List<YSpecification> result = null;
 
-        //first check if the xml string is well formed and build a document
+        // first check if the xml string is well formed and build a document
         Document document = JDOMUtil.stringToDocument(specStr);
         if (document != null) {
             Element specificationSetEl = document.getRootElement();
-            String version = getVersion(specificationSetEl);
+            YSchemaVersion version = getVersion(specificationSetEl);
+            Namespace ns = specificationSetEl.getNamespace();
 
-            //now check the specification file against its respective schema
+            // strip layout element, if any (the engine doesn't use it)
+            specificationSetEl.removeChild("layout", ns);
+
+            // now check the specification file against its respective schema
             if (schemaValidate) {
-                String errors = YawlXMLSpecificationValidator.getInstance()
-                                                    .checkSchema(specStr, version);
-                if (errors == null || errors.length() > 0) {
+                SchemaHandler validator = new SchemaHandler(version.getSchemaURL());
+                if (! validator.compileAndValidate(JDOMUtil.documentToString(document))) {
                     throw new YSyntaxException(
                       " The specification file failed to verify against YAWL's Schema:\n"
-                      + errors);
+                            + validator.getConcatenatedMessage());
                 }
             }
 
-            //now build a set of specifications - verification has not yet occured.
-            result = buildSpecifications(document);
+            // now build a set of specifications - verification has not yet occurred.
+            result = buildSpecifications(specificationSetEl, ns, version);
+        }
+        else {
+            throw new YSyntaxException("Invalid XML specification.");
         }
         return result;
     }
@@ -129,27 +129,9 @@ public class YMarshal {
      * @param version the appropriate schema version to use
      * @return the XML Document, rendered as a String
      */
-    public static String marshal(List<YSpecification> specificationList, String version) {
-
-        String header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-                          "<specificationSet version=\"%s\" xmlns=\"%s\" " +
-                          "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " +
-                          "xsi:schemaLocation=\"%s\">";
-
-        StringBuilder xml = new StringBuilder();
-
-        // generate version-specific header
-        if (version.startsWith("Beta")) {
-            xml.append(String.format(header, YSpecification.Beta7_1,
-                                             YSpecification.BetaNS,
-                                             YSpecification.BetaSchemaLocation));
-        }
-        else {                                            // version 2.0 or greater
-            xml.append(String.format(header, version,
-                                             YSpecification.Version2NS,
-                                             YSpecification.Version2SchemaLocation));
-        }
-
+    public static String marshal(List<YSpecification> specificationList,
+                                 YSchemaVersion version) {
+        StringBuilder xml = new StringBuilder(version.getHeader());
         for (YSpecification specification : specificationList) {
             xml.append(specification.toXML());
         }
@@ -166,10 +148,9 @@ public class YMarshal {
      * @return the XML Document, rendered as a String
      */
     public static String marshal(YSpecification specification) {
-        String version = specification.getSchemaVersion();
         List<YSpecification> spLst = new ArrayList<YSpecification>();
         spLst.add(specification);
-        return marshal(spLst, version);
+        return marshal(spLst, specification.getSchemaVersion());
     }
 
 
@@ -178,15 +159,12 @@ public class YMarshal {
      * @param specRoot the root Element of a specification set Document
      * @return the specification's schema version
      */
-    private static String getVersion(Element specRoot) {
+    private static YSchemaVersion getVersion(Element specRoot) {
         String version = specRoot.getAttributeValue("version");
 
         // version attribute was not mandatory in version 2
         // therefore a missing version number would likely be version 2
-        if (null == version) {
-            version = YSpecification.Beta2;
-        }
-        return version;
+        return (null == version) ? YSchemaVersion.Beta2 : YSchemaVersion.fromString(version);
     }
 
 }

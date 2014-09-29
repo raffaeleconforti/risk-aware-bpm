@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -24,6 +24,7 @@ import org.yawlfoundation.yawl.elements.YTask;
 import org.yawlfoundation.yawl.engine.YPersistenceManager;
 import org.yawlfoundation.yawl.exceptions.YPersistenceException;
 import org.yawlfoundation.yawl.exceptions.YStateException;
+import org.yawlfoundation.yawl.util.XNode;
 import org.yawlfoundation.yawl.util.YIdentifierBag;
 
 import java.util.List;
@@ -91,17 +92,17 @@ public class YInternalCondition extends YNetElement implements YConditionInterfa
 
     /**
      * Removes one YIdentifier from this condition.  If there are none
-     * inside then make no change to the org.yawlfoundation.yawl.risk.state of this.
+     * inside then make no change to the state of this.
      */
     public YIdentifier removeOne(YPersistenceManager pmgr) throws YPersistenceException {
-        YIdentifier id = (YIdentifier) getIdentifiers().get(0);
+        YIdentifier id = getIdentifiers().get(0);
         _bag.remove(pmgr, id, 1);
         return id;
     }
 
     /**
      * Removes one YIdentifier equal to identifier from the condition. If there are none
-     * inside then make no change to the org.yawlfoundation.yawl.risk.state of this.
+     * inside then make no change to the state of this.
      * @param identifier
      */
     public void removeOne(YPersistenceManager pmgr, YIdentifier identifier) throws YPersistenceException {
@@ -113,7 +114,7 @@ public class YInternalCondition extends YNetElement implements YConditionInterfa
      * @param identifier
      * @param amount the amount to remove.
      * @throws YStateException iff amount is greater than the number of YIdentifiers
-     * held inside this, and further more no change will be made to the org.yawlfoundation.yawl.risk.state of this.
+     * held inside this, and further more no change will be made to the state of this.
      */
     public void remove(YPersistenceManager pmgr, YIdentifier identifier, int amount) throws YStateException, YPersistenceException {
         _bag.remove(pmgr, identifier, amount);
@@ -133,5 +134,18 @@ public class YInternalCondition extends YNetElement implements YConditionInterfa
 
     public String toString() {
         return getID() + "[" + _myTask.toString() + "]";
+    }
+
+    public String toXML() {
+        return toXNode().toString();
+    }
+    
+    public XNode toXNode() {
+        XNode node = new XNode("internalCondition");
+        node.addAttribute("id", toString());
+        for (YIdentifier identifier : getIdentifiers()) {
+            node.addChild("identifier", identifier.toString());
+        }
+        return node;
     }
 }

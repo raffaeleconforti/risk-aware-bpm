@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -19,81 +19,99 @@
 package org.yawlfoundation.yawl.engine;
 
 import org.apache.log4j.Logger;
-import org.jdom.Document;
+import org.jdom2.Document;
+import org.yawlfoundation.yawl.authentication.YSession;
 import org.yawlfoundation.yawl.elements.YAWLServiceGateway;
 import org.yawlfoundation.yawl.elements.YAWLServiceReference;
-import org.yawlfoundation.yawl.elements.YAtomicTask;
 import org.yawlfoundation.yawl.elements.YTask;
 import org.yawlfoundation.yawl.elements.state.YIdentifier;
 import org.yawlfoundation.yawl.engine.announcement.AnnouncementContext;
-import org.yawlfoundation.yawl.engine.announcement.Announcements;
-import org.yawlfoundation.yawl.engine.announcement.CancelWorkItemAnnouncement;
-import org.yawlfoundation.yawl.engine.announcement.NewWorkItemAnnouncement;
+import org.yawlfoundation.yawl.engine.announcement.YAnnouncement;
+import org.yawlfoundation.yawl.engine.announcement.YEngineEvent;
 import org.yawlfoundation.yawl.engine.interfce.interfaceB.InterfaceB_EngineBasedClient;
 import org.yawlfoundation.yawl.engine.interfce.interfaceX.InterfaceX_EngineSideClient;
+import org.yawlfoundation.yawl.exceptions.YAWLException;
 import org.yawlfoundation.yawl.exceptions.YStateException;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.yawlfoundation.yawl.engine.announcement.YEngineEvent.*;
+
 /**
- * Author: Michael Adams
- * Creation Date: 10/04/2010
+ * Handles the announcement of engine-generated events to the environment.
+ *
+ * @author Michael Adams
+ * @date 10/04/2010
  */
 public class YAnnouncer {
 
-    private ObserverGatewayController _controller;
-    private Logger _logger;
-    private boolean _itemsAlreadyAnnounced;
+    private final ObserverGatewayController _controller;
+    private final YEngine _engine;
+    private final Logger _logger;
+    private final Set<InterfaceX_EngineSideClient> _interfaceXListeners;
+
     private AnnouncementContext _announcementContext;
-    private YEngine _engine;
-    private Set<InterfaceX_EngineSideClient> _interfaceXListeners;
-
-    /**
-     * Reannouncement Contexts:
-     *  Normal =  posted due to an extra-engine request.
-     *  Recovering = posted due to restart processing within the engine. Note: In this
-     *  context, the underlying engine status may be running rather than initialising!
-     */
-    public static final int REANNOUNCEMENT_CONTEXT_NORMAL  = 0;
-    public static final int REANNOUNCEMENT_CONTEXT_RECOVERING = 1;
 
 
-    public YAnnouncer(YEngine engine) {
+    protected YAnnouncer(YEngine engine) {
         _engine = engine;
         _logger = Logger.getLogger(this.getClass());
-
-        // Initialise the standard Observer Gateways.
-        // Currently the only standard gateway is the HTTP driven Servlet client.        
-        _controller = new ObserverGatewayController();
-        _controller.addGateway(new InterfaceB_EngineBasedClient());
-
         _interfaceXListeners = new HashSet<InterfaceX_EngineSideClient>();
+        _announcementContext = AnnouncementContext.NORMAL;
+        _controller = new ObserverGatewayController();
+
+        // Initialise the standard Observer Gateway.
+        // Currently the only standard gateway is the HTTP driven IB Servlet client.
+        try {
+            _controller.addGateway(new InterfaceB_EngineBasedClient());
+        }
+        catch (YAWLException ye) {
+            _logger.warn("Failed to register default observer gateway. The Engine " +
+                    "may be unable to send notifications to services!", ye);
+        }
     }
 
     public ObserverGatewayController getObserverGatewayController() {
         return _controller;
     }
 
-    public void setObserverGatewayController(ObserverGatewayController controller) {
-        _controller = controller;
+
+    public synchronized void registerInterfaceBObserverGateway(ObserverGateway gateway)
+            throws YAWLException {
+        boolean firstGateway = _controller.isEmpty();
+        _controller.addGateway(gateway);
+        if (firstGateway) rennounceRestoredItems();
     }
 
 
-    public void addInterfaceXListener(InterfaceX_EngineSideClient listener) {
+    protected AnnouncementContext getAnnouncementContext() {
+        return _announcementContext;
+    }
+
+
+    private void setAnnouncementContext(AnnouncementContext context) {
+        _announcementContext = context;
+    }
+
+
+    /******************************************************************************/
+    // INTERFACE X LISTENER MGT //
+
+    protected void addInterfaceXListener(InterfaceX_EngineSideClient listener) {
         _interfaceXListeners.add(listener);
     }
 
-    public void addInterfaceXListener(String uri) {
+    protected void addInterfaceXListener(String uri) {
         addInterfaceXListener(new InterfaceX_EngineSideClient(uri));
     }
 
-    public boolean removeInterfaceXListener(InterfaceX_EngineSideClient listener) {
+    protected boolean removeInterfaceXListener(InterfaceX_EngineSideClient listener) {
         return _interfaceXListeners.remove(listener);
     }
 
-    public boolean removeInterfaceXListener(String uri) {
+    protected boolean removeInterfaceXListener(String uri) {
         for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
             if (listener.getURI().equals(uri)) {
                 return removeInterfaceXListener(listener);
@@ -102,208 +120,194 @@ public class YAnnouncer {
         return false;
     }
 
-    public boolean hasInterfaceXListeners() {
+    protected boolean hasInterfaceXListeners() {
         return ! _interfaceXListeners.isEmpty();
     }
 
-    private void setAnnouncementContext(AnnouncementContext context) {
-        this._announcementContext = context;
-    }
 
-
-    public synchronized AnnouncementContext getAnnouncementContext() {
-        return this._announcementContext;
-    }
-
-    public void notifyServletInitialisationComplete() {
-        announceEngineInitialisationCompletion();
-    }
-
-
-
-    public synchronized void registerInterfaceBObserverGateway(ObserverGateway gateway) {
-
-        _controller.addGateway(gateway);
-
-        //MLF: moved from restore logic. There is no point in reannouncing before the first gateway
-        //     is registered as the announcements will simply fall on deaf errors. Obviously we
-        //     also don't want to do it everytime either!
-        if (! _itemsAlreadyAnnounced) {
-            int sum = 0;
-            _logger.info("Detected first gateway registration. Reannouncing all work items.");
-
-            setAnnouncementContext(AnnouncementContext.RECOVERING);
-
-            try {
-                _logger.info("Reannouncing all enabled workitems");
-                int itemsReannounced = reannounceEnabledWorkItems();
-                _logger.info("" + itemsReannounced + " enabled workitems reannounced");
-                sum += itemsReannounced;
-
-                _logger.info("Reannouncing all executing workitems");
-                itemsReannounced = reannounceExecutingWorkItems();
-                _logger.info("" + itemsReannounced + " executing workitems reannounced");
-                sum += itemsReannounced;
-
-                _logger.info("Reannouncing all fired workitems");
-                itemsReannounced = reannounceFiredWorkItems();
-                _logger.info("" + itemsReannounced + " fired workitems reannounced");
-                sum += itemsReannounced;
-            }
-            catch (YStateException e) {
-                _logger.error("Failure whilst reannouncing workitems. " +
-                        "Some workitems might not have been reannounced.", e);
-            }
-
-            setAnnouncementContext(AnnouncementContext.NORMAL);
-            _logger.info("Reannounced " + sum + " workitems in total.");
-            _itemsAlreadyAnnounced = true;
+    protected void shutdownInterfaceXListeners() {
+        for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
+            listener.shutdown();
         }
     }
 
 
-    protected void announceTasks(Announcements<NewWorkItemAnnouncement> announcements) {
-        debug("Announcing ", announcements.size() + " workitems.");
-        _controller.notifyAddWorkItems(announcements);
+    /******************************************************************************/
+    // INTERFACE B (OBSERVER GATEWAY) ANNOUNCEMENTS //
+
+    /**
+     * Called by the engine when its initialisation is complete. Broadcast to all
+     * registered services and gateways.
+     * @param services the set of currently registered services
+     * @param maxWaitSeconds timeout to announce to each service before giving up
+     */
+    protected void announceEngineInitialisationCompletion(
+            Set<YAWLServiceReference> services, int maxWaitSeconds) {
+        _controller.notifyEngineInitialised(services, maxWaitSeconds);
     }
 
 
-    public void notifyCaseSuspending(YIdentifier id) {
-        _controller.notifyCaseSuspending(id);
-    }
-
-    public void notifyCaseSuspended(YIdentifier id) {
-        _controller.notifyCaseSuspended(id);
-    }
-
-    public void notifyCaseResumption(YIdentifier id) {
-        _controller.notifyCaseResumption(id);
-    }
-
-    public void announceCancellationToEnvironment(Announcements<CancelWorkItemAnnouncement> announcements) {
-        debug("Announcing ", announcements.size() + " cancelled workitems.");
-        _controller.notifyRemoveWorkItems(announcements);
-    }
-
-    public void announceEngineInitialisationCompletion() {
-        _controller.notifyEngineInitialised(_engine.getYAWLServices());
-    }
-
-    public void announceCaseCancellationToEnvironment(YIdentifier id) {
-        _controller.notifyCaseCancellation(_engine.getYAWLServices(), id);
+    /**
+     * Called by the engine when a case is cancelled. Broadcast to all registered
+     * services and gateways.
+     * @param id the identifier of the cancelled case
+     * @param services the set of currently registered services
+     */
+    protected void announceCaseCancellation(YIdentifier id, Set<YAWLServiceReference> services) {
+        _controller.notifyCaseCancellation(services, id);
         announceCaseCancellationToInterfaceXListeners(id);
     }
 
 
-    protected void announceCaseCompletionToEnvironment(YAWLServiceReference yawlService,
-                                                       YIdentifier caseID, Document casedata) {
-        _controller.notifyCaseCompletion(yawlService, caseID, casedata);
+    /**
+     * Called by YWorkItemTimer when a work item's timer expires. Announced only to
+     * the designated service or gateway.
+     * @param item the work item that has had its timer expire
+     */
+    public void announceTimerExpiryEvent(YWorkItem item) {
+        announceToGateways(createAnnouncement(item, TIMER_EXPIRED));
+        announceTimerExpiryToInterfaceXListeners(item);
+        _engine.getInstanceCache().setTimerExpired(item);
     }
 
-    protected void announceCaseCompletionToEnvironment(YIdentifier caseID, Document casedata) {
-        _controller.notifyCaseCompletion(caseID, casedata);
+
+    /**
+     * Called by the engine when a case is suspending. Broadcast to all registered
+     * services and gateways.
+     * @param id the identifier of the suspending case
+     * @param services the set of currently registered services
+     */
+    protected void announceCaseSuspending(YIdentifier id, Set<YAWLServiceReference> services) {
+        _controller.notifyCaseSuspending(id, services);
     }
 
-    public void announceWorkItemStatusChange(YWorkItem workItem, YWorkItemStatus oldStatus,
+
+    /**
+     * Called by the engine when a case has suspended. Broadcast to all registered
+     * services and gateways.
+     * @param id the identifier of the suspended case
+     * @param services the set of currently registered services
+     */
+    protected void announceCaseSuspended(YIdentifier id, Set<YAWLServiceReference> services) {
+        _controller.notifyCaseSuspended(id, services);
+    }
+
+
+    /**
+     * Called by the engine when a case has resumed from suspension. Broadcast to all
+     * registered services and gateways.
+     * @param id the identifier of the resumed case
+     * @param services the set of currently registered services
+     */
+    protected void announceCaseResumption(YIdentifier id, Set<YAWLServiceReference> services) {
+        _controller.notifyCaseResumption(id, services);
+    }
+    
+    
+    protected void announceCaseStart(YSpecificationID specID, YIdentifier caseID,
+                                     String launchingService, boolean delayed) {
+
+        // if delayed, service string is uri, if not its a current sessionhandle
+        if (! delayed) {
+            YSession session = _engine.getSessionCache().getSession(launchingService);
+            launchingService = (session != null) ? session.getURI() : null;
+        }
+        _controller.notifyCaseStarting(_engine.getYAWLServices(), specID, caseID,
+                launchingService, delayed);
+    }
+ 
+
+    /**
+     * Called by a case's net runner when it completes. Announced only to the designated
+     * service or gateway when the 'service' parameter is not null, otherwise it is
+     * broadcast to all registered services and gateways.
+     * @param service the name of the service or gateway to announce the case completion
+     * to. If null, the event will be announced to all registered services and gateways
+     * @param caseID the identifier of the completed case
+     * @param caseData the final output data for the case
+     */
+    protected void announceCaseCompletion(YAWLServiceReference service,
+                                          YIdentifier caseID, Document caseData) {
+        if (service == null) {
+            _controller.notifyCaseCompletion(_engine.getYAWLServices(), caseID, caseData);
+        }
+        else _controller.notifyCaseCompletion(service, caseID, caseData);
+    }
+
+
+    /**
+     * Called by a workitem when it has a change of status. Broadcast to all
+     * registered services and gateways.
+     * @param item the work item that has had a change of status
+     * @param oldStatus the previous status of the work item
+     * @param newStatus the new status of the workitem
+     */
+    protected void announceWorkItemStatusChange(YWorkItem item, YWorkItemStatus oldStatus,
                                              YWorkItemStatus newStatus) {
         debug("Announcing workitem status change from '", oldStatus + "' to new status '",
-                newStatus + "' for workitem '", workItem.getWorkItemID().toString(), "'.");
-        _controller.notifyWorkItemStatusChange(workItem, oldStatus, newStatus);
+                newStatus + "' for workitem '", item.getWorkItemID().toString(), "'.");
+        _controller.notifyWorkItemStatusChange(_engine.getYAWLServices(), item,
+                oldStatus, newStatus);
     }
 
 
-    public int reannounceWorkItems(Set<YWorkItem> workItems) throws YStateException {
-        for (YWorkItem workitem : workItems) {
-            reannounceWorkItem(workitem);
+    /**
+     * Called by a workitem when it is cancelled. Announced only to the designated
+     * service or gateway.
+     * @param item the work item that has had a change of status
+     */
+    public void announceCancelledWorkItem(YWorkItem item) {
+        announceToGateways(createAnnouncement(item, ITEM_CANCEL));
+    }
+
+
+    /**
+     * Called by the engine when it begins to shutdown. Broadcast to all registered
+     * services and gateways.
+     */
+    protected void shutdownObserverGateways() {
+    	  _controller.shutdownObserverGateways();
+    }
+
+
+    /**
+     * Called by the engine each time a net runner advances a case, resulting in the
+     * enabling and/or cancelling of one or more work items.
+     * @param announcements A set of work item enabling or cancellation events
+     */
+    protected void announceToGateways(Set<YAnnouncement> announcements) {
+        if (announcements != null) {
+            debug("Announcing ", announcements.size() + " events.");
+            _controller.announce(announcements);
         }
-        return workItems.size();
     }
 
 
-    /**
-     * Causes the engine to re-announce all workitems which are in an "enabled" org.yawlfoundation.yawl.risk.state.<P>
-     *
-     * @return The number of enabled workitems that were reannounced
-     */
-    public int reannounceEnabledWorkItems() throws YStateException {
-        debug("--> reannounceEnabledWorkItems");
-        return reannounceWorkItems(YEngine.getWorkItemRepository().getEnabledWorkItems());
-    }
-
-
-    /**
-     * Causes the engine to re-announce all workitems which are in an "executing" org.yawlfoundation.yawl.risk.state.<P>
-     *
-     * @return The number of executing workitems that were reannounced
-     */
-    public int reannounceExecutingWorkItems() throws YStateException {
-        debug("--> reannounceExecutingWorkItems");
-        return reannounceWorkItems(YEngine.getWorkItemRepository().getExecutingWorkItems());
-    }
-
-
-    /**
-     * Causes the engine to re-announce all workitems which are in an "fired" org.yawlfoundation.yawl.risk.state.<P>
-     *
-     * @return The number of fired workitems that were reannounced
-     */
-    public int reannounceFiredWorkItems() throws YStateException {
-        debug("--> reannounceFiredWorkItems");
-        return reannounceWorkItems(YEngine.getWorkItemRepository().getFiredWorkItems());
-    }
-
-    /**
-     * Causes the engine to re-announce a specific workitem regardless of org.yawlfoundation.yawl.risk.state.<P>
-     */
-    public void reannounceWorkItem(YWorkItem workItem) throws YStateException
-    {
-        debug("--> reannounceWorkItem: WorkitemID=" + workItem.getWorkItemID().getTaskID());
-
-        YNetRunner netRunner = _engine.getNetRunner(workItem);
-        if (netRunner != null) {
-            announceToEnvironment(workItem, netRunner.get_caseIDForNet());
+    private void announceToGateways(YAnnouncement announcement) {
+        if (announcement != null) {
+            debug("Announcing one event.");
+            _controller.announce(announcement);
         }
-
-        debug("<-- reannounceEnabledWorkItem");
     }
 
 
-    public void announceToEnvironment(YWorkItem workItem, YIdentifier caseID) {
-        debug("--> announceToEnvironment");
+    protected YAnnouncement createAnnouncement(YAWLServiceReference ys, YWorkItem item,
+                                               YEngineEvent event) {
+        if (ys == null) ys = _engine.getDefaultWorklist();
+        return (ys != null) ?
+                new YAnnouncement(ys, item, event, getAnnouncementContext()) : null;
+    }
 
-        YTask task = _engine.getTaskDefinition(workItem.getSpecificationID(), workItem.getTaskID());
-        YAtomicTask atomicTask = (YAtomicTask) task;
-        YAWLServiceGateway wsgw = (YAWLServiceGateway) atomicTask.getDecompositionPrototype();
-        if (wsgw != null) {
-            YAWLServiceReference ys = wsgw.getYawlService();
-            if (ys != null) {
-                YWorkItem item = YEngine.getWorkItemRepository().getWorkItem(caseID.toString(),
-                        atomicTask.getID());
-                if (item == null) {
-                    throw new RuntimeException("Unable to find YWorKItem for atomic task '" +
-                            atomicTask.getID() + "' of case '" + caseID + "'.");
-                }
-                if (item.getStatus() == YWorkItemStatus.statusIsParent) item.add_child(item);
 
-                try {
-                    Announcements<NewWorkItemAnnouncement> items =
-                            new Announcements<NewWorkItemAnnouncement>();
-                    items.addAnnouncement(new NewWorkItemAnnouncement(ys, item,
-                            getAnnouncementContext()));
-                    announceTasks(items);
-                }
-                catch (YStateException e) {
-                    _logger.error("Failed to announce task '" + atomicTask.getID() +
-                            "' of case '" + caseID + "': ", e);
-                }
+    protected YAnnouncement createAnnouncement(YWorkItem item, YEngineEvent event) {
+        YTask task = item.getTask();
+        if ((task != null) && (task.getDecompositionPrototype() != null)) {
+            YAWLServiceGateway wsgw = (YAWLServiceGateway) task.getDecompositionPrototype();
+            if (wsgw != null) {
+                return createAnnouncement(wsgw.getYawlService(), item, event);
             }
-            else _logger.warn("No YawlService defined, unable to announce task '" +
-                    atomicTask.getID() + "' of case '" + caseID + "'.");
         }
-        else _logger.warn("No YAWLServiceGateway defined, unable to announce task '" +
-                atomicTask.getID() + "' of case '" + caseID + "'.");
-
-        debug("<-- announceToEnvironment");
+        return null;
     }
 
 
@@ -312,42 +316,24 @@ public class YAnnouncer {
     // the default worklist service for normal assignment.
     public void rejectAnnouncedEnabledTask(YWorkItem item) {
         YAWLServiceReference defaultWorklist = _engine.getDefaultWorklist();
-        if (_engine.getDefaultWorklist() != null) {
+        if (defaultWorklist != null) {
             debug("Announcing enabled task ", item.getIDString(), " on service ",
                           defaultWorklist.getServiceID());
-            try {
-                Announcements<NewWorkItemAnnouncement> items =
-                                 new Announcements<NewWorkItemAnnouncement>();
-                items.addAnnouncement(new NewWorkItemAnnouncement(
-                        defaultWorklist, item, getAnnouncementContext()));
-                announceTasks(items);
-            }
-            catch (YStateException yse) {
-                _logger.error("Failed to announce enablement of workitem '" +
-                               item.getIDString() + "': ", yse);
-            }
+            announceToGateways(createAnnouncement(defaultWorklist, item, ITEM_ADD));
         }
     }
 
 
-    public NewWorkItemAnnouncement createNewWorkItemAnnouncement(YAWLServiceReference ys,
-                                                                 YWorkItem item) {
-        if (ys == null) ys = _engine.getDefaultWorklist();
-        if (ys != null) {
-            return new NewWorkItemAnnouncement(ys, item, getAnnouncementContext());
-        }
-        else return null;
-    }
+    /******************************************************************************/
+    // INTERFACE X ANNOUNCEMENTS //
 
-
-    /** These next four methods announce an exception event to the observer */
     protected void announceCheckWorkItemConstraints(YWorkItem item, Document data,
                                                     boolean preCheck) {
         for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
             debug("Announcing Check Constraints for task ", item.getIDString(),
                          " on client ", listener.toString());
             listener.announceCheckWorkItemConstraints(item, data, preCheck);
-        }    
+        }
     }
 
 
@@ -361,16 +347,7 @@ public class YAnnouncer {
     }
 
 
-    public void announceCaseCancellationToInterfaceXListeners(YIdentifier caseID) {
-        for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
-            debug("Announcing Cancel Case for case ", caseID.toString(),
-                         " on client ",  listener.toString());
-            listener.announceCaseCancellation(caseID.get_idString());
-        }
-    }
-
-
-    public void announceTimeServiceExpiry(YWorkItem item, List timeOutTaskIds) {
+    protected void announceTimeServiceExpiry(YWorkItem item, List timeOutTaskIds) {
         for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
             debug("Announcing Time Out for item ", item.getWorkItemID().toString(),
                     " on client ", listener.toString());
@@ -379,39 +356,122 @@ public class YAnnouncer {
     }
 
 
-    public void announceTimerExpiryEvent(YWorkItem item) {
-        YAWLServiceReference defaultWorklist = _engine.getDefaultWorklist();
-        if (defaultWorklist != null)
-            _controller.notifyTimerExpiry(defaultWorklist, item);
+    private void announceCaseCancellationToInterfaceXListeners(YIdentifier caseID) {
+        for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
+            debug("Announcing Cancel Case for case ", caseID.toString(),
+                         " on client ",  listener.toString());
+            listener.announceCaseCancellation(caseID.get_idString());
+        }
+    }
 
+
+    private void announceTimerExpiryToInterfaceXListeners(YWorkItem item) {
         for (InterfaceX_EngineSideClient listener : _interfaceXListeners) {
             listener.announceTimeOut(item, null);
         }
-        _engine.getInstanceCache().setTimerExpired(item);
     }
 
-    public void announceCancelledWorkItem(YWorkItem item) {
-        YAWLServiceGateway wsgw = (YAWLServiceGateway) item.getTask().getDecompositionPrototype();
-        if (wsgw != null) {
-            YAWLServiceReference ys = wsgw.getYawlService();
-            if (ys == null) ys = YEngine.getInstance().getDefaultWorklist();
 
-            try {
-                Announcements<CancelWorkItemAnnouncement> announcements =
-                                         new Announcements<CancelWorkItemAnnouncement>();
-                announcements.addAnnouncement(new CancelWorkItemAnnouncement(ys, item));
-                YEngine.getInstance().getAnnouncer().announceCancellationToEnvironment(announcements);
-            }
-            catch (YStateException e) {
-                Logger.getLogger(this.getClass()).error(
-                        "Failed to announce cancellation of workitem '" +
-                              item.getIDString() + "': ",e);
-            }
+    /******************************************************************************/
+    // WORKITEM REANNOUNCEMENTS //
+
+    private void rennounceRestoredItems() {
+
+        //MLF: moved from restore logic. There is no point in reannouncing before the first gateway
+        //     is registered as the announcements will simply fall on deaf errors. Obviously we
+        //     also don't want to do it everytime either!
+        int sum = 0;
+        _logger.info("Detected first gateway registration. Reannouncing all work items.");
+
+        setAnnouncementContext(AnnouncementContext.RECOVERING);
+
+        try {
+            _logger.info("Reannouncing all enabled workitems");
+            int itemsReannounced = reannounceEnabledWorkItems();
+            _logger.info("" + itemsReannounced + " enabled workitems reannounced");
+            sum += itemsReannounced;
+
+            _logger.info("Reannouncing all executing workitems");
+            itemsReannounced = reannounceExecutingWorkItems();
+            _logger.info("" + itemsReannounced + " executing workitems reannounced");
+            sum += itemsReannounced;
+
+            _logger.info("Reannouncing all fired workitems");
+            itemsReannounced = reannounceFiredWorkItems();
+            _logger.info("" + itemsReannounced + " fired workitems reannounced");
+            sum += itemsReannounced;
         }
+        catch (YStateException e) {
+            _logger.error("Failure whilst reannouncing workitems. " +
+                    "Some workitems might not have been reannounced.", e);
+        }
+
+        setAnnouncementContext(AnnouncementContext.NORMAL);
+        _logger.info("Reannounced " + sum + " workitems in total.");
     }
 
 
-    protected void debug(final String... phrases) {
+    /**
+     * Causes the engine to re-announce all workitems which are in an "enabled" state.<P>
+     *
+     * @return The number of enabled workitems that were reannounced
+     */
+    public int reannounceEnabledWorkItems() throws YStateException {
+        debug("--> reannounceEnabledWorkItems");
+        return reannounceWorkItems(_engine.getWorkItemRepository().getEnabledWorkItems());
+    }
+
+
+    /**
+     * Causes the engine to re-announce all workitems which are in an "executing" state.<P>
+     *
+     * @return The number of executing workitems that were reannounced
+     */
+    protected int reannounceExecutingWorkItems() throws YStateException {
+        debug("--> reannounceExecutingWorkItems");
+        return reannounceWorkItems(_engine.getWorkItemRepository().getExecutingWorkItems());
+    }
+
+
+    /**
+     * Causes the engine to re-announce all workitems which are in an "fired" state.<P>
+     *
+     * @return The number of fired workitems that were reannounced
+     */
+    protected int reannounceFiredWorkItems() throws YStateException {
+        debug("--> reannounceFiredWorkItems");
+        return reannounceWorkItems(_engine.getWorkItemRepository().getFiredWorkItems());
+    }
+
+
+    private int reannounceWorkItems(Set<YWorkItem> workItems) throws YStateException {
+        Set<YAnnouncement> announcements = new HashSet<YAnnouncement>();
+        for (YWorkItem workitem : workItems) {
+            YAnnouncement announcement = createAnnouncement(workitem, ITEM_ADD);
+            if (announcement != null) announcements.add(announcement);
+        }
+        announceToGateways(announcements);
+        return workItems.size();
+    }
+
+
+    /**
+     * Causes the engine to re-announce a specific workitem regardless of state.<P>
+     */
+    protected void reannounceWorkItem(YWorkItem workItem) throws YStateException {
+        debug("--> reannounceWorkItem: WorkitemID=" + workItem.getWorkItemID().toString());
+        announceToGateways(createAnnouncement(workItem, ITEM_ADD));
+        debug("<-- reannounceEnabledWorkItem");
+    }
+
+
+    protected void announceDeadlock(YIdentifier caseID, Set<YTask> tasks) {
+        _controller.notifyDeadlock(_engine.getYAWLServices(), caseID, tasks);
+    }
+
+    /****************************************************************************/
+
+    private void debug(final String... phrases) {
         if (_logger.isDebugEnabled()) {
             if (phrases.length == 1) {
                 _logger.debug(phrases[0]);
@@ -424,11 +484,6 @@ public class YAnnouncer {
                 _logger.debug(msg.toString());
             }
         }
-    }
-
-    
-    protected void shutdownObserverGateways() {
-    	  _controller.shutdownObserverGateways();
     }
 
 }

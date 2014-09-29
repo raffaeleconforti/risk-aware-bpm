@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -208,8 +208,8 @@ public class teamQueues extends AbstractPageBean {
 
     // SPECIFIC DELARATIONS AND METHODS //
 
-    private SessionBean _sb = getSessionBean();
-    private ResourceManager _rm = getApplicationBean().getResourceManager();
+    private final SessionBean _sb = getSessionBean();
+    private final ResourceManager _rm = getApplicationBean().getResourceManager();
 
     private enum qSet { team, orgGroup }
 
@@ -219,6 +219,10 @@ public class teamQueues extends AbstractPageBean {
     public void prerender() {
         _sb.checkLogon();
         _sb.setActivePage(ApplicationBean.PageRef.teamQueues);
+
+        // abort load if org data isn't currently available
+        if (_sb.orgDataIsRefreshing()) return;
+
         _sb.showMessagePanel();
         
         ((pfQueueUI) getBean("pfQueueUI")).clearQueueGUI();
@@ -313,8 +317,8 @@ public class teamQueues extends AbstractPageBean {
 
 
     private void showWorkItem(WorkItemRecord wir) {
+        pfQueueUI itemsSubPage = (pfQueueUI) getBean("pfQueueUI");
         if (wir != null) {
-            pfQueueUI itemsSubPage = (pfQueueUI) getBean("pfQueueUI");
             Listbox lbx = itemsSubPage.getLbxItems();
             lbx.setSelected(wir.getID());
             itemsSubPage.populateTextBoxes(wir) ;
@@ -330,6 +334,7 @@ public class teamQueues extends AbstractPageBean {
                 txtResourceState.setText("");
             }
         }
+        itemsSubPage.getTxtDocumentation().setReadOnly(wir == null);
     }
 
 

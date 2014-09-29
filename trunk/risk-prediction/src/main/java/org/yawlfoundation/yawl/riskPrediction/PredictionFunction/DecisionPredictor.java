@@ -25,7 +25,7 @@ import java.util.Map.Entry;
 
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XLog;
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.risk.state.YAWL.Resource;
 import org.yawlfoundation.yawl.riskPrediction.Annotators.TaskExecutionAnnotator;
 import org.yawlfoundation.yawl.riskPrediction.Annotators.TimeBetweenTasksAnnotator;

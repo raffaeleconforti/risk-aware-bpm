@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,16 +18,15 @@
 
 package org.yawlfoundation.yawl.resourcing.resource;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.resourcing.QueueSet;
 import org.yawlfoundation.yawl.resourcing.ResourceManager;
 import org.yawlfoundation.yawl.resourcing.WorkQueue;
-import org.yawlfoundation.yawl.resourcing.datastore.WorkItemCache;
-import org.yawlfoundation.yawl.util.PasswordEncryptor;
+import org.yawlfoundation.yawl.resourcing.rsInterface.ResourceGatewayException;
 import org.yawlfoundation.yawl.util.JDOMUtil;
+import org.yawlfoundation.yawl.util.PasswordEncryptor;
 import org.yawlfoundation.yawl.util.StringUtil;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -39,7 +38,7 @@ import java.util.Set;
  *  v0.1, 03/08/2007
  */
 
-public class Participant extends AbstractResource implements Serializable {
+public class Participant extends AbstractResource implements Cloneable {
 
     // participant descriptive data
     private String _lastname ;
@@ -55,11 +54,9 @@ public class Participant extends AbstractResource implements Serializable {
     // participant's work queues
     private QueueSet _qSet ;
 
-    private ResourceManager _resMgr = ResourceManager.getInstance() ;
     private boolean _persisting ;
 
     /** CONSTRUCTORS **/
-
 
     public Participant() { super() ; }                   // for hibernate persistence
 
@@ -106,45 +103,43 @@ public class Participant extends AbstractResource implements Serializable {
     }
 
 
-    public Participant clone() {
-
-        // create a new Participant with persistence OFF
-        Participant result = new Participant(_lastname, _firstname, _userID, false);
-        result.setAdministrator(_isAdministrator);
-        result.setPassword(_password);
-        result.setID(_resourceID);
-        result.setNotes(_notes);
-        result.setDescription(_description);
-        if (_privileges != null)
-            result.setUserPrivileges(_privileges.clone());
-        else
-            result.setUserPrivileges(new UserPrivileges(_resourceID));
-
-        for (Role r : _roles) result.addRole(r);
-        for (Position p : _positions ) result.addPosition(p) ;
-        for (Capability c : _capabilities) result.addCapability(c);
-        return result ;
+    private ResourceManager getResourceManager() throws ResourceGatewayException {
+        try {
+            return ResourceManager.getInstance() ;
+        }
+        catch (NoClassDefFoundError ndf) {
+            throw new ResourceGatewayException(
+               "Illegal access attempt to server-side method from resource gateway", ndf);
+        }
     }
 
+    public Participant clone() {
+        Participant clone = new Participant("_CLONE_" + _resourceID);
+        clone.setValues(this);
+        return clone;
+    }
+
+
     // copies values from p to this (does NOT change id)
-    public void merge(Participant p) {
+    public void setValues(Participant p) {
+        super.merge(p);
         _lastname = p.getLastName();
         _firstname = p.getFirstName();
         setUserID(p.getUserID());
         _isAdministrator = p.isAdministrator();
         _password = p.getPassword();
-        _notes = p.getNotes();
-        _description = p.getDescription();
         setRoles(p.getRoles());
         setPositions(p.getPositions());
         setCapabilities(p.getCapabilities());
 
         if (_privileges == null) _privileges = new UserPrivileges(_resourceID) ; 
-         _privileges.merge(p.getUserPrivileges());
+         _privileges.setValues(p.getUserPrivileges());
     }
 
 
-    public void save() { _resMgr.updateParticipant(this); }
+    public void save() throws ResourceGatewayException {
+        getResourceManager().updateParticipant(this);
+    }
 
     public void setPersisting(boolean persisting) {
         _persisting = persisting;
@@ -158,6 +153,10 @@ public class Participant extends AbstractResource implements Serializable {
         _resourceID = id;
         _privileges.setID(id);
         if (_qSet != null) _qSet.setID(id);
+    }
+
+    public String getName() {
+        return getFullName();
     }
 
     public String getFirstName() { return _firstname ; }
@@ -192,12 +191,7 @@ public class Participant extends AbstractResource implements Serializable {
 
     public void setPassword(String pw, boolean encrypt) {
         if (encrypt) {
-            try {
-                pw = PasswordEncryptor.encrypt(pw) ;
-            }
-            catch (Exception e) {
-                // will have to revert to a non-encrypted string
-            }
+            pw = PasswordEncryptor.encrypt(pw, pw);
         }
         setPassword(pw) ;        
     }
@@ -240,8 +234,14 @@ public class Participant extends AbstractResource implements Serializable {
         }
     }
 
-    public void addRole(String rid) {
-        addRole(_resMgr.getOrgDataSet().getRole(rid));
+    public void addRole(String rid) throws ResourceGatewayException {
+        addRole(getResourceManager().getOrgDataSet().getRole(rid));
+    }
+
+    public void mergeRoles(Set<Role> roleSet) {
+        for (Role r : roleSet) {
+            if (! _roles.contains(r)) addRole(r);
+        }
     }
 
     public void removeRole(Role role) {
@@ -284,9 +284,16 @@ public class Participant extends AbstractResource implements Serializable {
         }
     }
 
-    public void addCapability(String cid) {
-        addCapability(_resMgr.getOrgDataSet().getCapability(cid));
+    public void addCapability(String cid) throws ResourceGatewayException {
+        addCapability(getResourceManager().getOrgDataSet().getCapability(cid));
     }
+
+    public void mergeCapabilities(Set<Capability> capSet) {
+        for (Capability c : capSet) {
+            if (! _capabilities.contains(c)) addCapability(c);
+        }
+    }
+
 
     public void removeCapability(Capability cap) {
         if (_capabilities.remove(cap)) {
@@ -319,7 +326,7 @@ public class Participant extends AbstractResource implements Serializable {
 
     public void setPositions(Set<Position> posSet) {
         removePositions();
-        for (Position pos : posSet) addPosition(pos)  ;
+        for (Position pos : posSet) addPosition(pos);
     }
 
     public void addPosition(Position pos) {
@@ -329,8 +336,8 @@ public class Participant extends AbstractResource implements Serializable {
         }
     }
 
-    public void addPosition(String pid) {
-        addPosition(_resMgr.getOrgDataSet().getPosition(pid));
+    public void addPosition(String pid) throws ResourceGatewayException {
+        addPosition(getResourceManager().getOrgDataSet().getPosition(pid));
     }
 
 
@@ -356,6 +363,12 @@ public class Participant extends AbstractResource implements Serializable {
         _positions.clear();
     }
 
+    public void mergePositions(Set<Position> posSet) {
+        for (Position p : posSet) {
+            if (! _positions.contains(p)) addPosition(p);
+        }
+    }
+
 
     public boolean hasPosition(Position pos) { return _positions.contains(pos) ; }
 
@@ -364,6 +377,31 @@ public class Participant extends AbstractResource implements Serializable {
         removeRoles();
         removePositions();
         removeCapabilities();
+    }
+
+    public Set<AbstractResourceAttribute> getAttributeReferences() {
+        Set<AbstractResourceAttribute> attributes = new HashSet<AbstractResourceAttribute>();
+        attributes.addAll(getRoles());
+        attributes.addAll(getPositions());
+        attributes.addAll(getCapabilities());
+        return attributes;
+    }
+
+    public void setAttributeReferences(Set<AbstractResourceAttribute> attributes) {
+        if (attributes != null) {
+            removeAttributeReferences();
+            for (AbstractResourceAttribute attribute : attributes) {
+                if (attribute instanceof Role) {
+                    addRole((Role) attribute);
+                }
+                else if (attribute instanceof Capability) {
+                    addCapability((Capability) attribute);
+                }
+                else if (attribute instanceof Position) {
+                    addPosition((Position) attribute);
+                }
+            }
+        }
     }
 
 
@@ -396,9 +434,9 @@ public class Participant extends AbstractResource implements Serializable {
     }
 
 
-    public void restoreWorkQueue(WorkQueue q, WorkItemCache cache, boolean persisting) {
+    public void attachWorkQueue(WorkQueue q, boolean persisting) {
         if (_qSet == null) createQueueSet(persisting) ;
-        _qSet.restoreWorkQueue(q, cache) ;
+        _qSet.setQueue(q) ;
     }
 
 

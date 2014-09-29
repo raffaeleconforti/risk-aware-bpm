@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010 The YAWL Foundation. All rights reserved.
+ * Copyright (c) 2004-2012 The YAWL Foundation. All rights reserved.
  * The YAWL Foundation is a collaboration of individuals and
  * organisations who are committed to improving workflow technology.
  *
@@ -18,7 +18,7 @@
 
 package org.yawlfoundation.yawl.engine.interfce;
 
-import org.jdom.Element;
+import org.jdom2.Element;
 import org.yawlfoundation.yawl.util.JDOMUtil;
 import org.yawlfoundation.yawl.util.StringUtil;
 
@@ -48,6 +48,7 @@ public class WorkItemRecord implements Cloneable {
     public static final String statusForcedComplete = "ForcedComplete";
     public static final String statusFailed = "Failed";
     public static final String statusSuspended = "Suspended";
+    public static final String statusDiscarded = "Discarded";
 
     // workitem resourcing statuses
     public final static String statusResourceOffered = "Offered" ;
@@ -66,6 +67,7 @@ public class WorkItemRecord implements Cloneable {
     private String _taskID;
     private String _uniqueID;                            // used by PDF Forms service
     private String _taskName;                            // the unmodified task name
+    private String _documentation;
     private String _allowsDynamicCreation;
     private String _requiresManualResourcing;
     private String _codelet;
@@ -99,21 +101,23 @@ public class WorkItemRecord implements Cloneable {
 
     // who performed the workitem
     private String _startedBy;
-    private String _completedBy ;
+    private String _completedBy;
 
     // initial data params and values
     private Element _dataList;
     private String _dataListString;
 
     // interim data store - for use by custome services for temp storage
-    private Element _dataListUpdated ;
-    private String _dataListUpdatedString ;
+    private Element _dataListUpdated;
+    private String _dataListUpdatedString;
 
     // configurable logging predicates
     private String _logPredicateStarted;
     private String _logPredicateCompletion;
 
-    private String _customFormURL ;                         // path to alternate jsp
+    private String _customFormURL;                         // path to alternate jsp
+
+    private boolean _docoChanged = false;                  // documentation updated?
 
     private String _tag;                                   // for user-defined values
 
@@ -249,6 +253,14 @@ public class WorkItemRecord implements Cloneable {
         _logPredicateCompletion = predicate;
     }
 
+    public void setDocumentation(String doco) {
+        _documentation = doco;
+    }
+
+    public void setDocumentationChanged(boolean added) {
+        _docoChanged = added;
+    }
+
     /********************************************************************************/
 
     // GETTERS //
@@ -322,29 +334,47 @@ public class WorkItemRecord implements Cloneable {
     /** @deprecated - use getDataList() */
     public Element getWorkItemData() { return getDataList(); }
 
-    public Element getDataList() { return _dataList; }
+    public Element getDataList() {
+        if (_dataList == null) _dataList = JDOMUtil.stringToElement(_dataListString);
+        return _dataList;
+    }
 
     public String getDataListString() { return _dataListString; }
 
     public String getTag() { return _tag ; }
 
-    public Element getUpdatedData() { return _dataListUpdated; }
+    public Element getUpdatedData() {
+        if (_dataListUpdated == null) {
+            _dataListUpdated = JDOMUtil.stringToElement(_dataListUpdatedString);
+        }
+        return _dataListUpdated;
+    }
 
     public String getIDForDisplay() {
         return _caseID + ":" + _taskName ;
     }
 
-    public String getTaskName() {
-        return _taskName;
-    }
+    public String getTaskName() { return _taskName; }
+
+    public String getDocumentation() { return _documentation; }
+
+    public boolean hasDocumentation() { return _documentation != null; }
+
+    public boolean isDocumentationChanged() { return _docoChanged; }
 
     // returns the case id of the root ancestor case
     public String getRootCaseID() {
-        String result = _caseID;
-        if ((_caseID != null) && (_caseID.indexOf(".") > 0)) {
-            result = _caseID.split("\\.")[0] ;
+        if (_caseID != null) {
+            int firstDot = _caseID.indexOf('.');
+            return (firstDot > -1) ? _caseID.substring(0, firstDot) : _caseID;
         }
-        return result ;
+        return _caseID ;
+    }
+
+    public String getParentID() {
+        if (isEnabledOrFired()) return null;
+        int pos = _caseID.lastIndexOf('.');        
+        return (pos < 0) ? null : _caseID.substring(0, pos) + ":" + _taskID;
     }
 
     public String getLogPredicateStarted() { return _logPredicateStarted; }
@@ -358,11 +388,20 @@ public class WorkItemRecord implements Cloneable {
         return (_deferredChoiceGroupID != null) ;
     }
 
+    public boolean isAutoTask() {
+        return ((getRequiresManualResourcing() != null) &&
+                (getRequiresManualResourcing().equalsIgnoreCase("false")));
+    }
+
+
     public String getCustomFormURL() { return _customFormURL; }
 
     public boolean hasLiveStatus() {
-        return _status.equals(statusFired) || _status.equals(statusEnabled) ||
-               _status.equals(statusExecuting);
+        return isEnabledOrFired() || _status.equals(statusExecuting);
+    }
+
+    public boolean isEnabledOrFired() {
+        return _status.equals(statusEnabled) || _status.equals(statusFired);
     }
 
     public boolean hasStatus(String status) {
@@ -373,8 +412,35 @@ public class WorkItemRecord implements Cloneable {
         return (_resourceStatus != null) && _resourceStatus.equals(status);
     }
 
-    
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o instanceof WorkItemRecord) {
+            WorkItemRecord other = (WorkItemRecord) o;
+            return getID().equals(other.getID()) &&
+                 _status.equals(other.getStatus()) &&
+                 _uniqueID != null ? _uniqueID.equals(other._uniqueID) :
+                    other._uniqueID == null;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = _caseID.hashCode();
+        result = 31 * result + _taskID.hashCode();
+        result = 31 * result + _status.hashCode();
+        result = 31 * result + (_uniqueID != null ? _uniqueID.hashCode() : 0);
+        return result;
+    }
+
     /********************************************************************************/
+
+    public String toString() {
+        return getID();
+    }
+
 
     public String toXML() {
         StringBuilder xml = new StringBuilder("<workItemRecord");
@@ -386,8 +452,9 @@ public class WorkItemRecord implements Cloneable {
            .append(StringUtil.wrap(_caseID, "caseid"))
            .append(StringUtil.wrap(_taskID, "taskid"))
            .append(StringUtil.wrap(_uniqueID, "uniqueid"))
-           .append(StringUtil.wrap(_taskName, "taskname"))
-           .append(StringUtil.wrap(_allowsDynamicCreation, "allowsdynamiccreation"))
+           .append(StringUtil.wrap(_taskName, "taskname"));
+        if (_documentation != null) xml.append(StringUtil.wrap(_documentation, "documentation"));
+        xml.append(StringUtil.wrap(_allowsDynamicCreation, "allowsdynamiccreation"))
            .append(StringUtil.wrap(_requiresManualResourcing, "requiresmanualresourcing"))
            .append(StringUtil.wrap(_codelet, "codelet"))
            .append(StringUtil.wrap(_deferredChoiceGroupID, "deferredChoiceGroupid"))
@@ -423,6 +490,9 @@ public class WorkItemRecord implements Cloneable {
 
         return xml.toString() ;
     }
+
+
+    /**************************************************************************/
 
 
     private String attributeTableToAttributeString() {
