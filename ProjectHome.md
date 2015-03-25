@@ -1,0 +1,1 @@
+This project contains a set of techniques for monitoring, preventing and mitigating risk in business processes, realized on top of the YAWL system.
